@@ -25,6 +25,14 @@ type DeviceRow = {
   notes: string
 }
 
+type Urun = {
+  id: string
+  ad: string
+  kategori: string
+  kapasite: string | null
+  tip: string | null
+}
+
 function addMonths(dateStr: string, months: number): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -74,6 +82,7 @@ export default function NewDevicePage() {
   const supabase = createClient()
   const [deviceTypes, setDeviceTypes] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
+  const [urunler, setUrunler] = useState<Urun[]>([])
   const [customerSearch, setCustomerSearch] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
   const [showDropdown, setShowDropdown] = useState(false)
@@ -81,16 +90,21 @@ export default function NewDevicePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  // urun autocomplete per-row: rowId -> search text, open state
+  const [urunSearch, setUrunSearch] = useState<Record<string, string>>({})
+  const [urunAcOpen, setUrunAcOpen] = useState<Record<string, boolean>>({})
   const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function load() {
-      const [{ data: dt }, { data: cu }] = await Promise.all([
+      const [{ data: dt }, { data: cu }, { data: ur }] = await Promise.all([
         supabase.from('device_types').select('*').order('name'),
         supabase.from('customers').select('id,full_name,phone').eq('is_active', true).order('full_name'),
+        supabase.from('urunler').select('id,ad,kategori,kapasite,tip').eq('aktif', true).order('ad'),
       ])
       setDeviceTypes(dt ?? [])
       setCustomers(cu ?? [])
+      setUrunler(ur ?? [])
       if (customerId && cu) {
         const found = cu.find((c: any) => c.id === customerId)
         if (found) { setSelectedCustomer(found); setCustomerSearch(found.full_name) }
@@ -124,6 +138,20 @@ export default function NewDevicePage() {
       }
       return updated
     }))
+  }
+
+  function selectUrun(rowId: string, urun: Urun) {
+    // Build a descriptive name from urun fields
+    const name = urun.ad
+    // Parse capacity number from kapasite string (e.g. "6 Kg" → "6")
+    const capMatch = urun.kapasite ? urun.kapasite.match(/[\d.]+/) : null
+    const cap = capMatch ? capMatch[0] : ''
+    updateRow(rowId, 'custom_name', name)
+    updateRow(rowId, 'useCustomName', true)
+    if (cap) setRows(prev => prev.map(r => r.id === rowId ? { ...r, custom_name: name, useCustomName: true, capacity: cap } : r))
+    else setRows(prev => prev.map(r => r.id === rowId ? { ...r, custom_name: name, useCustomName: true } : r))
+    setUrunAcOpen(prev => ({ ...prev, [rowId]: false }))
+    setUrunSearch(prev => ({ ...prev, [rowId]: '' }))
   }
 
   function addRow() { setRows(prev => [...prev, newRow()]) }
@@ -266,16 +294,54 @@ export default function NewDevicePage() {
                           <option value="">-- Tip Seçin --</option>
                           {deviceTypes.map(dt => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
                         </select>
+                        <button type="button" onClick={() => { updateRow(row.id, 'useCustomName', true); setUrunAcOpen(prev => ({ ...prev, [row.id]: true })) }}
+                          title="Ürünlerden seç" className="px-2 border rounded-lg text-xs text-gray-500 hover:bg-red-50 hover:border-[#C8102E] hover:text-[#C8102E]">🔍</button>
                         <button type="button" onClick={() => updateRow(row.id, 'useCustomName', true)}
                           title="Elle yaz" className="px-2 border rounded-lg text-xs text-gray-500 hover:bg-gray-50">✏️</button>
                       </div>
                     ) : (
-                      <div className="flex gap-1 mt-1">
-                        <input value={row.custom_name} onChange={e => updateRow(row.id, 'custom_name', e.target.value)}
-                          placeholder="Ürün adını yazın..."
-                          className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
-                        <button type="button" onClick={() => updateRow(row.id, 'useCustomName', false)}
-                          title="Listeden seç" className="px-2 border rounded-lg text-xs text-gray-500 hover:bg-gray-50">📋</button>
+                      <div className="relative mt-1">
+                        <div className="flex gap-1">
+                          <input value={row.custom_name} onChange={e => {
+                              updateRow(row.id, 'custom_name', e.target.value)
+                              setUrunSearch(prev => ({ ...prev, [row.id]: e.target.value }))
+                              setUrunAcOpen(prev => ({ ...prev, [row.id]: true }))
+                            }}
+                            onFocus={() => setUrunAcOpen(prev => ({ ...prev, [row.id]: true }))}
+                            onBlur={() => setTimeout(() => setUrunAcOpen(prev => ({ ...prev, [row.id]: false })), 150)}
+                            placeholder="Ürün adını yazın veya ara..."
+                            className="flex-1 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
+                          <button type="button" onClick={() => updateRow(row.id, 'useCustomName', false)}
+                            title="Device tipinden seç" className="px-2 border rounded-lg text-xs text-gray-500 hover:bg-gray-50">📋</button>
+                        </div>
+                        {urunAcOpen[row.id] && (
+                          <div className="absolute z-30 left-0 right-8 mt-1 bg-white border rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                            {urunler
+                              .filter(u => {
+                                const q = (urunSearch[row.id] ?? row.custom_name).toLowerCase()
+                                return !q || u.ad.toLowerCase().includes(q)
+                              })
+                              .slice(0, 12)
+                              .map(u => (
+                                <div key={u.id}
+                                  onMouseDown={e => { e.preventDefault(); selectUrun(row.id, u) }}
+                                  className="px-3 py-2 hover:bg-red-50 cursor-pointer border-b last:border-0">
+                                  <div className="text-sm font-medium text-gray-900">{u.ad}</div>
+                                  <div className="text-xs text-gray-400 flex gap-2">
+                                    <span>{u.kategori === 'cihaz' ? '🔴 Cihaz' : u.kategori === 'dolum' ? '🔵 Dolum' : '🟡 Yedek Parça'}</span>
+                                    {u.kapasite && <span>{u.kapasite}</span>}
+                                    {u.tip && <span>{u.tip}</span>}
+                                  </div>
+                                </div>
+                              ))}
+                            {urunler.filter(u => {
+                              const q = (urunSearch[row.id] ?? row.custom_name).toLowerCase()
+                              return !q || u.ad.toLowerCase().includes(q)
+                            }).length === 0 && (
+                              <div className="px-3 py-3 text-xs text-gray-400 text-center">Ürün bulunamadı</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

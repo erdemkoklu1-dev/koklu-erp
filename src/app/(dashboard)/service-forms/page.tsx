@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { formatTRDate } from '@/lib/finance/formatters'
+import PrintButton from '@/components/PrintButton'
 
 export default async function ServiceFormsPage() {
   const supabase = await createClient()
@@ -11,15 +13,24 @@ export default async function ServiceFormsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+      {/* Print header */}
+      <div className="print-header hidden">
+        <div>KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI</div>
+        <div style={{ fontWeight: 'normal', fontSize: '12px', marginTop: '4px' }}>Servis Formları Listesi · {new Date().toLocaleString('tr-TR')}</div>
+      </div>
+
+      <div className="bg-white border-b px-6 py-4 flex items-center justify-between no-print">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
           <h1 className="text-lg font-bold text-gray-900">Servis Formları</h1>
         </div>
-        <Link href="/service-forms/new"
-          className="bg-[#C8102E] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#a50d26] transition-colors">
-          + Yeni Servis Formu
-        </Link>
+        <div className="flex items-center gap-2">
+          <PrintButton />
+          <Link href="/service-forms/new"
+            className="bg-[#C8102E] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#a50d26] transition-colors">
+            + Yeni Servis Formu
+          </Link>
+        </div>
       </div>
 
       <div className="p-6 max-w-5xl mx-auto">
@@ -41,7 +52,7 @@ export default async function ServiceFormsPage() {
                   <td className="px-4 py-3 text-sm font-mono font-medium text-[#C8102E]">{form.form_number}</td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{(form.customers as any)?.full_name ?? '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{form.technician_name ?? '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{form.service_date}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatTRDate(form.service_date)}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
                       Tamamlandı

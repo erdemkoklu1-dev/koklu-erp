@@ -124,7 +124,10 @@ export default function NewServiceFormPage() {
   useEffect(() => {
     async function load() {
       const { data: cu } = await supabase
-        .from('customers').select('id,full_name,phone').eq('is_active', true).order('full_name')
+        .from('customers')
+        .select('id,full_name,phone,authorized_person,authorized_phone')
+        .eq('is_active', true)
+        .order('full_name')
       setCustomers(cu ?? [])
       if (customerId && cu) {
         const found = cu.find((c: any) => c.id === customerId)
@@ -148,7 +151,7 @@ export default function NewServiceFormPage() {
       const cap = d.capacity ? ` ${d.capacity} Kg` : ''
       const key = `${name}${cap}`
       if (!groups[key]) groups[key] = { ...d, device_name: key, quantity: 0 }
-      groups[key].quantity += 1
+      groups[key].quantity += (d.quantity || 1)
     }
 
     const result: DeviceGroup[] = Object.values(groups).map((g: any) => {
@@ -331,6 +334,19 @@ export default function NewServiceFormPage() {
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
           </div>
+
+          {selectedCustomer && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="text-xs bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                <span className="font-semibold text-blue-900">Firma Yetkili:</span>{' '}
+                <span className="text-blue-800">{selectedCustomer.authorized_person ?? '-'}</span>
+              </div>
+              <div className="text-xs bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                <span className="font-semibold text-blue-900">Yetkili Telefonu:</span>{' '}
+                <span className="text-blue-800">{selectedCustomer.authorized_phone ?? '-'}</span>
+              </div>
+            </div>
+          )}
 
           {/* Bakım periyot analizi */}
           {deviceGroups.length > 0 && (

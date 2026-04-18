@@ -1,0 +1,28 @@
+export default function ServiceFormsLoading() {
+  return (
+    <div className="p-6 space-y-5 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="h-7 w-44 bg-gray-200 rounded" />
+        <div className="h-9 w-40 bg-gray-200 rounded-lg" />
+      </div>
+      <div className="flex gap-3">
+        <div className="h-10 flex-1 bg-gray-100 rounded-lg" />
+        <div className="h-10 w-32 bg-gray-100 rounded-lg" />
+      </div>
+      <div className="bg-white border rounded-xl overflow-hidden">
+        <div className="grid grid-cols-6 gap-4 px-4 py-3 border-b bg-gray-50">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-4 bg-gray-200 rounded" />
+          ))}
+        </div>
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="grid grid-cols-6 gap-4 px-4 py-4 border-b last:border-0">
+            {[...Array(6)].map((_, j) => (
+              <div key={j} className="h-4 bg-gray-100 rounded" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

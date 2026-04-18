@@ -25,10 +25,10 @@ export default async function ServiceFormDetailPage({ params }: { params: Promis
   const saglam = items?.filter((i: any) =>
     i.body_status === 'SAĞLAM' && i.valve_status === 'SAĞLAM' &&
     i.hose_status === 'SAĞLAM' && i.gauge_status === 'SAĞLAM'
-  ).length ?? 0
+  ).reduce((s: number, i: any) => s + (i.quantity ?? 1), 0) ?? 0
   const hasarli = items?.filter((i: any) =>
     [i.body_status, i.valve_status, i.hose_status, i.gauge_status].includes('HASARLI')
-  ).length ?? 0
+  ).reduce((s: number, i: any) => s + (i.quantity ?? 1), 0) ?? 0
   const controlLabels: Record<number, string> = { 1: '1. Kontrol', 2: '2. Kontrol', 3: '3. Kontrol' }
 
   return (
