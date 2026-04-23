@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Shield, ClipboardList, FileUp, Wallet,
   Handshake, FileDown, FileInput, AlertTriangle, BarChart2, FileText,
-  Bell, Factory, Settings
+  Bell, Factory, Settings, Building2, UserSquare2
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -22,6 +22,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/fiyat-teklifleri',           label: 'Fiyat Teklifleri',   icon: FileText,      modul: 'fiyat_teklifleri' },
   { href: '/cari-hesap',                 label: 'Cari Hesap',         icon: Wallet,        modul: 'cari_hesap' },
   { href: '/araclar',                    label: 'Aracılar',           icon: Handshake,     modul: 'aracilar' },
+  { href: '/subeler',                    label: 'Şubeler',            icon: Building2,     modul: 'subeler' },
+  { href: '/personel',                   label: 'Personel',           icon: UserSquare2,   modul: 'personel' },
   { href: '/invoice-import',             label: 'Müşteri İçe Aktar',  icon: FileUp,        modul: 'musteriler' },
   { href: '/cari-hesap/fatura-import',   label: 'Fatura Yükle',       icon: FileDown,      modul: 'faturalar' },
   { href: '/cari-hesap/giden-faturalar', label: 'Giden Faturalar',    icon: FileUp,        modul: 'faturalar' },

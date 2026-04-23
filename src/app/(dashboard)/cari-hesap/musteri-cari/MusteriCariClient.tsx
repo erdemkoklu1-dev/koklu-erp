@@ -1,7 +1,9 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { formatCurrency, formatTRDate, PAYMENT_METHOD_LABELS } from '@/lib/finance/formatters'
+import { createClient } from '@/lib/supabase/client'
 
 type Customer = {
   id: string
@@ -23,6 +25,16 @@ type Payment = {
   id: string; invoice_id: string | null; payment_date: string | null
   amount: number | null; method: string | null; reference_no: string | null
 }
+type Mutabakat = {
+  id: string
+  musteri_id: string
+  mutabakat_tarihi: string
+  bizim_bakiye: number
+  musteri_bakiyesi: number | null
+  durum: string
+  notlar: string | null
+  created_at: string
+}
 
 type Props = {
   customers: Customer[]
@@ -31,12 +43,32 @@ type Props = {
   today: string
 }
 
+const MUTABAKAT_DURUM_LABELS: Record<string, { label: string; cls: string }> = {
+  taslak:     { label: 'Taslak',     cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+  gonderildi: { label: 'Gönderildi', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  onaylandi:  { label: 'Onaylandı',  cls: 'bg-green-50 text-green-700 border-green-200' },
+  itiraz:     { label: 'İtiraz',     cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+  fark_var:   { label: 'Fark Var',   cls: 'bg-red-50 text-red-700 border-red-200' },
+}
+
 export default function MusteriCariClient({ customers, invoices, payments, today }: Props) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'faturalar' | 'odemeler' | 'ekstre' | 'notlar'>('faturalar')
+  const [activeTab, setActiveTab] = useState<'faturalar' | 'odemeler' | 'ekstre' | 'notlar' | 'mutabakat'>('faturalar')
   const [note, setNote] = useState('')
   const [notes, setNotes] = useState<string[]>([])
+
+  // Mutabakat state
+  const [mutabakatList, setMutabakatList] = useState<Mutabakat[]>([])
+  const [mutabakatLoading, setMutabakatLoading] = useState(false)
+  const [showMutabakatModal, setShowMutabakatModal] = useState(false)
+  const [mutabakatTarih, setMutabakatTarih] = useState(today)
+  const [mutabakatBakiye, setMutabakatBakiye] = useState('')
+  const [mutabakatNotlar, setMutabakatNotlar] = useState('')
+  const [mutabakatSaving, setMutabakatSaving] = useState(false)
+  const [mutabakatDurumEdit, setMutabakatDurumEdit] = useState<string | null>(null)
+  const [musteriBakiyeEdit, setMusteriBakiyeEdit] = useState('')
 
   const invoiceMap = useMemo(() => {
     const m = new Map<string, Invoice[]>()
@@ -74,7 +106,6 @@ export default function MusteriCariClient({ customers, invoices, payments, today
     })
   }, [customers, invoiceMap, today])
 
-  // Client-side search: full_name, phone, tax_number
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     if (!q) return rows
@@ -93,7 +124,6 @@ export default function MusteriCariClient({ customers, invoices, payments, today
     return payments.filter(p => p.invoice_id && ids.has(p.invoice_id))
   }, [selInvoices, payments])
 
-  // Cari ekstre: fatura = borç, ödeme = alacak, kronolojik
   const ekstre = useMemo(() => {
     type EksRow = { date: string; tip: string; aciklama: string; borc: number; alacak: number; bakiye: number }
     const eksList: Omit<EksRow, 'bakiye'>[] = []
@@ -112,12 +142,234 @@ export default function MusteriCariClient({ customers, invoices, payments, today
   const toplamAlacak = useMemo(() => rows.reduce((s, r) => s + r.kalan, 0), [rows])
   const gecikmisSayi = useMemo(() => rows.filter(r => r.gecikmisTutar > 0).length, [rows])
 
+  // ── Mutabakat işlemleri ──────────────────────────────────────────
+  const fetchMutabakat = useCallback(async (musteriId: string) => {
+    setMutabakatLoading(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('mutabakat_formlari')
+      .select('*')
+      .eq('musteri_id', musteriId)
+      .order('created_at', { ascending: false })
+    setMutabakatList(data ?? [])
+    setMutabakatLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'mutabakat' && selectedId) {
+      fetchMutabakat(selectedId)
+    }
+  }, [activeTab, selectedId, fetchMutabakat])
+
+  function openMutabakatModal() {
+    setMutabakatTarih(today)
+    setMutabakatBakiye(selected ? String(selected.kalan.toFixed(2)) : '')
+    setMutabakatNotlar('')
+    setShowMutabakatModal(true)
+  }
+
+  async function saveMutabakat() {
+    if (!selectedId || !mutabakatTarih) return
+    setMutabakatSaving(true)
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('mutabakat_formlari')
+      .insert({
+        musteri_id: selectedId,
+        mutabakat_tarihi: mutabakatTarih,
+        bizim_bakiye: parseFloat(mutabakatBakiye) || 0,
+        durum: 'taslak',
+        notlar: mutabakatNotlar || null,
+      })
+      .select('id')
+      .single()
+    setMutabakatSaving(false)
+    if (error) { alert('Kayıt hatası: ' + error.message); return }
+    setShowMutabakatModal(false)
+    if (data?.id) {
+      router.push(`/cari-hesap/musteri-cari/mutabakat/${data.id}`)
+    } else {
+      fetchMutabakat(selectedId)
+    }
+  }
+
+  async function updateMutabakatDurum(id: string, durum: string, musteriBakiyesi?: number | null) {
+    const supabase = createClient()
+    const update: any = { durum }
+    if (musteriBakiyesi !== undefined) update.musteri_bakiyesi = musteriBakiyesi
+    await supabase.from('mutabakat_formlari').update(update).eq('id', id)
+    if (selectedId) fetchMutabakat(selectedId)
+  }
+
+  async function deleteMutabakat(id: string) {
+    if (!confirm('Bu mutabakat formunu silmek istediğinizden emin misiniz?')) return
+    const supabase = createClient()
+    await supabase.from('mutabakat_formlari').delete().eq('id', id)
+    if (selectedId) fetchMutabakat(selectedId)
+  }
+
+  // ── Print (Müşteri Cari PDF) ─────────────────────────────────────
+  function handlePrint() {
+    window.print()
+  }
+
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
 
+      {/* ── Print-only Cari Raporu ── */}
+      {selected && (
+        <div className="print-only hidden">
+          <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '210mm', margin: '0 auto', padding: '10mm', fontSize: '11px', color: '#111' }}>
+            {/* Başlık */}
+            <div style={{ borderBottom: '2px solid #C8102E', paddingBottom: '8px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#C8102E' }}>KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI</div>
+              <div style={{ fontSize: '11px', color: '#555' }}>SANAYİ VE TİCARET LİMİTED ŞİRKETİ · Ticaret Sicil No: 4213</div>
+              <div style={{ fontSize: '11px', color: '#555' }}>Karaağaç Mah. 774. Sok. No:49 Erzincan · Tel: (0446) 214 45 81</div>
+            </div>
+
+            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>MÜŞTERİ CARİ RAPORU</div>
+
+            {/* Müşteri bilgileri */}
+            <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '8px', marginBottom: '10px', backgroundColor: '#f9fafb' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{selected.full_name}</div>
+              {selected.tax_number && <div>VKN: {selected.tax_number}</div>}
+              {selected.phone && <div>Tel: {selected.phone}</div>}
+              {selected.address && <div>{selected.address}</div>}
+            </div>
+
+            <div style={{ fontSize: '10px', color: '#888', marginBottom: '10px' }}>
+              Rapor Tarihi: {new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+            </div>
+
+            {/* Hesap Özeti */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '12px' }}>
+              {[
+                { label: 'Toplam Fatura', val: formatCurrency(selected.totalInvoice) },
+                { label: 'Tahsil Edilen', val: formatCurrency(selected.totalPaid) },
+                { label: 'Kalan Alacak', val: formatCurrency(selected.kalan) },
+                { label: 'Gecikmiş', val: formatCurrency(selected.gecikmisTutar) },
+              ].map(kpi => (
+                <div key={kpi.label} style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '9px', color: '#888' }}>{kpi.label}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{kpi.val}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Faturalar */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '4px', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px' }}>Faturalar</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f3f4f6' }}>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Fatura No</th>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Tarih</th>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Vade</th>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'right' }}>Tutar</th>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'right' }}>Ödenen</th>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'right' }}>Kalan</th>
+                    <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'center' }}>Durum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selInvoices.map(inv => {
+                    const k = Math.max(0, (inv.total_amount ?? 0) - (inv.paid_amount ?? 0))
+                    const effDue = inv.due_date ?? inv.invoice_date
+                    const late = effDue && effDue < today && k > 0
+                    return (
+                      <tr key={inv.id} style={{ backgroundColor: late ? '#fff5f5' : 'white' }}>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', fontFamily: 'monospace' }}>{inv.invoice_number}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px' }}>{formatTRDate(inv.invoice_date)}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', color: late ? '#dc2626' : undefined }}>{formatTRDate(effDue)}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'right' }}>{formatCurrency(inv.total_amount)}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'right', color: '#16a34a' }}>{formatCurrency(inv.paid_amount)}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'right', color: k > 0 ? '#ea580c' : '#9ca3af', fontWeight: k > 0 ? 'bold' : undefined }}>{k > 0 ? formatCurrency(k) : '—'}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'center' }}>{inv.status}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Ödemeler */}
+            {selPayments.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '4px', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px' }}>Ödemeler</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3f4f6' }}>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Tarih</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'right' }}>Tutar</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Yöntem</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Referans</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selPayments.map(p => (
+                      <tr key={p.id}>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px' }}>{formatTRDate(p.payment_date)}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'right', color: '#16a34a', fontWeight: 'bold' }}>{formatCurrency(p.amount)}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px' }}>{PAYMENT_METHOD_LABELS[p.method ?? ''] ?? p.method}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', fontFamily: 'monospace' }}>{p.reference_no ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Hesap Ekstresi */}
+            {ekstre.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '4px', borderBottom: '1px solid #e5e7eb', paddingBottom: '2px' }}>Hesap Ekstresi</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3f4f6' }}>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Tarih</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>İşlem</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'left' }}>Açıklama</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'right' }}>Borç</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'right' }}>Alacak</th>
+                      <th style={{ border: '1px solid #e5e7eb', padding: '4px 6px', textAlign: 'right' }}>Bakiye</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ekstre.map((row, i) => (
+                      <tr key={i}>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px' }}>{formatTRDate(row.date)}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px' }}>{row.tip}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', fontFamily: 'monospace' }}>{row.aciklama}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'right' }}>{row.borc > 0 ? formatCurrency(row.borc) : '—'}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'right', color: '#16a34a' }}>{row.alacak > 0 ? formatCurrency(row.alacak) : '—'}</td>
+                        <td style={{ border: '1px solid #e5e7eb', padding: '3px 6px', textAlign: 'right', fontWeight: 'bold', color: row.bakiye > 0 ? '#ea580c' : row.bakiye < 0 ? '#16a34a' : '#9ca3af' }}>
+                          {row.bakiye === 0 ? '—' : formatCurrency(Math.abs(row.bakiye))}
+                          {row.bakiye < 0 && ' (alacak)'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* İmza alanı */}
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px', marginTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: '11px' }}>KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI</div>
+                <div style={{ fontSize: '10px', color: '#555' }}>SANAYİ VE TİCARET LİMİTED ŞİRKETİ</div>
+                <div style={{ marginTop: '20px', borderTop: '1px solid #111', paddingTop: '4px', width: '160px', fontSize: '10px' }}>Kaşe ve İmza</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: '#555', marginBottom: '20px' }}>Tarih: ___________</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Sol Panel ── */}
-      <div className="w-72 flex-shrink-0 border-r bg-white flex flex-col h-full">
-        {/* Üst */}
+      <div className="no-print w-72 flex-shrink-0 border-r bg-white flex flex-col h-full">
         <div className="px-4 py-3 border-b space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Müşteri Cari</h2>
@@ -138,7 +390,6 @@ export default function MusteriCariClient({ customers, invoices, payments, today
           </div>
         </div>
 
-        {/* Liste */}
         <div className="flex-1 overflow-y-auto divide-y">
           {filtered.map(r => (
             <button
@@ -176,7 +427,6 @@ export default function MusteriCariClient({ customers, invoices, payments, today
           )}
         </div>
 
-        {/* Alt özet */}
         <div className="border-t px-4 py-3 bg-gray-50">
           <div className="text-xs text-gray-500">Toplam Alacak</div>
           <div className="text-base font-bold text-orange-600">{formatCurrency(toplamAlacak)}</div>
@@ -184,7 +434,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
       </div>
 
       {/* ── Sağ Panel ── */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="flex-1 overflow-y-auto bg-gray-50 no-print">
         {!selected ? (
           <div className="flex items-center justify-center h-full min-h-64">
             <div className="text-center">
@@ -225,10 +475,29 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                     </div>
                   )}
                 </div>
-                <Link href={`/customers/${selected.id}`}
-                  className="text-xs text-[#C8102E] hover:underline font-medium flex-shrink-0">
-                  Müşteri Kartı →
-                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handlePrint}
+                    className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 flex items-center gap-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 6 2 18 2 18 9"/>
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                      <rect x="6" y="14" width="12" height="8"/>
+                    </svg>
+                    PDF İndir
+                  </button>
+                  <button
+                    onClick={openMutabakatModal}
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                  >
+                    Mutabakat Formu
+                  </button>
+                  <Link href={`/customers/${selected.id}`}
+                    className="text-xs text-[#C8102E] hover:underline font-medium flex-shrink-0">
+                    Müşteri Kartı →
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -263,12 +532,15 @@ export default function MusteriCariClient({ customers, invoices, payments, today
 
             {/* Sekmeler */}
             <div className="bg-white border rounded-xl overflow-hidden">
-              <div className="border-b px-4 flex gap-0">
-                {(['faturalar', 'odemeler', 'ekstre', 'notlar'] as const).map(tab => {
-                  const labels = { faturalar: 'Faturalar', odemeler: 'Ödemeler', ekstre: 'Hesap Özeti', notlar: 'Notlar' }
+              <div className="border-b px-4 flex gap-0 overflow-x-auto">
+                {(['faturalar', 'odemeler', 'ekstre', 'mutabakat', 'notlar'] as const).map(tab => {
+                  const labels: Record<string, string> = {
+                    faturalar: 'Faturalar', odemeler: 'Ödemeler',
+                    ekstre: 'Hesap Özeti', notlar: 'Notlar', mutabakat: 'Mutabakat Formları'
+                  }
                   return (
                     <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
+                      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
                       {labels[tab]}
                     </button>
                   )
@@ -436,7 +708,123 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                 </div>
               )}
 
-              {/* Sekme 4: Notlar */}
+              {/* Sekme 4: Mutabakat Formları */}
+              {activeTab === 'mutabakat' && (
+                <div>
+                  <div className="px-4 py-2 border-b bg-gray-50 flex justify-between items-center">
+                    <span className="text-xs text-gray-500">Mutabakat Mektupları</span>
+                    <button
+                      onClick={openMutabakatModal}
+                      className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700"
+                    >
+                      + Yeni Mutabakat
+                    </button>
+                  </div>
+
+                  {mutabakatLoading ? (
+                    <div className="px-4 py-8 text-center text-sm text-gray-400">Yükleniyor...</div>
+                  ) : mutabakatList.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-gray-400">Henüz mutabakat formu yok.</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Mutabakat Tarihi</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Bizim Bakiye</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Müşteri Bakiyesi</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Durum</th>
+                            <th className="px-4 py-2.5" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {mutabakatList.map(m => {
+                            const durumCfg = MUTABAKAT_DURUM_LABELS[m.durum] ?? { label: m.durum, cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+                            const isEditing = mutabakatDurumEdit === m.id
+                            return (
+                              <tr key={m.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-2.5 text-xs text-gray-600">{formatTRDate(m.mutabakat_tarihi)}</td>
+                                <td className="px-4 py-2.5 text-right font-semibold text-gray-800">{formatCurrency(m.bizim_bakiye)}</td>
+                                <td className="px-4 py-2.5 text-right">
+                                  {m.musteri_bakiyesi != null ? (
+                                    <span className={`text-sm font-medium ${m.musteri_bakiyesi !== m.bizim_bakiye ? 'text-red-600' : 'text-green-600'}`}>
+                                      {formatCurrency(m.musteri_bakiyesi)}
+                                    </span>
+                                  ) : <span className="text-gray-300 text-xs">—</span>}
+                                </td>
+                                <td className="px-4 py-2.5">
+                                  {isEditing ? (
+                                    <div className="flex flex-col gap-1">
+                                      <select
+                                        className="border rounded px-2 py-1 text-xs"
+                                        defaultValue={m.durum}
+                                        onChange={async e => {
+                                          await updateMutabakatDurum(m.id, e.target.value)
+                                          setMutabakatDurumEdit(null)
+                                        }}
+                                      >
+                                        {Object.entries(MUTABAKAT_DURUM_LABELS).map(([k, v]) => (
+                                          <option key={k} value={k}>{v.label}</option>
+                                        ))}
+                                      </select>
+                                      {(m.durum === 'itiraz' || m.durum === 'fark_var') && (
+                                        <div className="flex gap-1">
+                                          <input
+                                            type="number"
+                                            placeholder="Müşteri bakiyesi"
+                                            value={musteriBakiyeEdit}
+                                            onChange={e => setMusteriBakiyeEdit(e.target.value)}
+                                            className="border rounded px-2 py-1 text-xs w-28"
+                                          />
+                                          <button
+                                            onClick={() => {
+                                              const v = parseFloat(musteriBakiyeEdit)
+                                              if (!isNaN(v)) updateMutabakatDurum(m.id, m.durum, v)
+                                              setMutabakatDurumEdit(null)
+                                            }}
+                                            className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
+                                          >
+                                            Kaydet
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => { setMutabakatDurumEdit(m.id); setMusteriBakiyeEdit(String(m.musteri_bakiyesi ?? '')) }}
+                                      className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border cursor-pointer hover:opacity-80 ${durumCfg.cls}`}
+                                    >
+                                      {durumCfg.label} ▾
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2.5">
+                                  <div className="flex gap-2 justify-end">
+                                    <Link
+                                      href={`/cari-hesap/musteri-cari/mutabakat/${m.id}`}
+                                      className="text-xs text-blue-600 hover:underline font-medium"
+                                    >
+                                      PDF →
+                                    </Link>
+                                    <button
+                                      onClick={() => deleteMutabakat(m.id)}
+                                      className="text-xs text-red-400 hover:text-red-600"
+                                    >
+                                      Sil
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sekme 5: Notlar */}
               {activeTab === 'notlar' && (
                 <div className="p-4 space-y-3">
                   <div className="flex gap-2">
@@ -473,6 +861,72 @@ export default function MusteriCariClient({ customers, invoices, payments, today
           </div>
         )}
       </div>
+
+      {/* ── Mutabakat Oluşturma Modal ── */}
+      {showMutabakatModal && selected && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900">Mutabakat Formu Oluştur</h3>
+              <button onClick={() => setShowMutabakatModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Müşteri</label>
+                <div className="border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700">{selected.full_name}</div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Mutabakat Tarihi</label>
+                <input
+                  type="date"
+                  value={mutabakatTarih}
+                  onChange={e => setMutabakatTarih(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Bizim Bakiyemiz (TL)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={mutabakatBakiye}
+                  onChange={e => setMutabakatBakiye(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {selected.kalan > 0 && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    Güncel kalan alacak: {formatCurrency(selected.kalan)}
+                    {' '}<button onClick={() => setMutabakatBakiye(String(selected.kalan.toFixed(2)))} className="text-blue-600 hover:underline">Kullan</button>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Notlar</label>
+                <textarea
+                  value={mutabakatNotlar}
+                  onChange={e => setMutabakatNotlar(e.target.value)}
+                  rows={2}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="İsteğe bağlı..."
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t flex gap-3 justify-end">
+              <button onClick={() => setShowMutabakatModal(false)}
+                className="border px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                İptal
+              </button>
+              <button
+                onClick={saveMutabakat}
+                disabled={mutabakatSaving || !mutabakatTarih || !mutabakatBakiye}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              >
+                {mutabakatSaving ? 'Kaydediliyor...' : 'Kaydet ve PDF Oluştur'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

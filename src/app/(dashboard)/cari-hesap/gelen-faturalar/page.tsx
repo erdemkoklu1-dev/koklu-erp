@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
-import { formatCurrency, formatTRDate } from '@/lib/finance/formatters'
+import { formatCurrency } from '@/lib/finance/formatters'
 import GelenFaturaTable from './GelenFaturaTable'
 import GelenFiltresi from './GelenFiltresi'
 import PrintButton from '@/components/PrintButton'
@@ -32,8 +32,8 @@ export default async function GelenFaturalarPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    tedarikci?: string; odeme_durumu?: string; vade_durumu?: string; kategori?: string
-    period?: string; from?: string; to?: string; sort?: string
+    q?: string; tedarikci?: string; odeme_durumu?: string; vade_durumu?: string; kategori?: string
+    period?: string; from?: string; to?: string; sort?: string; sehir?: string
   }>
 }) {
   const params = await searchParams
@@ -44,37 +44,60 @@ export default async function GelenFaturalarPage({
 
   const { from: dateFrom, to: dateTo } = computeDateRange(params.period, params.from, params.to)
 
-  // DB sort
   const dbSortCol = params.sort === 'date_asc' ? 'invoice_date'
     : params.sort === 'amount_desc' || params.sort === 'amount_asc' ? 'total_amount'
     : 'invoice_date'
   const dbAsc = params.sort === 'date_asc' || params.sort === 'amount_asc'
 
-  let query = supabase
-    .from('invoices')
-    .select('id, invoice_number, supplier_name, invoice_date, due_date, total_amount, paid_amount, status, notes')
-    .eq('invoice_type', 'alis')
-    .neq('status', 'iptal')
-    .order(dbSortCol, { ascending: dbAsc })
-
-  if (params.tedarikci)    query = query.ilike('supplier_name', `%${params.tedarikci}%`)
-  if (dateFrom)            query = query.gte('invoice_date', dateFrom)
-  if (dateTo)              query = query.lte('invoice_date', dateTo)
-  if (params.kategori === 'vergi') query = query.ilike('notes', '%Vergi Ödemesi%')
-
-  if (params.odeme_durumu && params.odeme_durumu !== 'tumu') {
-    if (params.odeme_durumu === 'odenmemis') {
-      query = query.in('status', ['taslak', 'kesildi', 'gonderildi'])
-    } else {
-      query = query.eq('status', params.odeme_durumu)
-    }
+  // İl filtresi: önce bu ildeki tedarikçilerin firma adlarını bul
+  let supplierFilter: string[] | null = null
+  if (params.sehir) {
+    const { data: teds } = await supabase
+      .from('tedarikciler')
+      .select('firma_adi')
+      .eq('sehir', params.sehir)
+    supplierFilter = (teds ?? []).map((t: any) => t.firma_adi).filter(Boolean)
   }
 
-  const { data: allInvoices } = await query
+  let invoices: any[] = []
+
+  // Eğer il filtresi seçiliyse ama o ilde tedarikçi yoksa boş döndür
+  const noSehirMatch = supplierFilter !== null && supplierFilter.length === 0
+  if (!noSehirMatch) {
+    let query = supabase
+      .from('invoices')
+      .select('id, invoice_number, supplier_name, invoice_date, due_date, total_amount, paid_amount, status, notes')
+      .eq('invoice_type', 'alis')
+      .neq('status', 'iptal')
+      .order(dbSortCol, { ascending: dbAsc })
+
+    // Unified search: fatura no + tedarikçi adı
+    const aramaMetni = (params.q ?? params.tedarikci ?? '').trim()
+    if (aramaMetni.length >= 2) {
+      query = query.or(`invoice_number.ilike.%${aramaMetni}%,supplier_name.ilike.%${aramaMetni}%`)
+    }
+
+    if (dateFrom) query = query.gte('invoice_date', dateFrom)
+    if (dateTo)   query = query.lte('invoice_date', dateTo)
+    if (params.kategori === 'vergi') query = query.ilike('notes', '%Vergi Ödemesi%')
+
+    if (params.odeme_durumu && params.odeme_durumu !== 'tumu') {
+      if (params.odeme_durumu === 'odenmemis') {
+        query = query.in('status', ['taslak', 'kesildi', 'gonderildi'])
+      } else {
+        query = query.eq('status', params.odeme_durumu)
+      }
+    }
+
+    if (supplierFilter !== null && supplierFilter.length > 0) {
+      query = query.in('supplier_name', supplierFilter)
+    }
+
+    const { data } = await query
+    invoices = data ?? []
+  }
 
   // Post-fetch: JS sort + vade filter
-  let invoices = allInvoices ?? []
-
   if (params.sort === 'customer_asc') {
     invoices = [...invoices].sort((a, b) => (a.supplier_name ?? '').localeCompare(b.supplier_name ?? '', 'tr'))
   } else if (params.sort === 'customer_desc') {

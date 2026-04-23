@@ -30,15 +30,14 @@ function computeDateRange(period?: string, from?: string, to?: string) {
 export default async function GidenFaturalarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; from?: string; to?: string; sort?: string; durum?: string }>
+  searchParams: Promise<{ q?: string; period?: string; from?: string; to?: string; sort?: string; durum?: string; sehir?: string }>
 }) {
-  const { q, period, from: fromParam, to: toParam, sort, durum } = await searchParams
+  const { q, period, from: fromParam, to: toParam, sort, durum, sehir } = await searchParams
   const supabase = createServiceClient()
   const today = new Date().toISOString().split('T')[0]
 
   const { from: dateFrom, to: dateTo } = computeDateRange(period, fromParam, toParam)
 
-  // DB-level sort
   const dbSortCol = sort === 'date_asc' ? 'invoice_date'
     : sort === 'amount_desc' || sort === 'amount_asc' ? 'total_amount'
     : 'invoice_date'
@@ -46,7 +45,7 @@ export default async function GidenFaturalarPage({
 
   let query = supabase
     .from('invoices')
-    .select('id, invoice_number, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, customers(full_name)')
+    .select('id, invoice_number, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, customers(full_name, il)')
     .eq('invoice_type', 'satis')
     .neq('status', 'iptal')
     .order(dbSortCol, { ascending: dbAsc })
@@ -54,7 +53,11 @@ export default async function GidenFaturalarPage({
   if (dateFrom) query = query.gte('invoice_date', dateFrom)
   if (dateTo)   query = query.lte('invoice_date', dateTo)
 
-  // Durum filtresi
+  // Fatura no DB-level search (min 2 chars)
+  if (q && q.trim().length >= 2) {
+    query = query.ilike('invoice_number', `%${q.trim()}%`)
+  }
+
   if (durum && durum !== 'tumu' && durum !== 'gecikmiş') {
     if (durum === 'vergi_mahsup') {
       query = query.eq('mahsup_durumu', 'vergi_mahsup')
@@ -65,7 +68,6 @@ export default async function GidenFaturalarPage({
 
   const { data: rawInvoices } = await query
 
-  // Post-fetch: JS sort + search + gecikmiş filter
   let invoices = rawInvoices ?? []
 
   if (sort === 'customer_asc') {
@@ -92,12 +94,21 @@ export default async function GidenFaturalarPage({
     )
   }
 
-  if (q) {
-    const s = q.toLowerCase()
+  // Müşteri adına göre search (JS-side, joined table)
+  if (q && q.trim().length >= 2) {
+    const s = q.trim().toLowerCase()
     invoices = invoices.filter(i => {
       const c = i.customers as any
       return (i.invoice_number ?? '').toLowerCase().includes(s) ||
         (c?.full_name ?? '').toLowerCase().includes(s)
+    })
+  }
+
+  // İl filtresi: customers.il'e göre
+  if (sehir) {
+    invoices = invoices.filter(i => {
+      const c = i.customers as any
+      return (c?.il ?? '') === sehir
     })
   }
 

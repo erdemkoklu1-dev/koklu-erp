@@ -27,7 +27,9 @@
       "Read(//c/Users/erdem/.supabase/**)",
       "Bash(ls -la *.env* .env*)",
       "Bash(grep -v \":0$\")",
-      "Bash(grep -l \"PrintButton\" C:/Projects/koklu-erp/src/app/**/*.tsx C:/Projects/koklu-erp/src/app/**/**/*.tsx)"
+      "Bash(grep -l \"PrintButton\" C:/Projects/koklu-erp/src/app/**/*.tsx C:/Projects/koklu-erp/src/app/**/**/*.tsx)",
+      "Bash(mkdir -p \"C:/Projects/koklu-erp/src/app/\\(dashboard\\)/subeler/[id]/edit\")",
+      "Bash(mkdir -p \"C:/Projects/koklu-erp/src/app/\\(dashboard\\)/subeler/[id]/rapor\")"
     ]
   }
 }
