@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // lucide-react tree-shaking — büyük icon paketini sadece kullanılanları çeker
+  serverExternalPackages: ['pdfjs-dist'],
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },

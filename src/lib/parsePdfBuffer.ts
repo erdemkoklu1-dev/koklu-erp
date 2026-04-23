@@ -1,5 +1,22 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse: (buffer: Buffer) => Promise<{ text: string }> = require('pdf-parse')
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+
+async function extractTextFromPdf(buffer: Buffer): Promise<string> {
+  const uint8Array = new Uint8Array(buffer)
+  const loadingTask = pdfjsLib.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false })
+  const pdf = await loadingTask.promise
+  let fullText = ''
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const textContent = await page.getTextContent()
+    const pageText = (textContent.items as { str: string }[])
+      .map(item => item.str)
+      .join(' ')
+    fullText += pageText + '\n'
+  }
+  return fullText
+}
 
 // ── Sabitler ────────────────────────────────────────────────────
 
@@ -393,8 +410,7 @@ export async function parsePdfBuffer(
   }
 
   try {
-    const data = await pdfParse(buffer)
-    let text = data.text
+    let text = await extractTextFromPdf(buffer)
     text = text.replace(/­/g, '-').replace(/\xad/g, '-')
 
     // ── Fatura No ────────────────────────────────────────────────
