@@ -99,6 +99,8 @@ export default async function TeklifPdfPage({ params }: { params: Promise<{ id: 
           fontSize: '11px',
           color: '#1a1a1a',
           boxSizing: 'border-box',
+          WebkitPrintColorAdjust: 'exact' as any,
+          printColorAdjust: 'exact' as any,
         }}
       >
         {/* ── BAŞLIK BÖLÜMÜ ── */}
@@ -172,13 +174,13 @@ export default async function TeklifPdfPage({ params }: { params: Promise<{ id: 
             <col style={{ width: '18%' }} />
           </colgroup>
           <thead>
-            <tr style={{ backgroundColor: '#C8102E', color: '#fff' }}>
-              <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '700', letterSpacing: '0.3px' }}>S.NO</th>
-              <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '700' }}>ADET</th>
-              <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700' }}>MALIN CİNSİ</th>
-              <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: '10px', fontWeight: '700' }}>B. FİYATI</th>
-              {varSatirIskonto && <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: '10px', fontWeight: '700' }}>İSK.%</th>}
-              <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: '10px', fontWeight: '700' }}>TOPLAM</th>
+            <tr style={{ backgroundColor: '#C8102E', color: '#ffffff', WebkitPrintColorAdjust: 'exact' as any, printColorAdjust: 'exact' as any }}>
+              <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '700', letterSpacing: '0.3px', backgroundColor: '#C8102E', color: '#ffffff', border: 'none' }}>S.NO</th>
+              <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '700', backgroundColor: '#C8102E', color: '#ffffff', border: 'none' }}>ADET</th>
+              <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', backgroundColor: '#C8102E', color: '#ffffff', border: 'none' }}>MALIN CİNSİ</th>
+              <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: '10px', fontWeight: '700', backgroundColor: '#C8102E', color: '#ffffff', border: 'none' }}>B. FİYATI</th>
+              {varSatirIskonto && <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: '10px', fontWeight: '700', backgroundColor: '#C8102E', color: '#ffffff', border: 'none' }}>İSK.%</th>}
+              <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: '10px', fontWeight: '700', backgroundColor: '#C8102E', color: '#ffffff', border: 'none' }}>TOPLAM</th>
             </tr>
           </thead>
           <tbody>
@@ -240,9 +242,9 @@ export default async function TeklifPdfPage({ params }: { params: Promise<{ id: 
                   <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: '600', borderBottom: '1px solid #eee' }}>{fmtN(kdvTutari, currency)}</td>
                 </tr>
               )}
-              <tr style={{ backgroundColor: '#f5f5f5' }}>
-                <td style={{ padding: '6px 10px', fontWeight: '800', fontSize: '12px' }}>GENEL TOPLAM</td>
-                <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '800', fontSize: '13px', color: '#C8102E' }}>{fmtN(genelToplam, currency)}</td>
+              <tr style={{ backgroundColor: '#f0f0f0', WebkitPrintColorAdjust: 'exact' as any, printColorAdjust: 'exact' as any }}>
+                <td style={{ padding: '6px 10px', fontWeight: '800', fontSize: '12px', color: '#111827', backgroundColor: '#f0f0f0', border: 'none' }}>GENEL TOPLAM</td>
+                <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '800', fontSize: '13px', color: '#C8102E', backgroundColor: '#f0f0f0', border: 'none' }}>{fmtN(genelToplam, currency)}</td>
               </tr>
             </tbody>
           </table>
@@ -295,6 +297,8 @@ export default async function TeklifPdfPage({ params }: { params: Promise<{ id: 
           @page { size: A4; margin: 0; }
           body { margin: 0; background: white; }
           .print\\:hidden { display: none !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          th { background: transparent !important; }
         }
       `}</style>
     </div>

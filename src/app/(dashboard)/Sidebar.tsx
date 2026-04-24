@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/fabrika',                    label: 'Fabrika',            icon: Factory,       modul: 'fabrika' },
   { href: '/hatirlatmalar',              label: 'Hatırlatmalar',      icon: Bell,          modul: 'hatirlatmalar' },
   { href: '/fiyat-teklifleri',           label: 'Fiyat Teklifleri',   icon: FileText,      modul: 'fiyat_teklifleri' },
+  { href: '/fiyat-teklifleri/proforma', label: 'Proforma Fatura',    icon: FileText,      modul: 'fiyat_teklifleri' },
   { href: '/cari-hesap',                 label: 'Cari Hesap',         icon: Wallet,        modul: 'cari_hesap' },
   { href: '/araclar',                    label: 'Aracılar',           icon: Handshake,     modul: 'aracilar' },
   { href: '/subeler',                    label: 'Şubeler',            icon: Building2,     modul: 'subeler' },

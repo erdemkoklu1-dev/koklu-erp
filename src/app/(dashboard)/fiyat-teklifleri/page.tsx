@@ -232,6 +232,10 @@ export default async function FiyatTeklifleriPage({
                           className="text-blue-600 text-sm font-medium hover:underline">
                           Düzenle
                         </Link>
+                        <Link href={`/fiyat-teklifleri/proforma/yeni?teklif_id=${t.id}`}
+                          className="text-purple-600 text-sm font-medium hover:underline">
+                          Proforma
+                        </Link>
                         <TeklifSilButton id={t.id} teklifNo={t.teklif_no} />
                       </div>
                     </td>
