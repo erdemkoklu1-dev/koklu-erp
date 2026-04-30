@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef, Suspense } from 'react'
+import React, { useState, useRef, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/finance/formatters'
@@ -10,6 +10,9 @@ import { useSearchParams } from 'next/navigation'
 function normalizeName(name: string): string {
   return name.toLowerCase().replace(/\s+/g, ' ').trim()
 }
+
+type Sube = { id: string; ad: string }
+
 // ════════════════════════════════════════════════════════
 //  PDF FATURA IMPORT
 // ════════════════════════════════════════════════════════
@@ -48,6 +51,12 @@ type PdfRowStatus = 'eklenecek' | 'yeni_musteri' | 'duplicate' | 'hata'
 type PdfPreviewRow = ParsedInvoice & {
   rowStatus: PdfRowStatus
   editedName: string
+  editedVkn: string
+  editedFaturaNo: string
+  editedTarih: string
+  editedVade: string
+  editedTutar: string
+  sube_id: string | null
   expanded: boolean
 }
 
@@ -76,6 +85,158 @@ function fmtAmt(v: number | null | undefined): string {
   return formatCurrency(v)
 }
 
+// ── Edit Modal ─────────────────────────────────────────────────
+function PdfEditModal({
+  row,
+  rowIdx,
+  subeler,
+  customers,
+  onSave,
+  onClose,
+}: {
+  row: PdfPreviewRow
+  rowIdx: number
+  subeler: Sube[]
+  customers: { id: string; full_name: string; tax_number: string | null }[]
+  onSave: (idx: number, updated: Partial<PdfPreviewRow>) => void
+  onClose: () => void
+}) {
+  const [name, setName]       = useState(row.editedName)
+  const [vkn, setVkn]         = useState(row.editedVkn)
+  const [faturaNo, setFaturaNo] = useState(row.editedFaturaNo)
+  const [tarih, setTarih]     = useState(row.editedTarih)
+  const [vade, setVade]       = useState(row.editedVade)
+  const [tutar, setTutar]     = useState(row.editedTutar)
+  const [subeId, setSubeId]   = useState<string | null>(row.sube_id)
+  const [custDrop, setCustDrop] = useState(false)
+  const custRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (custRef.current && !custRef.current.contains(e.target as Node)) setCustDrop(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  const filteredCust = name.length >= 1
+    ? customers.filter(c => c.full_name.toLowerCase().includes(name.toLowerCase())).slice(0, 8)
+    : []
+
+  function pickCustomer(c: { id: string; full_name: string; tax_number: string | null }) {
+    setName(c.full_name)
+    setVkn(c.tax_number ?? '')
+    setCustDrop(false)
+  }
+
+  function handleSave() {
+    onSave(rowIdx, {
+      editedName: name,
+      editedVkn: vkn,
+      editedFaturaNo: faturaNo,
+      editedTarih: tarih,
+      editedVade: vade,
+      editedTutar: tutar,
+      sube_id: subeId,
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
+          <h3 className="text-sm font-semibold text-gray-900">Fatura Düzenle</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+        </div>
+        <div className="p-5 space-y-4">
+
+          {/* Müşteri unvanı + autocomplete */}
+          <div ref={custRef} className="relative">
+            <label className="text-xs font-medium text-gray-600">Müşteri Unvanı</label>
+            <input
+              value={name}
+              onChange={e => { setName(e.target.value); setCustDrop(true) }}
+              onFocus={() => setCustDrop(true)}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+            />
+            {custDrop && filteredCust.length > 0 && (
+              <div className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                {filteredCust.map(c => (
+                  <button key={c.id} type="button" onMouseDown={() => pickCustomer(c)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0">
+                    <div className="font-medium text-gray-900">{c.full_name}</div>
+                    {c.tax_number && <div className="text-xs text-gray-400 font-mono">{c.tax_number}</div>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* VKN + Fatura No */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600">Müşteri VKN</label>
+              <input value={vkn} onChange={e => setVkn(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Fatura No</label>
+              <input value={faturaNo} onChange={e => setFaturaNo(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
+            </div>
+          </div>
+
+          {/* Tarihler */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600">Fatura Tarihi</label>
+              <input type="date" value={tarih} onChange={e => setTarih(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Vade Tarihi</label>
+              <input type="date" value={vade} onChange={e => setVade(e.target.value)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
+            </div>
+          </div>
+
+          {/* Tutar + Şube */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600">Ödenecek Tutar (₺)</label>
+              <input type="number" value={tutar} onChange={e => setTutar(e.target.value)} step="0.01" min="0"
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Şube</label>
+              <select value={subeId ?? ''} onChange={e => setSubeId(e.target.value || null)}
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                <option value="">— Seçin</option>
+                {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="text-xs text-gray-400">
+            Kalem sayısı: {row.kalemler?.length ?? 0} — Değiştirilemiyor
+          </div>
+        </div>
+        <div className="flex gap-3 px-5 py-4 border-t bg-gray-50">
+          <button onClick={handleSave}
+            className="flex-1 bg-[#C8102E] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#a50d26]">
+            Kaydet
+          </button>
+          <button onClick={onClose}
+            className="px-5 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-100">
+            İptal
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PdfFaturaImport() {
   const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -83,6 +244,23 @@ function PdfFaturaImport() {
   const [error, setError] = useState('')
   const [previewRows, setPreviewRows] = useState<PdfPreviewRow[]>([])
   const [importResult, setImportResult] = useState<PdfImportResult | null>(null)
+  const [subeler, setSubeler] = useState<Sube[]>([])
+  const [globalSubeId, setGlobalSubeId] = useState<string | null>(null)
+  const [editRowIdx, setEditRowIdx] = useState<number | null>(null)
+  const [customers, setCustomers] = useState<{ id: string; full_name: string; tax_number: string | null }[]>([])
+
+  // Şubeleri yükle ve Erzincan Merkez'i varsayılan yap
+  useEffect(() => {
+    supabase.from('subeler').select('id, ad').order('ad').then(({ data }: { data: any; error: any }) => {
+      if (data) {
+        setSubeler(data as Sube[])
+        const erzincan = (data as Sube[]).find(s => s.ad === 'Erzincan Merkez')
+        if (erzincan) setGlobalSubeId(erzincan.id)
+      }
+    })
+    supabase.from('customers').select('id, full_name, tax_number').eq('is_active', true).order('full_name')
+      .then(({ data }: { data: any; error: any }) => { if (data) setCustomers(data as any[]) })
+  }, [])
 
   async function handleFile(file: File) {
     const lowerName = file.name.toLowerCase()
@@ -94,7 +272,7 @@ function PdfFaturaImport() {
     setError('')
 
     try {
-      // ── Dosyayı API'ye gönder, Python ile parse et ────────────
+      // ── Dosyayı API'ye gönder, parse et ────────────────────────
       const fd = new FormData()
       fd.append('file', file)
       const res = await fetch('/api/pdf-fatura-parse', { method: 'POST', body: fd })
@@ -134,6 +312,12 @@ function PdfFaturaImport() {
           ...inv,
           rowStatus,
           editedName: inv.musteri_adi ?? '',
+          editedVkn: inv.musteri_vkn ?? '',
+          editedFaturaNo: inv.fatura_no ?? '',
+          editedTarih: inv.fatura_tarihi ?? '',
+          editedVade: inv.vade_tarihi ?? '',
+          editedTutar: inv.odenecek_tutar != null ? String(inv.odenecek_tutar) : '',
+          sube_id: globalSubeId,
           expanded: false,
         }
       })
@@ -155,18 +339,19 @@ function PdfFaturaImport() {
         .filter(r => r.rowStatus === 'eklenecek' || r.rowStatus === 'yeni_musteri')
         .map(r => ({
           filename:       r.filename,
-          fatura_no:      r.fatura_no ?? '',
-          fatura_tarihi:  r.fatura_tarihi ?? new Date().toISOString().split('T')[0],
-          vade_tarihi:    r.vade_tarihi ?? null,
+          fatura_no:      r.editedFaturaNo.trim() || (r.fatura_no ?? ''),
+          fatura_tarihi:  r.editedTarih || (r.fatura_tarihi ?? new Date().toISOString().split('T')[0]),
+          vade_tarihi:    r.editedVade || r.vade_tarihi || null,
           senaryo:        r.senaryo ?? null,
           musteri_adi:    r.editedName.trim() || (r.musteri_adi ?? 'Bilinmiyor'),
-          musteri_vkn:    r.musteri_vkn ?? null,
+          musteri_vkn:    r.editedVkn.trim() || r.musteri_vkn || null,
           musteri_adresi: r.musteri_adresi ?? null,
           kdv_matrahi:    r.kdv_matrahi ?? null,
           kdv_tutari:     r.kdv_tutari ?? null,
-          odenecek_tutar: r.odenecek_tutar ?? null,
+          odenecek_tutar: r.editedTutar ? parseFloat(r.editedTutar) : (r.odenecek_tutar ?? null),
           kalemler:       r.kalemler ?? [],
           banka_bilgileri: r.banka_bilgileri ?? [],
+          sube_id:        r.sube_id ?? null,
         }))
 
       const res = await fetch('/api/pdf-fatura-save', {
@@ -200,6 +385,31 @@ function PdfFaturaImport() {
     setPreviewRows([])
     setImportResult(null)
     setError('')
+  }
+
+  function applyGlobalSube(subeId: string | null) {
+    setGlobalSubeId(subeId)
+    setPreviewRows(prev => prev.map(r => ({ ...r, sube_id: subeId })))
+  }
+
+  function saveEdit(idx: number, updated: Partial<PdfPreviewRow>) {
+    setPreviewRows(prev => prev.map((r, i) => {
+      if (i !== idx) return r
+      const merged = { ...r, ...updated }
+      // Müşteri eşleştirme güncelle
+      if (updated.editedVkn !== undefined || updated.editedName !== undefined) {
+        const vkn  = (updated.editedVkn ?? r.editedVkn).trim()
+        const name = (updated.editedName ?? r.editedName).trim()
+        const existingVkns  = new Set(customers.filter(c => c.tax_number).map(c => c.tax_number!.trim()))
+        const existingNames = new Set(customers.map(c => normalizeName(c.full_name)))
+        const vknMatch  = vkn  && existingVkns.has(vkn)
+        const nameMatch = name && existingNames.has(normalizeName(name))
+        if (merged.rowStatus !== 'duplicate' && merged.rowStatus !== 'hata') {
+          merged.rowStatus = (vknMatch || nameMatch) ? 'eklenecek' : 'yeni_musteri'
+        }
+      }
+      return merged
+    }))
   }
 
   // ── Adım 1: Upload ────────────────────────────────────────────
@@ -257,10 +467,14 @@ function PdfFaturaImport() {
     const hatali      = previewRows.filter(r => r.rowStatus === 'hata').length
     const toplamTutar = previewRows
       .filter(r => r.rowStatus === 'eklenecek' || r.rowStatus === 'yeni_musteri')
-      .reduce((s, r) => s + (r.odenecek_tutar ?? 0), 0)
+      .reduce((s, r) => s + (r.editedTutar ? parseFloat(r.editedTutar) : (r.odenecek_tutar ?? 0)), 0)
+
+    const erzincanSube = subeler.find(s => s.ad === 'Erzincan Merkez')
+    const istanbulSube = subeler.find(s => s.ad === 'İstanbul Şube')
 
     return (
       <div className="p-6 space-y-4 max-w-6xl mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={resetAll} className="text-sm text-gray-500 hover:text-gray-700">← Geri</button>
@@ -305,6 +519,32 @@ function PdfFaturaImport() {
           </div>
         </div>
 
+        {/* Global Şube Seçici */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-blue-800">Tüm Faturalara Şube:</span>
+          <select
+            value={globalSubeId ?? ''}
+            onChange={e => applyGlobalSube(e.target.value || null)}
+            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+          >
+            <option value="">— Şube seçin</option>
+            {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+          </select>
+          <span className="text-blue-400 text-xs">veya hızlı:</span>
+          {erzincanSube && (
+            <button onClick={() => applyGlobalSube(erzincanSube.id)}
+              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-lg font-medium transition-colors">
+              Tümünü Erzincan'a Ata
+            </button>
+          )}
+          {istanbulSube && (
+            <button onClick={() => applyGlobalSube(istanbulSube.id)}
+              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-lg font-medium transition-colors">
+              Tümünü İstanbul'a Ata
+            </button>
+          )}
+        </div>
+
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
 
         {/* Satır listesi */}
@@ -316,8 +556,10 @@ function PdfFaturaImport() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Müşteri Adı</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-28">Şube</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kalem</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
+                <th className="px-4 py-3 w-8" />
                 <th className="px-4 py-3 w-8" />
                 <th className="px-4 py-3 w-8" />
               </tr>
@@ -341,40 +583,37 @@ function PdfFaturaImport() {
                   ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">Parse Hatası</span>
                   : <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Eklenecek</span>
 
+                const subeAdi = row.sube_id ? (subeler.find(s => s.id === row.sube_id)?.ad ?? '?') : <span className="text-gray-300">—</span>
+
                 return (
                   <React.Fragment key={idx}>
                     <tr className={`${rowBg} border-t`}>
                       <td className="px-4 py-2.5">{badge}</td>
                       <td className="px-4 py-2.5">
-                        {isYeni ? (
-                          <input
-                            value={row.editedName}
-                            onChange={e => setPreviewRows(prev => prev.map((r, i) => i === idx ? { ...r, editedName: e.target.value } : r))}
-                            className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                          />
-                        ) : (
-                          <span className="text-gray-900 font-medium">{row.musteri_adi || <span className="text-gray-400 italic">Bilinmiyor</span>}</span>
-                        )}
-                        {row.musteri_vkn && (
-                          <div className="text-xs text-gray-400 font-mono">{row.musteri_vkn}</div>
+                        <span className="text-gray-900 font-medium">
+                          {row.editedName || <span className="text-gray-400 italic">Bilinmiyor</span>}
+                        </span>
+                        {(row.editedVkn || row.musteri_vkn) && (
+                          <div className="text-xs text-gray-400 font-mono">{row.editedVkn || row.musteri_vkn}</div>
                         )}
                       </td>
                       <td className="px-4 py-2.5 font-mono text-xs text-gray-700">
-                        {row.fatura_no ?? <span className="text-gray-400">—</span>}
+                        {row.editedFaturaNo || row.fatura_no || <span className="text-gray-400">—</span>}
                       </td>
                       <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap text-xs">
-                        <div>{row.fatura_tarihi ?? '—'}</div>
-                        {row.vade_tarihi && (
-                          <div className="text-gray-400">vade: {row.vade_tarihi}</div>
+                        <div>{row.editedTarih || row.fatura_tarihi || '—'}</div>
+                        {(row.editedVade || row.vade_tarihi) && (
+                          <div className="text-gray-400">vade: {row.editedVade || row.vade_tarihi}</div>
                         )}
                       </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-600">{subeAdi}</td>
                       <td className="px-4 py-2.5 text-right text-gray-600">
                         {isHata ? <span className="text-red-500 text-xs">{row.hata?.slice(0, 40)}</span> : (row.kalemler?.length ?? 0)}
                       </td>
                       <td className={`px-4 py-2.5 text-right font-semibold ${isDup ? 'text-gray-400' : 'text-gray-900'}`}>
-                        {fmtAmt(row.odenecek_tutar)}
+                        {row.editedTutar ? fmtAmt(parseFloat(row.editedTutar)) : fmtAmt(row.odenecek_tutar)}
                       </td>
-                      <td className="px-4 py-2.5 text-center">
+                      <td className="px-2 py-2.5 text-center">
                         {!isHata && (row.kalemler?.length ?? 0) > 0 && (
                           <button
                             onClick={() => toggleExpand(idx)}
@@ -384,6 +623,18 @@ function PdfFaturaImport() {
                             {row.expanded ? '▲' : '▼'}
                           </button>
                         )}
+                      </td>
+                      <td className="px-2 py-2.5 text-center">
+                        <button
+                          onClick={() => setEditRowIdx(idx)}
+                          className="text-gray-400 hover:text-blue-500 transition-colors"
+                          title="Düzenle"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
                       </td>
                       <td className="px-2 py-2.5 text-center">
                         <button
@@ -397,7 +648,7 @@ function PdfFaturaImport() {
                     </tr>
                     {row.expanded && (row.kalemler?.length ?? 0) > 0 && (
                       <tr className={`${rowBg} border-t border-dashed`}>
-                        <td colSpan={8} className="px-6 pb-3 pt-1">
+                        <td colSpan={10} className="px-6 pb-3 pt-1">
                           <div className="bg-white border rounded-lg overflow-hidden">
                             <table className="w-full text-xs">
                               <thead className="bg-gray-50 border-b">
@@ -456,6 +707,18 @@ function PdfFaturaImport() {
             İptal
           </button>
         </div>
+
+        {/* Edit Modal */}
+        {editRowIdx !== null && (
+          <PdfEditModal
+            row={previewRows[editRowIdx]}
+            rowIdx={editRowIdx}
+            subeler={subeler}
+            customers={customers}
+            onSave={saveEdit}
+            onClose={() => setEditRowIdx(null)}
+          />
+        )}
       </div>
     )
   }
@@ -617,6 +880,7 @@ type GelenPdfPreviewRow = GelenParsedInvoice & {
   rowStatus: GelenPdfRowStatus
   editedName: string
   editedKategori: string
+  sube_id: string | null
   expanded: boolean
 }
 
@@ -646,6 +910,18 @@ function GelenPdfFaturaImport() {
   const [error, setError] = useState('')
   const [previewRows, setPreviewRows] = useState<GelenPdfPreviewRow[]>([])
   const [importResult, setImportResult] = useState<GelenPdfImportResult | null>(null)
+  const [subeler, setSubeler] = useState<Sube[]>([])
+  const [globalSubeId, setGlobalSubeId] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.from('subeler').select('id, ad').order('ad').then(({ data }: { data: any; error: any }) => {
+      if (data) {
+        setSubeler(data as Sube[])
+        const erzincan = (data as Sube[]).find(s => s.ad === 'Erzincan Merkez')
+        if (erzincan) setGlobalSubeId(erzincan.id)
+      }
+    })
+  }, [])
 
   async function handleFile(file: File) {
     const lowerName = file.name.toLowerCase()
@@ -689,7 +965,6 @@ function GelenPdfFaturaImport() {
           const taxMatch  = !!taxNo  && existingTaxNos.has(taxNo.trim())
           const nameMatch = !!name   && existingNames.has(normalizeName(name))
           const isYeni    = !taxMatch && !nameMatch
-          // Yeni tedarikçi ise sarı; mevcut tedarikçi ve kategori bilinmiyorsa turuncu; diğerleri yeşil
           if (isYeni) {
             rowStatus = 'yeni_tedarikci'
           } else if (inv.gider_kategorisi === 'Genel Gider') {
@@ -703,6 +978,7 @@ function GelenPdfFaturaImport() {
           rowStatus,
           editedName: inv.satici_adi ?? '',
           editedKategori: inv.gider_kategorisi ?? 'Genel Gider',
+          sube_id: globalSubeId,
           expanded: false,
         }
       })
@@ -737,6 +1013,7 @@ function GelenPdfFaturaImport() {
           banka_bilgileri: r.banka_bilgileri ?? [],
           gider_kategorisi: r.editedKategori,
           bakiye_notu:     r.bakiye_notu ?? null,
+          sube_id:         r.sube_id ?? null,
         }))
 
       const res = await fetch('/api/gelen-pdf-save', {
@@ -770,6 +1047,11 @@ function GelenPdfFaturaImport() {
     setPreviewRows([])
     setImportResult(null)
     setError('')
+  }
+
+  function applyGlobalSube(subeId: string | null) {
+    setGlobalSubeId(subeId)
+    setPreviewRows(prev => prev.map(r => ({ ...r, sube_id: subeId })))
   }
 
   // ── Upload ────────────────────────────────────────────
@@ -833,6 +1115,9 @@ function GelenPdfFaturaImport() {
       .filter(r => r.rowStatus !== 'duplicate' && r.rowStatus !== 'hata')
       .reduce((s, r) => s + (r.odenecek_tutar ?? 0), 0)
 
+    const erzincanSube = subeler.find(s => s.ad === 'Erzincan Merkez')
+    const istanbulSube = subeler.find(s => s.ad === 'İstanbul Şube')
+
     return (
       <div className="p-6 space-y-4 max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
@@ -883,6 +1168,32 @@ function GelenPdfFaturaImport() {
           </div>
         </div>
 
+        {/* Global Şube Seçici */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-blue-800">Tüm Faturalara Şube:</span>
+          <select
+            value={globalSubeId ?? ''}
+            onChange={e => applyGlobalSube(e.target.value || null)}
+            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+          >
+            <option value="">— Şube seçin</option>
+            {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+          </select>
+          <span className="text-blue-400 text-xs">veya hızlı:</span>
+          {erzincanSube && (
+            <button onClick={() => applyGlobalSube(erzincanSube.id)}
+              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-lg font-medium transition-colors">
+              Tümünü Erzincan'a Ata
+            </button>
+          )}
+          {istanbulSube && (
+            <button onClick={() => applyGlobalSube(istanbulSube.id)}
+              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-lg font-medium transition-colors">
+              Tümünü İstanbul'a Ata
+            </button>
+          )}
+        </div>
+
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
 
         <div className="bg-white border rounded-xl overflow-hidden">
@@ -894,6 +1205,7 @@ function GelenPdfFaturaImport() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih / Vade</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-28">Şube</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kalem</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
                 <th className="px-4 py-3 w-8" />
@@ -922,6 +1234,8 @@ function GelenPdfFaturaImport() {
                   : isManuel
                   ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200">Manuel Kategori</span>
                   : <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Eklenecek</span>
+
+                const subeAdi = row.sube_id ? (subeler.find(s => s.id === row.sube_id)?.ad ?? '?') : <span className="text-gray-300">—</span>
 
                 return (
                   <React.Fragment key={idx}>
@@ -958,11 +1272,9 @@ function GelenPdfFaturaImport() {
                               if (i !== idx) return r
                               const newKat = e.target.value
                               let newStatus = r.rowStatus
-                              // Eğer 'manuel_kategori' iken Genel Gider dışı bir şey seçilirse → 'eklenecek'
                               if (r.rowStatus === 'manuel_kategori' && newKat !== 'Genel Gider') {
                                 newStatus = 'eklenecek'
                               }
-                              // Eğer 'eklenecek' iken Genel Gider seçilirse → 'manuel_kategori'
                               if (r.rowStatus === 'eklenecek' && newKat === 'Genel Gider') {
                                 newStatus = 'manuel_kategori'
                               }
@@ -976,6 +1288,20 @@ function GelenPdfFaturaImport() {
                           </select>
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-600">
+                        {!isDup && !isHata ? (
+                          <select
+                            value={row.sube_id ?? ''}
+                            onChange={e => setPreviewRows(prev => prev.map((r, i) => i === idx ? { ...r, sube_id: e.target.value || null } : r))}
+                            className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C8102E] bg-white"
+                          >
+                            <option value="">—</option>
+                            {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+                          </select>
+                        ) : (
+                          <span className="text-gray-300">—</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-600">
@@ -1011,7 +1337,7 @@ function GelenPdfFaturaImport() {
                     </tr>
                     {row.expanded && (row.kalemler?.length ?? 0) > 0 && (
                       <tr key={`${idx}-items`} className={`${rowBg} border-t border-dashed`}>
-                        <td colSpan={9} className="px-6 pb-3 pt-1">
+                        <td colSpan={10} className="px-6 pb-3 pt-1">
                           {row.bakiye_notu && (
                             <div className="mb-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded px-3 py-1.5">
                               {row.bakiye_notu}

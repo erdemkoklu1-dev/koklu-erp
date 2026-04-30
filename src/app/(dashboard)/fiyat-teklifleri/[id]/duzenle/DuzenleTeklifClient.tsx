@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
+import SubeSelect from '@/components/SubeSelect'
 
 // ─── Türkçe para yazıya çevirme ────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -129,6 +130,7 @@ export default function DuzenleTeklifClient({
     teklif.ticari_sartname_metni || buildSartname((teklif.kdv_durumu as KdvDurumu) || 'haric', teklif.gecerlilik_suresi || 7)
   )
 
+  const [subeId, setSubeId] = useState<string | null>(teklif.sube_id ?? null)
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
@@ -253,7 +255,7 @@ export default function DuzenleTeklifClient({
     try {
       const { error: tErr } = await supabase.from('teklifler').update({
         tarih, gecerlilik_suresi: gecerlilik, gecerlilik_bitis: gecerlilikBitis,
-        sehir: sehir || null, durum,
+        sehir: sehir || null, durum, sube_id: subeId || null,
         musteri_id: musteriMod === 'kayitli' ? seciliMusteri?.id : null,
         musteri_adi: musteriAdi,
         musteri_sehir: musteriMod === 'kayitli' ? sehir || null : manuelSehir || null,
@@ -336,6 +338,10 @@ export default function DuzenleTeklifClient({
                   <option value="kaybedildi">Kaybedildi</option>
                   <option value="iptal">İptal</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Şube</label>
+                <SubeSelect value={subeId} onChange={setSubeId} label="" />
               </div>
             </div>
           </div>

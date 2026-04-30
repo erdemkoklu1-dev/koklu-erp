@@ -27,6 +27,7 @@ export type PdfInvoiceRow = {
   odenecek_tutar?: number | null
   kalemler: PdfInvoiceItem[]
   banka_bilgileri?: Array<{ iban: string; banka_adi?: string | null }>
+  sube_id?: string | null
 }
 
 function normalizeName(n: string): string {
@@ -125,11 +126,13 @@ export async function POST(req: NextRequest) {
 
         // ── Yeni müşteri oluştur ──────────────────────────────────
         if (!customerId) {
+          // 11 haneli numara = TC Kimlik → bireysel müşteri
+          const isBireysel = row.musteri_vkn ? /^\d{11}$/.test(row.musteri_vkn.trim()) : false
           const { data: newCust, error: custErr } = await supabase
             .from('customers')
             .insert({
               full_name:  row.musteri_adi.trim(),
-              type:       'company',
+              type:       isBireysel ? 'individual' : 'company',
               tax_number: row.musteri_vkn  || null,
               address:    row.musteri_adresi || null,
               is_active:  true,
@@ -174,6 +177,7 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    row.senaryo ? `PDF e-Fatura: ${row.senaryo}` : 'PDF e-Fatura',
             notes:          bankaNotu || null,
+            sube_id:        row.sube_id || null,
           })
           .select('id')
           .single()

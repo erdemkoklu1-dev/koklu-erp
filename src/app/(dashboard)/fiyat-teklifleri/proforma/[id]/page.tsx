@@ -36,6 +36,7 @@ export default async function ProformaDuzenlePage({
     banka_adi:             proforma.banka_adi ?? '',
     notlar:                proforma.notlar ?? '',
     ozel_sartlar:          proforma.ozel_sartlar ?? '',
+    sube_id:               proforma.sube_id ?? null,
     kalemleri: (kalemler ?? []).map((k: any): ProformaKalem => ({
       id:             Math.random().toString(36).slice(2),
       sira_no:        k.sira_no,

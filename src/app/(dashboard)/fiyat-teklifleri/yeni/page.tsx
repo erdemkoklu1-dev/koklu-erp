@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
+import SubeSelect from '@/components/SubeSelect'
 
 // ─── Türkçe para yazıya çevirme ────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -100,6 +101,7 @@ export default function YeniTeklifPage() {
   const [sartname, setSartname]           = useState(false)
   const [sartnameMetin, setSartnameMetin] = useState(() => buildSartname('haric', 7))
 
+  const [subeId, setSubeId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
@@ -247,7 +249,7 @@ export default function YeniTeklifPage() {
     try {
       const { data: teklif, error: tErr } = await supabase.from('teklifler').insert([{
         teklif_no, tarih, gecerlilik_suresi: gecerlilik, gecerlilik_bitis: gecerlilikBitis,
-        sehir: sehir || null, durum,
+        sehir: sehir || null, durum, sube_id: subeId || null,
         musteri_id: musteriMod === 'kayitli' ? seciliMusteri?.id : null,
         musteri_adi: musteriAdi,
         musteri_sehir: musteriMod === 'kayitli' ? sehir || null : manuelSehir || null,
@@ -332,6 +334,10 @@ export default function YeniTeklifPage() {
                   <option value="kazanildi">Kazanıldı</option>
                   <option value="kaybedildi">Kaybedildi</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600">Şube</label>
+                <SubeSelect value={subeId} onChange={setSubeId} label="" />
               </div>
             </div>
           </div>

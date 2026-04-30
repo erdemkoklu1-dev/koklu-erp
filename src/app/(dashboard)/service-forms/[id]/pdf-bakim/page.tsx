@@ -27,6 +27,28 @@ function mergeStatus(current: string | null, next: string | null) {
   return 'KARISIK'
 }
 
+function statusDisplay(value: string): { label: string; color: string } {
+  const upper = (value ?? '').trim().toUpperCase()
+  if (upper === 'SAĞLAM') return { label: 'SAĞLAM', color: '#16a34a' }
+  if (upper === 'HASARLI') return { label: 'HASARLI', color: '#dc2626' }
+  if (upper === 'DEĞİŞTİRİLDİ') return { label: 'DEĞİŞTİRİLDİ', color: '#ca8a04' }
+  if (upper === 'YOK') return { label: 'YOK', color: '#9ca3af' }
+  if (upper === 'KARISIK') return { label: 'KARISIK', color: '#ca8a04' }
+  return { label: upper || '-', color: '#9ca3af' }
+}
+
+const C = {
+  red: '#dc2626',
+  redDark: '#b91c1c',
+  black: '#1a1a1a',
+  darkGray: '#374151',
+  gray: '#6b7280',
+  lightGray: '#9ca3af',
+  bgGray: '#f9fafb',
+  border: '#e5e7eb',
+  white: '#ffffff',
+}
+
 export default async function ServiceFormBakimPdfPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -120,121 +142,232 @@ export default async function ServiceFormBakimPdfPage({ params }: { params: Prom
   const customer = form.customers as any
   const controlLabel = form.control_number ? `${form.control_number}. Kontrol` : 'Dolum / Genel Bakım'
 
+  const thStyle: React.CSSProperties = {
+    border: `1px solid ${C.redDark}`,
+    padding: '6px 8px',
+    textAlign: 'center',
+    fontWeight: 700,
+    fontSize: '8pt',
+    color: C.white,
+    backgroundColor: C.red,
+  }
+
+  const infoFields: [string, string | null][] = [
+    ['Müşteri', customer?.full_name],
+    ['Adres', customer?.address],
+    ['Telefon', customer?.phone],
+    ['Vergi No', customer?.tax_number],
+    ['Teknisyen', form.technician_name],
+  ]
+
   return (
-    <div className="min-h-screen bg-white text-black">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
       <PrintActions backHref={`/service-forms/${id}`} />
+      <style>{`
+        @page { size: A4 portrait; margin: 0; }
+        @media print {
+          html, body { margin: 0; padding: 0; background: white; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .no-print { display: none !important; }
+          .pdf-page { box-shadow: none !important; margin: 0 !important; max-width: 100% !important; }
+        }
+      `}</style>
 
-      <main className="max-w-5xl mx-auto p-6 space-y-4">
-        <header className="border-2 border-black p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-bold">FIRMA BAKIM FORMU</h1>
-              <div className="text-sm mt-1 font-semibold">{customer?.full_name ?? '-'}</div>
+      <div
+        className="pdf-page"
+        style={{
+          maxWidth: '794px',
+          margin: '24px auto',
+          backgroundColor: C.white,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+          position: 'relative',
+          minHeight: '1123px',
+          paddingTop: '30px',
+          paddingBottom: '80px',
+          paddingLeft: '35px',
+          paddingRight: '35px',
+          fontFamily: 'Helvetica, Arial, sans-serif',
+          fontSize: '9pt',
+          color: C.black,
+        }}
+      >
+        {/* HEADER */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div>
+            <div style={{ fontSize: '22pt', fontWeight: 700, color: C.red, lineHeight: 1.1 }}>KÖKLÜ</div>
+            <div style={{ fontSize: '10pt', fontWeight: 700, color: C.black, lineHeight: 1.3 }}>YANGIN SÖNDÜRME CİHAZLARI</div>
+            <div style={{ fontSize: '10pt', fontWeight: 700, color: C.black, lineHeight: 1.3 }}>SANAYİ VE TİCARET LTD. ŞTİ.</div>
+            <div style={{ fontSize: '8pt', color: '#555555', marginTop: '5px', lineHeight: 1.5 }}>
+              Merkez: Karaağaç Mah. 774. Sok. No:49 Erzincan | Tel: (0446) 214 45 81
             </div>
-            <div className="text-sm text-right">
-              <div>Tarih: {toTrDate(form.service_date)}</div>
-              <div>Servis Turu: {controlLabel}</div>
-              <div>Form No: {form.form_number}</div>
+            <div style={{ fontSize: '8pt', color: '#555555', lineHeight: 1.5 }}>
+              Şube: Kışla Cd. Seferağa San. Sit. No:181/B İstanbul | Tel: (0534) 311 49 05
             </div>
           </div>
-        </header>
-
-        <section className="border border-black p-4 text-sm">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="font-semibold">Musteri:</span> {customer?.full_name ?? '-'}
-            </div>
-            <div>
-              <span className="font-semibold">Telefon:</span> {customer?.phone ?? '-'}
-            </div>
-            <div>
-              <span className="font-semibold">Adres:</span> {customer?.address ?? '-'}
-            </div>
-            <div>
-              <span className="font-semibold">Teknisyen:</span> {form.technician_name ?? '-'}
-            </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '18pt', fontWeight: 700, color: C.red, lineHeight: 1.1 }}>BAKIM FORMU</div>
+            <div style={{ fontSize: '8pt', color: '#555555', marginTop: '8px' }}>Tarih: {toTrDate(form.service_date)}</div>
+            <div style={{ fontSize: '8pt', color: '#555555' }}>Servis: {controlLabel}</div>
+            <div style={{ fontSize: '8pt', color: '#555555' }}>Form No: {form.form_number}</div>
           </div>
+        </div>
+
+        {/* Red divider */}
+        <div style={{ height: '2px', backgroundColor: C.red, marginBottom: '14px' }} />
+
+        {/* Customer info box */}
+        <section style={{
+          border: `1px solid ${C.border}`,
+          backgroundColor: C.bgGray,
+          borderRadius: '3px',
+          padding: '10px 14px',
+          marginBottom: '14px',
+        }}>
+          {infoFields.map(([label, value]) => (
+            <div key={label} style={{ display: 'flex', marginBottom: '3px', lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 700, width: '100pt', flexShrink: 0, color: C.darkGray, fontSize: '9pt' }}>{label}:</div>
+              <div style={{ color: C.black, fontSize: '9pt' }}>{value ?? '-'}</div>
+            </div>
+          ))}
         </section>
 
-        <section className="border border-black">
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-black px-2 py-2 text-left">Malin Cinsi</th>
-                <th className="border border-black px-2 py-2 text-left">Seri No</th>
-                <th className="border border-black px-2 py-2 text-center">Govde</th>
-                <th className="border border-black px-2 py-2 text-center">Vana</th>
-                <th className="border border-black px-2 py-2 text-center">Hortum</th>
-                <th className="border border-black px-2 py-2 text-center">Saat</th>
+        {/* Section title */}
+        <div style={{ fontWeight: 700, fontSize: '10pt', color: C.black, marginBottom: '6px' }}>
+          CİHAZ KONTROL TABLOSU
+        </div>
+
+        {/* Device table */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: 'auto' }} />
+            <col style={{ width: '62pt' }} />
+            <col style={{ width: '62pt' }} />
+            <col style={{ width: '62pt' }} />
+            <col style={{ width: '62pt' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={{ ...thStyle, textAlign: 'left' }}>Malın Cinsi</th>
+              <th style={thStyle}>Gövde</th>
+              <th style={thStyle}>Vana</th>
+              <th style={thStyle}>Hortum</th>
+              <th style={thStyle}>Saat</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groupedRows.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ border: `1px solid ${C.border}`, padding: '20px', textAlign: 'center', color: C.gray, fontSize: '8pt' }}>
+                  Kayıtlı satır bulunamadı.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {groupedRows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="border border-black px-2 py-6 text-center">
-                    Kayitli satir bulunamadi.
-                  </td>
-                </tr>
-              ) : (
-                groupedRows.map((item: any) => (
+            ) : (
+              groupedRows.map((item: any, idx: number) => {
+                const rowBg = idx % 2 === 0 ? C.white : C.bgGray
+                const statuses: string[] = [item.body_status, item.valve_status, item.hose_status, item.gauge_status]
+                return (
                   <Fragment key={item.id}>
-                    <tr>
-                      <td className="border border-black px-2 py-2">
-                        {item.device_name ?? '-'} ({item.quantity ?? 0} Adet)
+                    <tr style={{ backgroundColor: rowBg }}>
+                      <td style={{ border: `1px solid ${C.border}`, padding: '6px 8px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '8pt' }}>
+                          {item.device_name ?? '-'} ({item.quantity ?? 0} Adet)
+                        </div>
+                        <div style={{ fontSize: '7pt', color: C.gray, marginTop: '2px' }}>
+                          Seri No: {item.serial_number ?? '-'}
+                        </div>
                       </td>
-                      <td className="border border-black px-2 py-2">{item.serial_number ?? '-'}</td>
-                      <td className="border border-black px-2 py-2 text-center">{item.body_status ?? '-'}</td>
-                      <td className="border border-black px-2 py-2 text-center">{item.valve_status ?? '-'}</td>
-                      <td className="border border-black px-2 py-2 text-center">{item.hose_status ?? '-'}</td>
-                      <td className="border border-black px-2 py-2 text-center">{item.gauge_status ?? '-'}</td>
+                      {statuses.map((status, si) => {
+                        const { label, color } = statusDisplay(status)
+                        return (
+                          <td key={si} style={{ border: `1px solid ${C.border}`, padding: '5px 3px', textAlign: 'center', fontSize: '6.5pt', fontWeight: 700, color }}>
+                            {label}
+                          </td>
+                        )
+                      })}
                     </tr>
                     <tr>
-                      <td colSpan={6} className="border border-black px-2 py-1.5 text-[11px]">
-                        <span className="font-semibold">Aciklama:</span> {customer?.full_name ?? 'Musteri'} bunyesinde
-                        bulunan {item.quantity ?? 0} adet {item.device_name ?? 'cihaz'} icin gecerlidir.
+                      <td colSpan={5} style={{ border: `1px solid ${C.border}`, padding: '4px 8px', fontSize: '7pt', color: C.darkGray, backgroundColor: C.bgGray }}>
+                        <span style={{ fontWeight: 700 }}>Açıklama:</span>{' '}
+                        {customer?.full_name ?? 'Müşteri'} bünyesinde bulunan {item.quantity ?? 0} adet {item.device_name ?? 'cihaz'} için geçerlidir.
                         {item.notes ? ` Not: ${item.notes}` : ''}
                       </td>
                     </tr>
                   </Fragment>
-                ))
-              )}
-            </tbody>
-          </table>
-        </section>
+                )
+              })
+            )}
+          </tbody>
+        </table>
 
-        <section className="grid grid-cols-2 gap-4 text-sm">
-          <div className="border border-black p-3">
-            <div className="font-semibold mb-2">Genel Notlar</div>
-            <div className="min-h-16 whitespace-pre-wrap">{form.general_notes ?? '-'}</div>
-          </div>
-          <div className="border border-black p-3">
-            <div className="font-semibold mb-2">Musteriye Not</div>
-            <div className="min-h-16 whitespace-pre-wrap">{form.customer_note ?? '-'}</div>
-          </div>
-        </section>
+        {/* Notes */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          {([
+            ['Genel Notlar', form.general_notes],
+            ['Müşteriye Not', form.customer_note],
+          ] as [string, string | null][]).map(([label, value]) => (
+            <div key={label} style={{ border: `1px solid ${C.border}`, borderRadius: '3px', padding: '10px 12px' }}>
+              <div style={{ fontWeight: 700, fontSize: '9pt', color: C.darkGray, marginBottom: '6px' }}>{label}</div>
+              <div style={{ fontSize: '8pt', minHeight: '48px', color: C.black, whiteSpace: 'pre-wrap' }}>{value ?? '-'}</div>
+            </div>
+          ))}
+        </div>
 
-        <footer className="grid grid-cols-3 gap-3 text-sm pt-3">
-          <div className="border border-black p-3">
-            <div className="font-semibold">Toplam Cihaz</div>
-            <div className="text-lg font-bold">{totalDevices}</div>
-          </div>
-          <div className="border border-black p-3">
-            <div className="font-semibold">Sonraki Servis</div>
-            <div>{toTrDate(form.next_service_date)}</div>
-          </div>
-          <div className="border border-black p-3">
-            <div className="font-semibold">Vergi No</div>
-            <div>{customer?.tax_number ?? '-'}</div>
-          </div>
-        </footer>
+        {/* Summary */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          marginBottom: '20px',
+          border: `1px solid ${C.border}`,
+          borderTop: `2px solid ${C.red}`,
+          borderRadius: '3px',
+          overflow: 'hidden',
+        }}>
+          {([
+            ['Toplam Cihaz', String(totalDevices), true],
+            ['Sonraki Servis', toTrDate(form.next_service_date), false],
+            ['Vergi No', customer?.tax_number ?? '-', false],
+          ] as [string, string, boolean][]).map(([label, value, large], i) => (
+            <div key={label} style={{
+              padding: '10px 12px',
+              borderRight: i < 2 ? `1px solid ${C.border}` : undefined,
+            }}>
+              <div style={{ fontSize: '8pt', fontWeight: 700, color: C.darkGray }}>{label}</div>
+              <div style={{ fontSize: large ? '14pt' : '9pt', fontWeight: large ? 700 : 400, color: C.black, marginTop: '2px' }}>{value}</div>
+            </div>
+          ))}
+        </div>
 
-        <section className="border border-black p-3 text-xs leading-5">
-          <div className="font-semibold uppercase">KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI SANAYİ VE TİCARET LİMİTED ŞİRKETİ</div>
-          <div>Ticaret Sicil No: 4213</div>
-          <div>Merkez: Karaağaç Mah. 774. Sok. No:49 Erzincan | Tel: (0446) 214 45 81</div>
-          <div>Şube: Kışla Cd. Seferağa San. Sit. No:181/B Topçular - İstanbul | Tel: (0534) 311 49 05</div>
-        </section>
-      </main>
+        {/* Signature */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {(['Müşteri Onay İmzası', 'Firma Yetkili İmza / Kaşe'] as string[]).map(label => (
+            <div key={label} style={{ border: `1px solid ${C.border}`, borderRadius: '3px', padding: '10px 12px', minHeight: '70px' }}>
+              <div style={{ fontSize: '8pt', fontWeight: 700, color: C.darkGray }}>{label}</div>
+              <div style={{ marginTop: '50px', borderBottom: `1px dashed ${C.lightGray}` }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          position: 'absolute',
+          bottom: '25px',
+          left: '35px',
+          right: '35px',
+          borderTop: `1px solid ${C.border}`,
+          paddingTop: '6px',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '7pt', color: '#888888' }}>
+            KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI SANAYİ VE TİCARET LİMİTED ŞİRKETİ · Ticaret Sicil No: 4213
+          </div>
+          <div style={{ fontSize: '7pt', color: '#888888' }}>
+            Merkez: Karaağaç Mah. 774. Sok. No:49 Erzincan | Tel: (0446) 214 45 81
+          </div>
+          <div style={{ fontSize: '7pt', color: '#888888' }}>
+            Şube: Kışla Cd. Seferağa San. Sit. No:181/B Topçular - İstanbul | Tel: (0534) 311 49 05
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

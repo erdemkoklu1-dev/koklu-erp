@@ -28,6 +28,7 @@ export type GelenPdfRow = {
   banka_bilgileri?: Array<{ iban: string; banka_adi?: string | null }>
   gider_kategorisi: string
   bakiye_notu?: string | null
+  sube_id?: string | null
 }
 
 function normalizeName(n: string): string {
@@ -137,6 +138,7 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    `PDF Gelen Fatura${row.senaryo ? `: ${row.senaryo}` : ''}`,
             notes:          notesParts.join(' | ') || null,
+            sube_id:        row.sube_id || null,
           })
           .select('id')
           .single()

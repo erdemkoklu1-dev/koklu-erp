@@ -4,12 +4,14 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
+import SubeSelect from '@/components/SubeSelect'
 
 export default function NewCustomerPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [subeId, setSubeId] = useState<string | null>(null)
   const [form, setForm] = useState({
     full_name: '',
     type: 'company',
@@ -34,7 +36,7 @@ export default function NewCustomerPage() {
     if (!form.full_name.trim()) { setError('Müşteri adı zorunlu.'); return }
     setLoading(true)
     setError('')
-    const { error } = await supabase.from('customers').insert([form])
+    const { error } = await supabase.from('customers').insert([{ ...form, sube_id: subeId || null }])
     if (error) {
       setError('Kayıt sırasında hata oluştu: ' + error.message)
       setLoading(false)
@@ -113,6 +115,13 @@ export default function NewCustomerPage() {
                 placeholder="info@firma.com" />
             </div>
           </div>
+
+          {/* Şube */}
+          <SubeSelect
+            value={subeId}
+            onChange={setSubeId}
+            label="Şube"
+          />
 
           {/* İl + Adres */}
           <div className="grid grid-cols-3 gap-4">

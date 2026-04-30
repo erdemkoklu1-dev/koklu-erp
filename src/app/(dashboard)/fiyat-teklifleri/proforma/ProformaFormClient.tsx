@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import SubeSelect from '@/components/SubeSelect'
 
 // ─── Türkçe sayı yazıya çevirme ───────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -76,6 +77,7 @@ export type ProformaInitialData = {
   notlar: string
   ozel_sartlar: string
   kalemleri: ProformaKalem[]
+  sube_id?: string | null
 }
 
 export type ProformaPrefillData = {
@@ -162,6 +164,7 @@ export default function ProformaFormClient({
   const [paraBirimi, setParaBirimi] = useState<ParaBirimi>(initialData?.para_birimi ?? 'TRY')
   const [durum, setDurum]           = useState<Durum>(initialData?.durum ?? 'taslak')
   const [teklifId]                  = useState<string | null>(initialData?.teklif_id ?? prefillData?.teklif_id ?? null)
+  const [subeId, setSubeId]         = useState<string | null>(initialData?.sube_id ?? null)
 
   // ─── Müşteri alanları
   const [customerId, setCustomerId]               = useState<string | null>(initialData?.customer_id ?? prefillData?.customer_id ?? null)
@@ -332,6 +335,7 @@ export default function ProformaFormClient({
       kdv_matrahi:          kdvMatrahi,
       kdv_tutari:           toplamKdv,
       toplam_tutar:         genelToplam,
+      sube_id:              subeId || null,
     }
 
     let proformaId: string
@@ -454,6 +458,9 @@ export default function ProformaFormClient({
                 <option value="faturalandi">Faturalandı</option>
                 <option value="iptal">İptal</option>
               </select>
+            </div>
+            <div>
+              <SubeSelect value={subeId} onChange={setSubeId} label="Şube" />
             </div>
           </div>
         </div>

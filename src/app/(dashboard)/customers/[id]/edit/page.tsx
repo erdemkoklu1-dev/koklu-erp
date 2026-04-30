@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
+import SubeSelect from '@/components/SubeSelect'
 
 type DeviceRow = {
   id?: string
@@ -64,6 +65,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState('')
+  const [subeId, setSubeId] = useState<string | null>(null)
   const [form, setForm] = useState({
     full_name: '', type: 'company', tax_number: '',
     authorized_person: '', authorized_phone: '', phone: '', email: '', address: '', il: '', notes: '',
@@ -76,20 +78,23 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       const { id: resolvedId } = await params
       setId(resolvedId)
       const { data: customer } = await supabase.from('customers').select('*').eq('id', resolvedId).single()
-      if (customer) setForm({
-        full_name: customer.full_name ?? '',
-        type: customer.type ?? 'company',
-        tax_number: customer.tax_number ?? '',
-        authorized_person: customer.authorized_person ?? '',
-        authorized_phone: customer.authorized_phone ?? '',
-        phone: customer.phone ?? '',
-        email: customer.email ?? '',
-        address: customer.address ?? '',
-        il: customer.il ?? '',
-        notes: customer.notes ?? '',
-        iban: customer.iban ?? '',
-        bank_name: customer.bank_name ?? '',
-      })
+      if (customer) {
+        setForm({
+          full_name: customer.full_name ?? '',
+          type: customer.type ?? 'company',
+          tax_number: customer.tax_number ?? '',
+          authorized_person: customer.authorized_person ?? '',
+          authorized_phone: customer.authorized_phone ?? '',
+          phone: customer.phone ?? '',
+          email: customer.email ?? '',
+          address: customer.address ?? '',
+          il: customer.il ?? '',
+          notes: customer.notes ?? '',
+          iban: customer.iban ?? '',
+          bank_name: customer.bank_name ?? '',
+        })
+        setSubeId(customer.sube_id ?? null)
+      }
 
       const { data: devs } = await supabase
         .from('devices')
@@ -156,7 +161,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
 
     try {
       const { error: custErr } = await supabase.from('customers').update({
-        ...form, updated_at: new Date().toISOString()
+        ...form, sube_id: subeId || null, updated_at: new Date().toISOString()
       }).eq('id', id)
       if (custErr) throw new Error('Güncelleme hatası: ' + custErr.message)
 
@@ -309,6 +314,9 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               <input name="iban" value={form.iban} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="TR00 0000 0000 0000 0000 0000 00" />
+            </div>
+            <div>
+              <SubeSelect value={subeId} onChange={setSubeId} label="Şube" />
             </div>
             <div className="col-span-2">
               <label className="text-sm font-medium text-gray-700">Notlar</label>

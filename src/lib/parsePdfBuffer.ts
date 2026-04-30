@@ -10,9 +10,21 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const textContent = await page.getTextContent()
-    const pageText = (textContent.items as { str: string }[])
-      .map(item => item.str)
-      .join(' ')
+    const items = textContent.items as { str: string; transform: number[] }[]
+
+    // y koordinatına göre satır grupla → doğal satır yapısını koru
+    if (items.length === 0) continue
+    const lineMap = new Map<number, string[]>()
+    for (const item of items) {
+      if (!item.str.trim()) continue
+      // transform[5] = y koordinatı; 1 piksel tolerans ile yuvarla
+      const y = Math.round((item.transform?.[5] ?? 0) / 2) * 2
+      if (!lineMap.has(y)) lineMap.set(y, [])
+      lineMap.get(y)!.push(item.str)
+    }
+    // y büyükten küçüğe sırala (PDF koordinat sistemi aşağı doğru azalır)
+    const sortedYs = [...lineMap.keys()].sort((a, b) => b - a)
+    const pageText = sortedYs.map(y => lineMap.get(y)!.join(' ')).join('\n')
     fullText += pageText + '\n'
   }
   return fullText
@@ -152,20 +164,46 @@ function extractMusteriAdres(text: string): [string | null, string | null] {
   if (!m || m.index == null) return [null, null]
 
   const after = text.slice(m.index + m[0].length)
-  const lines = after.split('\n').map(l => l.trim()).filter(Boolean)
 
+  // Hızlı regex: "FİRMA ADI VKN: 1234..." gibi tek satırda birleşmiş metinden unvanı çek
+  // pdfjs öğeleri space ile birleşince VKN aynı satırda gelir; unvanı VKN/TCKN öncesinde bul
+  const quickM = after.match(
+    /^([A-ZÇĞİÖŞÜa-zçğışöşü0-9][^\n]{2,80}?)(?:\s+(?:VKN|TCKN|V\.?K\.?N|T\.?C\.?)\s*[:\s]|\n)/i
+  )
+  if (quickM) {
+    const candidate = quickM[1].trim()
+    const low = normalize(candidate)
+    if (candidate.length >= 3 && !ADRES_STOP.some(kw => low.startsWith(kw))) {
+      return [candidate, null]
+    }
+  }
+
+  const lines = after.split('\n').map(l => l.trim()).filter(Boolean)
   let musteriAdi: string | null = null
   const adresLines: string[] = []
 
   for (const line of lines) {
     const low = normalize(line)
-    const shouldStop = ADRES_STOP.some(kw => low.startsWith(kw) || low.includes(kw + ':'))
-    if (shouldStop) break
+
+    // Stop keyword satır başında mı?
+    const startsWithStop = ADRES_STOP.some(kw => low.startsWith(kw))
+    if (startsWithStop) break
+
+    // Stop keyword satır ortasında (VKN: veya benzeri) → unvanı stop'tan önce kes
+    let extracted = line
+    for (const kw of ADRES_STOP) {
+      const idx = low.indexOf(' ' + kw + ':')
+      if (idx > 0) {
+        extracted = line.slice(0, idx).trim()
+        if (musteriAdi === null && extracted.length >= 2) musteriAdi = extracted
+        return [musteriAdi, adresLines.join(' ').trim() || null]
+      }
+    }
 
     if (musteriAdi === null) {
-      musteriAdi = line
+      musteriAdi = extracted
     } else {
-      adresLines.push(line)
+      adresLines.push(extracted)
     }
     if (/\d{5}/.test(line) || line.includes('/')) break
   }
@@ -310,9 +348,88 @@ function extractItemsSemihler(text: string): KalemItem[] {
   return items
 }
 
+// ── Standart e-Fatura kalem çıkarma ─────────────────────────────
+// "Sıra No" başlığından "Mal Hizmet Toplam" bitiş satırına kadar olan
+// bölgeyi işler; ürün adı birden fazla satıra yayılabilir.
+
+const BIRIM_ALTS = 'Adet|adet|KG|Kg|kg|Lt|lt|Mt|mt|Ton|ton|Kutu|kutu|Paket|paket|Hizmet|hizmet|Saat|saat|M2|m2|M3|m3|Takım|takım'
+const EFATURA_DATA_ROW = new RegExp(
+  `^(\\d+(?:[.,]\\d+)?)\\s*(${BIRIM_ALTS})\\s+(\\d[\\d.,]*)\\s*TL`, 'i'
+)
+const EFATURA_HEADER = /^(S[ıi]ra|Mal\s*Hiz|Aç[ıi]klama|Miktar|Birim\s*Fiyat|[İI]skonto|KDV|Di[ğg]er|Tutarı?\s*$|Fiyat[ıi]?\s*$|No\s*$)/i
+const PURE_NUMBER   = /^\s*\d{1,3}\s*$/
+const PERCENT_ONLY  = /^\s*%[\d.,]+\s*$/
+const TL_ONLY       = /^\s*[\d.,]+\s*TL\s*$/i
+
+function extractItemsEfatura(text: string): KalemItem[] {
+  const baslaM = text.match(/S[ıi]ra\s*\n?\s*No|S[ıi]ra\s+No/im)
+  const bitisM = text.match(/Mal\s*[/]?\s*Hizmet\s+Toplam|Toplam\s+Tutar\s*:/im)
+  if (!baslaM || baslaM.index === undefined || !bitisM || bitisM.index === undefined) return []
+  if (bitisM.index <= baslaM.index) return []
+
+  const region = text.slice(baslaM.index, bitisM.index)
+  const lines  = region.split('\n').map(l => l.trim()).filter(Boolean)
+
+  const items: KalemItem[]  = []
+  let   descParts: string[] = []
+
+  for (const line of lines) {
+    if (EFATURA_HEADER.test(line)) continue
+    if (PURE_NUMBER.test(line))    { descParts = []; continue }
+    if (PERCENT_ONLY.test(line))   continue
+    if (TL_ONLY.test(line))        continue
+
+    const dataM = line.match(EFATURA_DATA_ROW)
+    if (dataM) {
+      const miktar     = parseAmount(dataM[1]) ?? 1
+      const birim      = dataM[2]
+      const birimFiyat = parseAmount(dataM[3]) ?? 0
+
+      // KDV oranı: ilk % değeri
+      const kdvRateM = line.match(/%\s*(\d+(?:[.,]\d+)?)/)
+      let   kdvOrani = kdvRateM ? (parseAmount(kdvRateM[1]) ?? 20) : 20
+      if (kdvOrani > 100) kdvOrani = 20
+
+      // Tüm TL tutarları — son olanı satır toplamı
+      const allAmounts = [...line.matchAll(/([\d.,]+)\s*TL/gi)].map(m => parseAmount(m[1]) ?? 0)
+      const satirToplam = allAmounts.length >= 2
+        ? allAmounts[allAmounts.length - 1]
+        : Math.round(miktar * birimFiyat * (1 + kdvOrani / 100) * 100) / 100
+
+      const kdvTutari = Math.round(miktar * birimFiyat * kdvOrani / 100 * 100) / 100
+      // Sıra numarası satırın başında kalmışsa temizle (ör: "1 6 Kg KKT...")
+      const rawDesc = descParts.join(' ').trim().replace(/^\d{1,3}\s+/, '')
+      const urunAdi = rawDesc || `Kalem ${items.length + 1}`
+
+      if (!isOzetSatir([urunAdi])) {
+        items.push({
+          urun_adi: urunAdi, miktar, birim,
+          birim_fiyat:    Math.round(birimFiyat * 100) / 100,
+          iskonto_orani:  0, iskonto_tutari: 0,
+          kdv_orani:      kdvOrani,
+          kdv_tutari:     kdvTutari,
+          satir_toplam:   Math.round(satirToplam * 100) / 100,
+        })
+      }
+      descParts = []
+      continue
+    }
+
+    // Özet satır değilse ürün adı olarak biriktir
+    if (!isOzetSatir([line]) && line.length > 1) {
+      descParts.push(line)
+    }
+  }
+  return items
+}
+
 // ── Genel metin bazlı kalem çıkarma (fallback) ──────────────────
 
 function extractItemsFromText(text: string): KalemItem[] {
+  // Standart e-fatura format (öncelikli)
+  const efatura = extractItemsEfatura(text)
+  if (efatura.length > 0) return efatura
+
   const hidropres = extractItemsHidropres(text)
   if (hidropres.length > 0) return hidropres
 
@@ -452,14 +569,27 @@ export async function parsePdfBuffer(
       result.musteri_adi    = musteriAdi
       result.musteri_adresi = musteriAdresi
 
+      // VKN çıkarma: ilk VKN satıcının, ikinci VKN müşterinin
       const vkns = [...text.matchAll(/VKN\s*[:\s]+(\d{10})/gi)].map(m => m[1])
-      if (vkns.length >= 2) result.musteri_vkn = vkns[1]
-      else if (vkns.length === 1) result.musteri_vkn = vkns[0]
+      if (vkns.length >= 2) {
+        result.musteri_vkn = vkns[1]
+      }
+      // Tek VKN varsa muhtemelen satıcının — bireysel müşteri için TC ara
 
       if (!result.musteri_vkn) {
-        const tckns = [...text.matchAll(/(?:T\.?C\.?\s*(?:Kimlik\s*No)?|TCKN)\s*[:\s]+(\d{11})/gi)].map(m => m[1])
-        const tckns2 = tckns.length > 0 ? tckns : [...text.matchAll(/\b(\d{11})\b/g)].map(m => m[1])
-        if (tckns2.length > 0) result.musteri_vkn = tckns2[tckns2.length - 1]
+        // SAYIN bloğuna yakın TC Kimlik No'yu bul (bireysel müşteri)
+        const sayinM = text.match(/SAYIN/i)
+        const sayinBlock = sayinM?.index !== undefined
+          ? text.slice(sayinM.index, sayinM.index + 600)
+          : ''
+        const tcInBlock = [...sayinBlock.matchAll(/(?:T\.?C\.?\s*(?:Kimlik\s*)?(?:No)?|TCKN)\s*[:\s]+(\d{11})/gi)].map(m => m[1])
+        if (tcInBlock.length > 0) {
+          result.musteri_vkn = tcInBlock[0]
+        } else {
+          // Belgede herhangi bir TC Kimlik No var mı?
+          const allTckns = [...text.matchAll(/(?:T\.?C\.?\s*(?:Kimlik\s*)?(?:No)?|TCKN)\s*[:\s]+(\d{11})/gi)].map(m => m[1])
+          if (allTckns.length > 0) result.musteri_vkn = allTckns[allTckns.length - 1]
+        }
       }
     }
 
