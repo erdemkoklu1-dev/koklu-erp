@@ -1,3 +1,3 @@
 # GÖREV
 
-Bekleyen görev yok.
+Şu an bekleyen görev yok.

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
 import SubeSelect from '@/components/SubeSelect'
+import TedarikciTeklifModal, { type ParsedKalem, type ParsedTeklif } from '@/components/TedarikciTeklifModal'
 
 // ─── Türkçe para yazıya çevirme ────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -89,12 +90,15 @@ export default function YeniTeklifPage() {
   const [kdvOrani, setKdvOrani]     = useState(20)
 
   const [kalemler, setKalemler] = useState<Kalem[]>([newKalem()])
-  const [karOrani, setKarOrani] = useState('')
+  const [karOrani, setKarOrani]     = useState('')
+  const [yuvarlaBase, setYuvarlaBase] = useState<1 | 10 | 100 | 1000>(1)
   const [kdvManuelVal, setKdvManuelVal] = useState('')
   const [genelIskonto, setGenelIskonto]       = useState('')
   const [genelIskontoTip, setGenelIskontoTip] = useState<'yuzde' | 'tl'>('yuzde')
-  const [pdfYukleniyor, setPdfYukleniyor] = useState(false)
-  const [pdfHata, setPdfHata]             = useState('')
+  const [pdfYukleniyor, setPdfYukleniyor]   = useState(false)
+  const [pdfHata, setPdfHata]               = useState('')
+  const [parsedTeklif, setParsedTeklif]     = useState<ParsedTeklif | null>(null)
+  const [showImportModal, setShowImportModal] = useState(false)
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
   const [notlar, setNotlar]               = useState('')
@@ -207,6 +211,13 @@ export default function YeniTeklifPage() {
   const genelToplam = kdvDurumu === 'haric' ? iskontoSonrasi + kdvTutari : iskontoSonrasi
   const tutarYaziyla = paraBirimi === 'TL' ? sayiyiYaziyaCevir(genelToplam) : `${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(genelToplam)} ${paraBirimi}`
 
+  function applyYuvarla() {
+    setKalemler(prev => prev.map(k => {
+      const yeni = Math.round(k.birim_fiyat / yuvarlaBase) * yuvarlaBase
+      return { ...k, birim_fiyat: yeni, toplam: Math.round(k.miktar * yeni * (1 - (k.iskonto || 0) / 100) * 100) / 100 }
+    }))
+  }
+
   function applyKarOrani() {
     const oran = parseFloat(karOrani)
     if (isNaN(oran)) return
@@ -216,28 +227,39 @@ export default function YeniTeklifPage() {
     }))
   }
 
-  async function handlePdfParse(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     setPdfHata(''); setPdfYukleniyor(true)
     try {
       const fd = new FormData(); fd.append('file', file)
-      const res = await fetch('/api/parse-teklif-pdf', { method: 'POST', body: fd })
+      const res = await fetch('/api/parse-teklif', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Bilinmeyen hata')
-      const items = json.items as Array<{ sira?: number; adet?: number; aciklama: string; birimFiyat?: number; toplam?: number }>
-      if (!Array.isArray(items) || !items.length) { setPdfHata("PDF'den kalem bulunamadı."); return }
-      const yeni: Kalem[] = items.map(item => {
-        const miktar = Number(item.adet ?? 1) || 1
-        const birim_fiyat = Number(item.birimFiyat ?? 0)
-        return { id: Math.random().toString(36).slice(2), aciklama: item.aciklama ?? '', miktar, birim_fiyat, iskonto: 0, toplam: Number(item.toplam) || Math.round(miktar * birim_fiyat * 100) / 100 }
-      })
-      setKalemler(prev => [...prev.filter(k => k.aciklama.trim() || k.birim_fiyat > 0), ...yeni])
+      if (!json.kalemler || !json.kalemler.length) { setPdfHata('Dosyadan kalem bulunamadı. Önizleme açılıyor.') }
+      setParsedTeklif(json as ParsedTeklif)
+      setShowImportModal(true)
     } catch (err: any) {
       setPdfHata(err.message ?? 'Hata oluştu')
     } finally {
       setPdfYukleniyor(false)
       if (pdfInputRef.current) pdfInputRef.current.value = ''
     }
+  }
+
+  function handleImportAktar(importedKalemler: ParsedKalem[], paraBirimi: string) {
+    const yeni: Kalem[] = importedKalemler.map(k => ({
+      id: Math.random().toString(36).slice(2),
+      aciklama: k.aciklama,
+      miktar: k.miktar,
+      birim_fiyat: k.birim_fiyat,
+      iskonto: 0,
+      toplam: k.toplam || Math.round(k.miktar * k.birim_fiyat * 100) / 100,
+    }))
+    setKalemler(prev => [...prev.filter(k => k.aciklama.trim() || k.birim_fiyat > 0), ...yeni])
+    if (paraBirimi === 'EUR') setParaBirimi('EUR')
+    else if (paraBirimi === 'USD') setParaBirimi('USD')
+    else setParaBirimi('TL')
+    setShowImportModal(false)
   }
 
   async function handleKaydet(e: React.FormEvent) {
@@ -475,15 +497,31 @@ export default function YeniTeklifPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" onClick={() => pdfInputRef.current?.click()} disabled={pdfYukleniyor}
                 className="text-xs border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-50">
-                {pdfYukleniyor ? '⏳ Ayrıştırılıyor...' : "📄 PDF'den Aktar"}
+                {pdfYukleniyor ? '⏳ Ayrıştırılıyor...' : '📄 PDF/Excel\'den Aktar'}
               </button>
-              <input ref={pdfInputRef} type="file" accept=".pdf" onChange={handlePdfParse} className="hidden" />
+              <input ref={pdfInputRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
               <div className="flex items-center gap-1">
                 <input type="number" value={karOrani} onChange={e => setKarOrani(e.target.value)} placeholder="örn: 20 veya -10"
                   className="w-28 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                 <button type="button" onClick={applyKarOrani}
                   className="text-xs border border-gray-300 text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-50 whitespace-nowrap">
                   Kar Uygula
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <select
+                  value={yuvarlaBase}
+                  onChange={e => setYuvarlaBase(parseInt(e.target.value) as 1 | 10 | 100 | 1000)}
+                  className="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                >
+                  <option value={1}>Tam sayı</option>
+                  <option value={10}>10'a</option>
+                  <option value={100}>100'e</option>
+                  <option value={1000}>1000'e</option>
+                </select>
+                <button type="button" onClick={applyYuvarla}
+                  className="text-xs border border-gray-300 text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-50 whitespace-nowrap">
+                  Yuvarla
                 </button>
               </div>
               <button type="button" onClick={() => setKalemler(prev => [...prev, newKalem()])}
@@ -644,6 +682,14 @@ export default function YeniTeklifPage() {
           <Link href="/fiyat-teklifleri" className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors text-center">İptal</Link>
         </div>
       </form>
+
+      {/* ── Tedarikçi teklif import modal ── */}
+      <TedarikciTeklifModal
+        open={showImportModal}
+        data={parsedTeklif}
+        onClose={() => setShowImportModal(false)}
+        onAktar={handleImportAktar}
+      />
 
       {/* ── Dolum fiyat tipi seçim popup ── */}
       {dolumPopup && (

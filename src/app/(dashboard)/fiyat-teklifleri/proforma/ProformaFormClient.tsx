@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SubeSelect from '@/components/SubeSelect'
+import TedarikciTeklifModal, { type ParsedKalem, type ParsedTeklif } from '@/components/TedarikciTeklifModal'
 
 // ─── Türkçe sayı yazıya çevirme ───────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -204,6 +205,13 @@ export default function ProformaFormClient({
   const [notlar, setNotlar]       = useState(initialData?.notlar ?? '')
   const [ozelSartlar, setOzelSartlar] = useState(initialData?.ozel_sartlar ?? '')
 
+  // ─── Import
+  const [importYukleniyor, setImportYukleniyor]   = useState(false)
+  const [importHata, setImportHata]               = useState('')
+  const [parsedTeklif, setParsedTeklif]           = useState<ParsedTeklif | null>(null)
+  const [showImportModal, setShowImportModal]     = useState(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
+
   // ─── UI
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -286,6 +294,48 @@ export default function ProformaFormClient({
       return hesaplaKalem({ ...k, [field]: value })
     }))
   }, [])
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    setImportHata(''); setImportYukleniyor(true)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const res = await fetch('/api/parse-teklif', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Bilinmeyen hata')
+      if (!json.kalemler || !json.kalemler.length) setImportHata('Dosyadan kalem bulunamadı. Önizleme açılıyor.')
+      setParsedTeklif(json as ParsedTeklif)
+      setShowImportModal(true)
+    } catch (err: unknown) {
+      setImportHata(err instanceof Error ? err.message : 'Hata oluştu')
+    } finally {
+      setImportYukleniyor(false)
+      if (importInputRef.current) importInputRef.current.value = ''
+    }
+  }
+
+  function handleImportAktar(importedKalemler: ParsedKalem[], paraBirimi: string) {
+    const yeni: ProformaKalem[] = importedKalemler.map((k, i) =>
+      hesaplaKalem({
+        id: Math.random().toString(36).slice(2),
+        sira_no: i + 1,
+        urun_id: null,
+        mal_hizmet: k.aciklama,
+        aciklama: '',
+        miktar: k.miktar,
+        birim: k.birim,
+        birim_fiyat: k.birim_fiyat,
+        iskonto_orani: 0,
+        iskonto_tutari: 0,
+        kdv_orani: 20,
+        kdv_tutari: 0,
+        toplam_tutar: 0,
+      })
+    )
+    setKalemler(prev => [...prev.filter(k => k.mal_hizmet.trim()), ...yeni])
+    setParaBirimi((['TRY', 'USD', 'EUR'].includes(paraBirimi) ? paraBirimi : 'TRY') as ParaBirimi)
+    setShowImportModal(false)
+  }
 
   function addKalem() {
     setKalemler(prev => [...prev, newKalem(prev.length + 1)])
@@ -529,7 +579,21 @@ export default function ProformaFormClient({
 
         {/* ─── Kalem Tablosu */}
         <div className="bg-white border rounded-lg p-5" ref={acRef}>
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Kalemler</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-700">Kalemler</h2>
+            <div className="flex items-center gap-2">
+              {importHata && <span className="text-xs text-red-600">{importHata}</span>}
+              <button
+                type="button"
+                onClick={() => importInputRef.current?.click()}
+                disabled={importYukleniyor}
+                className="text-xs border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+              >
+                {importYukleniyor ? '⏳ Ayrıştırılıyor...' : "📄 PDF/Excel'den Aktar"}
+              </button>
+              <input ref={importInputRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[900px]">
               <thead>
@@ -731,6 +795,13 @@ export default function ProformaFormClient({
         </div>
 
       </div>
+
+      <TedarikciTeklifModal
+        open={showImportModal}
+        data={parsedTeklif}
+        onClose={() => setShowImportModal(false)}
+        onAktar={handleImportAktar}
+      />
     </div>
   )
 }
