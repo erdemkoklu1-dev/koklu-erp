@@ -13,6 +13,7 @@ export type DeviceItem = {
   tarih:      string
   tarihTipi:  'kontrol' | 'skt'
   gunKaldi:   number
+  sonBakim:   string | null
 }
 
 export type CustomerGroup = {
@@ -40,6 +41,7 @@ type Props = {
   buHaftaGonderilecek: number
   kontrolYaklasan:    number
   sktYaklasan:        number
+  toplamMusteri:      number
   sablonlar:          Sablon[]
   hasResend:          boolean
   hasNetgsm:          boolean
@@ -77,7 +79,7 @@ function GunBadge({ gun }: { gun: number }) {
 export default function OzetClient({
   aktifGruplar, susturulmusGruplar,
   buAyGonderilen, buHaftaGonderilecek,
-  kontrolYaklasan, sktYaklasan,
+  kontrolYaklasan, sktYaklasan, toplamMusteri,
   sablonlar, hasResend, hasNetgsm,
 }: Props) {
   const router  = useRouter()
@@ -109,8 +111,33 @@ export default function OzetClient({
   // Session'da gönderildi işareti
   const [sessionSent, setSessionSent]   = useState<Set<string>>(new Set())
 
+  // Filtreler
+  const [aramaMetni,   setAramaMetni]   = useState('')
+  const [durumFiltre,  setDurumFiltre]  = useState('')
+  const [urunFiltre,   setUrunFiltre]   = useState('')
+
   const emailSablon = sablonlar.find(s => s.kanal === 'email')
   const smsSablon   = sablonlar.find(s => s.kanal === 'sms')
+
+  // Filtre hesaplamaları
+  const gecikmisSayisi  = aktifGruplar.filter(g => g.enYakinGunKaldi < 0).length
+  const buHaftaSayisi   = aktifGruplar.filter(g => g.enYakinGunKaldi >= 0 && g.enYakinGunKaldi <= 7).length
+  const buAySayisi      = aktifGruplar.filter(g => g.enYakinGunKaldi >= 0 && g.enYakinGunKaldi <= 30).length
+
+  // Ürün listesi (distinct)
+  const urunListesi = Array.from(new Set(
+    aktifGruplar.flatMap(g => g.devices.map(d => d.deviceName))
+  )).sort()
+
+  const filtrelenmisGruplar = aktifGruplar.filter(g => {
+    if (aramaMetni && !g.customerName.toLowerCase().includes(aramaMetni.toLowerCase())) return false
+    if (durumFiltre === 'gecikmiş'  && g.enYakinGunKaldi >= 0) return false
+    if (durumFiltre === 'bu_hafta'  && (g.enYakinGunKaldi < 0 || g.enYakinGunKaldi > 7)) return false
+    if (durumFiltre === 'bu_ay'     && (g.enYakinGunKaldi < 0 || g.enYakinGunKaldi > 30)) return false
+    if (durumFiltre === 'gecerli'   && g.enYakinGunKaldi < 0) return false
+    if (urunFiltre && !g.devices.some(d => d.deviceName.toLowerCase().includes(urunFiltre.toLowerCase()))) return false
+    return true
+  })
 
   // ── Accordion ─────────────────────────────────────────
   function toggleExpand(id: string) {
@@ -311,10 +338,15 @@ export default function OzetClient({
           } hover:bg-gray-50/60 transition-colors cursor-pointer`}
           onClick={() => toggleExpand(g.customerId)}
         >
-          {/* Expand chevron + Müşteri */}
+          {/* Müşteri + durum noktası */}
           <td className="px-4 py-2.5">
             <div className="flex items-center gap-2">
               <span className="text-gray-400 text-xs select-none">{isExpanded ? '▼' : '▶'}</span>
+              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                g.enYakinGunKaldi < 0   ? 'bg-red-500' :
+                g.enYakinGunKaldi <= 7  ? 'bg-orange-500' :
+                g.enYakinGunKaldi <= 30 ? 'bg-yellow-400' : 'bg-green-500'
+              }`} />
               <Link
                 href={`/customers/${g.customerId}`}
                 onClick={e => e.stopPropagation()}
@@ -322,13 +354,30 @@ export default function OzetClient({
               >
                 {g.customerName}
               </Link>
-              <span className="inline-flex px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500 border">
-                {g.devices.length} cihaz
-              </span>
+              {isSent && (
+                <span className="px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">✓</span>
+              )}
             </div>
           </td>
 
-          {/* Kontrol/SKT Tarihi */}
+          {/* Cihaz */}
+          <td className="px-4 py-2.5 text-sm text-gray-700">
+            {g.devices[0] ? (
+              <div>
+                <div className="font-medium">{g.devices[0].deviceName}</div>
+                {g.devices.length > 1 && (
+                  <div className="text-xs text-gray-400">+{g.devices.length - 1} cihaz daha</div>
+                )}
+              </div>
+            ) : '—'}
+          </td>
+
+          {/* Son Bakım */}
+          <td className="px-4 py-2.5 text-sm text-gray-600">
+            {g.devices[0]?.sonBakim ? formatTRDate(g.devices[0].sonBakim) : '—'}
+          </td>
+
+          {/* Sıradaki Bakım */}
           <td className="px-4 py-2.5 text-sm text-gray-700">
             {g.devices[0] && (
               <div className="flex items-center gap-1.5">
@@ -336,7 +385,7 @@ export default function OzetClient({
                   g.devices[0].tarihTipi === 'skt'
                     ? 'bg-red-50 text-red-700 border-red-200'
                     : 'bg-blue-50 text-blue-700 border-blue-200'
-                }`}>{g.devices[0].tarihTipi === 'skt' ? 'SKT' : 'Kontrol'}</span>
+                }`}>{g.devices[0].tarihTipi === 'skt' ? 'SKT' : 'Knt'}</span>
                 {formatTRDate(g.devices[0].tarih)}
               </div>
             )}
@@ -344,23 +393,6 @@ export default function OzetClient({
 
           {/* Kalan Gün */}
           <td className="px-4 py-2.5"><GunBadge gun={g.enYakinGunKaldi} /></td>
-
-          {/* Durum */}
-          <td className="px-4 py-2.5">
-            {isSent
-              ? <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">✓ Gönderildi</span>
-              : <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">Bekliyor</span>
-            }
-          </td>
-
-          {/* Kanal */}
-          <td className="px-4 py-2.5">
-            <div className="flex gap-1 flex-wrap">
-              {g.customerEmail  && <span className="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200">✉</span>}
-              {g.customerPhone  && <span className="px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">📱</span>}
-              {!g.customerEmail && !g.customerPhone && <span className="text-gray-300 text-xs">—</span>}
-            </div>
-          </td>
 
           {/* Aksiyonlar */}
           <td className="px-4 py-2.5 text-right" onClick={e => e.stopPropagation()}>
@@ -403,20 +435,23 @@ export default function OzetClient({
         {isExpanded && g.devices.map((dev, i) => (
           <tr key={dev.deviceId + dev.tarihTipi + i}
             className="bg-gray-50/80 border-t border-dashed border-gray-200">
-            <td className="pl-10 pr-4 py-2 text-xs text-gray-600" colSpan={1}>
+            <td className="pl-10 pr-4 py-2 text-xs text-gray-600">
               <span className="text-gray-400 mr-1">└</span>
               {dev.deviceName}
+            </td>
+            <td className="px-4 py-2 text-xs text-gray-500">
+              {dev.sonBakim ? formatTRDate(dev.sonBakim) : '—'}
             </td>
             <td className="px-4 py-2 text-xs text-gray-500">
               <span className={`px-1.5 py-0.5 rounded text-xs border mr-1 ${
                 dev.tarihTipi === 'skt'
                   ? 'bg-red-50 text-red-600 border-red-200'
                   : 'bg-blue-50 text-blue-600 border-blue-200'
-              }`}>{dev.tarihTipi === 'skt' ? 'SKT' : 'Kontrol'}</span>
+              }`}>{dev.tarihTipi === 'skt' ? 'SKT' : 'Knt'}</span>
               {formatTRDate(dev.tarih)}
             </td>
             <td className="px-4 py-2"><GunBadge gun={dev.gunKaldi} /></td>
-            <td colSpan={3} />
+            <td colSpan={2} />
           </tr>
         ))}
       </React.Fragment>
@@ -445,28 +480,72 @@ export default function OzetClient({
 
       {/* KPI Kartlar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Bu Ay Gönderilen',   val: buAyGonderilen,      sub: 'hatırlatma',         color: '' },
-          { label: 'Bu Hafta Gönderilecek', val: buHaftaGonderilecek, sub: 'planlanan + yaklaşan', color: 'text-blue-600' },
-          { label: 'Kontrol Yaklaşan',   val: kontrolYaklasan,     sub: '30 gün içinde',       color: kontrolYaklasan > 0 ? 'text-orange-700' : '' },
-          { label: 'SKT Yaklaşan',       val: sktYaklasan,         sub: '30 gün içinde',       color: sktYaklasan > 0 ? 'text-red-700' : '' },
-        ].map(k => (
-          <div key={k.label} className={`bg-white border rounded-xl p-4 ${
-            k.label === 'Kontrol Yaklaşan' && kontrolYaklasan > 0 ? 'bg-orange-50 border-orange-200' :
-            k.label === 'SKT Yaklaşan'     && sktYaklasan > 0     ? 'bg-red-50 border-red-200' : ''
-          }`}>
-            <div className="text-xs text-gray-500 mb-0.5">{k.label}</div>
-            <div className={`text-2xl font-bold ${k.color || 'text-gray-900'}`}>{k.val}</div>
-            <div className="text-xs text-gray-400 mt-0.5">{k.sub}</div>
-          </div>
-        ))}
+        <div className={`bg-white border rounded-xl p-4 ${gecikmisSayisi > 0 ? 'bg-red-50 border-red-200' : ''}`}>
+          <div className="text-xs text-gray-500 mb-0.5">Gecikmiş Servisler</div>
+          <div className={`text-2xl font-bold ${gecikmisSayisi > 0 ? 'text-red-700' : 'text-gray-900'}`}>{gecikmisSayisi}</div>
+          <div className="text-xs text-gray-400 mt-0.5">kontrol tarihi geçmiş</div>
+        </div>
+        <div className={`bg-white border rounded-xl p-4 ${buHaftaSayisi > 0 ? 'bg-orange-50 border-orange-200' : ''}`}>
+          <div className="text-xs text-gray-500 mb-0.5">Bu Hafta Yaklaşan</div>
+          <div className={`text-2xl font-bold ${buHaftaSayisi > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{buHaftaSayisi}</div>
+          <div className="text-xs text-gray-400 mt-0.5">0–7 gün içinde</div>
+        </div>
+        <div className={`bg-white border rounded-xl p-4 ${buAySayisi > 0 ? 'bg-yellow-50 border-yellow-200' : ''}`}>
+          <div className="text-xs text-gray-500 mb-0.5">Bu Ay Yaklaşan</div>
+          <div className={`text-2xl font-bold ${buAySayisi > 0 ? 'text-yellow-700' : 'text-gray-900'}`}>{buAySayisi}</div>
+          <div className="text-xs text-gray-400 mt-0.5">0–30 gün içinde</div>
+        </div>
+        <div className="bg-white border rounded-xl p-4">
+          <div className="text-xs text-gray-500 mb-0.5">Toplam Müşteri</div>
+          <div className="text-2xl font-bold text-gray-900">{toplamMusteri}</div>
+          <div className="text-xs text-gray-400 mt-0.5">aktif kayıt</div>
+        </div>
+      </div>
+
+      {/* Filtre Barı */}
+      <div className="bg-white border rounded-xl px-4 py-3 flex flex-wrap gap-3 items-center">
+        <input
+          type="text"
+          placeholder="Müşteri ara..."
+          value={aramaMetni}
+          onChange={e => setAramaMetni(e.target.value)}
+          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] w-44"
+        />
+        <select
+          value={durumFiltre}
+          onChange={e => setDurumFiltre(e.target.value)}
+          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+        >
+          <option value="">Tüm Durumlar</option>
+          <option value="gecikmiş">Gecikmiş</option>
+          <option value="bu_hafta">Bu Hafta (0–7 gün)</option>
+          <option value="bu_ay">Bu Ay (0–30 gün)</option>
+          <option value="gecerli">Geçerli</option>
+        </select>
+        <select
+          value={urunFiltre}
+          onChange={e => setUrunFiltre(e.target.value)}
+          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] max-w-[200px]"
+        >
+          <option value="">Tüm Ürünler</option>
+          {urunListesi.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+        {(aramaMetni || durumFiltre || urunFiltre) && (
+          <button
+            onClick={() => { setAramaMetni(''); setDurumFiltre(''); setUrunFiltre('') }}
+            className="text-xs text-gray-400 hover:text-gray-600 border rounded-lg px-2.5 py-1.5"
+          >
+            Temizle
+          </button>
+        )}
+        <span className="text-xs text-gray-400 ml-auto">{filtrelenmisGruplar.length} sonuç</span>
       </div>
 
       {/* Ana Tablo */}
       <div className="bg-white border rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900">
-            Yaklaşan Hatırlatmalar ({aktifGruplar.length} müşteri)
+            Yaklaşan Bakımlar ({filtrelenmisGruplar.length} müşteri)
           </h2>
           {aktifGruplar.length > 0 && (
             <button
@@ -478,9 +557,11 @@ export default function OzetClient({
           )}
         </div>
 
-        {aktifGruplar.length === 0 ? (
+        {filtrelenmisGruplar.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-gray-400">
-            30 gün içinde yaklaşan kontrol veya SKT tarihi bulunamadı.
+            {aktifGruplar.length === 0
+              ? '30 gün içinde yaklaşan kontrol veya SKT tarihi bulunamadı.'
+              : 'Filtreye uyan müşteri bulunamadı.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -488,15 +569,15 @@ export default function OzetClient({
               <thead className="border-b">
                 <tr>
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Müşteri</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Kontrol/SKT Tarihi</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Cihaz</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Son Bakım</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Sıradaki Bakım</th>
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Kalan Gün</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Durum</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Kanal</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {aktifGruplar.map(g => renderGrupSatir(g))}
+                {filtrelenmisGruplar.map(g => renderGrupSatir(g))}
               </tbody>
             </table>
           </div>

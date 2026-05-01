@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import HatirlatmaModal from '@/components/HatirlatmaModal'
 
 export type ControlStatus = 'expired' | 'overdue' | 'urgent' | 'soon' | 'ok' | 'no-device'
 export type CustomerRow = {
@@ -56,8 +57,11 @@ function FilterPill({
   )
 }
 
+type HatirlatmaTarget = { id: string; full_name: string; phone: string | null; email: string | null }
+
 export default function CustomersClient({ customers }: { customers: CustomerRow[] }) {
   const [cityFilter, setCityFilter] = useState<CityFilter>('all')
+  const [hatirlatmaTarget, setHatirlatmaTarget] = useState<HatirlatmaTarget | null>(null)
   const [otherCityFilter, setOtherCityFilter] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
@@ -232,6 +236,17 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
         </div>
       </div>
 
+      {hatirlatmaTarget && (
+        <HatirlatmaModal
+          open={true}
+          onClose={() => setHatirlatmaTarget(null)}
+          customerId={hatirlatmaTarget.id}
+          customerName={hatirlatmaTarget.full_name}
+          phone={hatirlatmaTarget.phone}
+          email={hatirlatmaTarget.email}
+        />
+      )}
+
       {/* Müşteri tablosu */}
       <div className="bg-white border rounded-lg overflow-hidden">
         {filtered.length === 0 ? (
@@ -285,9 +300,20 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/customers/${c.id}`} className="text-[#C8102E] text-sm font-medium hover:underline">
-                        Detay →
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link href={`/customers/${c.id}`} className="text-[#C8102E] text-sm font-medium hover:underline">
+                          Detay →
+                        </Link>
+                        {c.controlStatus !== 'no-device' && (
+                          <button
+                            title="Hatırlatma Gönder"
+                            onClick={() => setHatirlatmaTarget({ id: c.id, full_name: c.full_name, phone: c.phone, email: c.email })}
+                            className="text-gray-400 hover:text-[#C8102E] transition-colors"
+                          >
+                            🔔
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

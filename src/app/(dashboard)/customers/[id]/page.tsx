@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { formatCurrency, formatTRDate } from '@/lib/finance/formatters'
 import DeleteCustomerButton from './DeleteCustomerButton'
+import HatirlatmaSection from './HatirlatmaSection'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -199,13 +200,23 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
         </div>
 
+        {/* Hatırlatmalar */}
+        <HatirlatmaSection
+          customerId={id}
+          customerName={customer.full_name}
+          phone={customer.phone ?? null}
+          email={customer.email ?? null}
+        />
+
         {/* Son servisler */}
         <div className="bg-white border rounded-lg p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-900">Son Servisler</h2>
-            <button className="border border-[#C8102E] text-[#C8102E] px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors">
+            <Link
+              href={`/service-forms/new?customer_id=${id}&customer_name=${encodeURIComponent(customer.full_name)}`}
+              className="border border-[#C8102E] text-[#C8102E] px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors">
               + Servis Formu
-            </button>
+            </Link>
           </div>
           <div className="text-center py-6 text-gray-400 text-sm">
             Bu müşteriye ait servis kaydı bulunmuyor.

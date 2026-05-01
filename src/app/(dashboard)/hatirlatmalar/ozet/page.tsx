@@ -21,6 +21,7 @@ export default async function HatirlatmalarOzetPage() {
     { data: recentSends },
     { data: susturmalar },
     { count: buHaftaPlanlanan },
+    { count: toplamMusteri },
   ] = await Promise.all([
     // Bu ay gönderilen (gönderildi)
     supabase
@@ -34,7 +35,7 @@ export default async function HatirlatmalarOzetPage() {
       .from('devices')
       .select(`
         id, custom_device_name, brand, capacity,
-        control1_date, control2_date, control3_date, expiry_date,
+        last_fill_date, control1_date, control2_date, control3_date, expiry_date,
         customers!inner(id, full_name, email, phone)
       `)
       .eq('is_active', true)
@@ -71,6 +72,12 @@ export default async function HatirlatmalarOzetPage() {
       .eq('durum', 'planlandı')
       .gte('planli_gonderim_zamani', today.toISOString())
       .lte('planli_gonderim_zamani', in7Days.toISOString()),
+
+    // Toplam aktif müşteri sayısı
+    supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true),
   ])
 
   // Susturulan müşteri ID seti
@@ -137,7 +144,7 @@ export default async function HatirlatmalarOzetPage() {
 
       // Bu device+tip kombinasyonu zaten var mı?
       const idx = group.devices.findIndex(dv => dv.deviceId === d.id && dv.tarihTipi === tip)
-      const newItem: DeviceItem = { deviceId: d.id, deviceName, tarih: dateStr, tarihTipi: tip, gunKaldi }
+      const newItem: DeviceItem = { deviceId: d.id, deviceName, tarih: dateStr, tarihTipi: tip, gunKaldi, sonBakim: d.last_fill_date ?? null }
 
       if (idx === -1) {
         group.devices.push(newItem)
@@ -182,6 +189,7 @@ export default async function HatirlatmalarOzetPage() {
       buHaftaGonderilecek={(buHaftaPlanlanan ?? 0) + aktifGruplar.filter(g => g.enYakinGunKaldi >= 0 && g.enYakinGunKaldi <= 7).length}
       kontrolYaklasan={kontrolYaklasan}
       sktYaklasan={sktYaklasan}
+      toplamMusteri={toplamMusteri ?? 0}
       sablonlar={(sablonlar ?? []) as any}
       hasResend={hasResend}
       hasNetgsm={hasNetgsm}

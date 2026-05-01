@@ -411,15 +411,6 @@ export default function AyarlarClient() {
         </div>
       ))}
 
-      {/* Geliştirici notu */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-800 space-y-1">
-        <div className="font-semibold">Geliştirici Notu</div>
-        <div>
-          Bu ayarlar Supabase <code className="font-mono bg-blue-100 px-1 rounded">app_settings</code> tablosunda saklanır.
-          Ortam değişkenleri (<code className="font-mono bg-blue-100 px-1 rounded">.env.local</code>) varsa önceliklidir.
-          Otomatik gönderim için Supabase Edge Functions veya harici bir cron servisi (örn. Upstash) kullanılabilir.
-        </div>
-      </div>
     </div>
   )
 }
