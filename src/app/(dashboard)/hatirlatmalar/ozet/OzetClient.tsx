@@ -72,7 +72,7 @@ function GunBadge({ gun }: { gun: number }) {
   if (gun === 0) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-orange-50 text-orange-700 border-orange-200">Bugün!</span>
   if (gun <= 7)  return <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-orange-50 text-orange-700 border-orange-200">{gun} gün</span>
   if (gun <= 30) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-yellow-50 text-yellow-700 border-yellow-200">{gun} gün</span>
-  return               <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-100 text-gray-600 border-gray-200">{gun} gün</span>
+  return               <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600">{gun} gün</span>
 }
 
 // ── Ana bileşen ───────────────────────────────────────────
@@ -341,7 +341,7 @@ export default function OzetClient({
           {/* Müşteri + durum noktası */}
           <td className="px-4 py-2.5">
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-xs select-none">{isExpanded ? '▼' : '▶'}</span>
+              <span className="text-gray-400 dark:text-gray-500 text-xs select-none">{isExpanded ? '▼' : '▶'}</span>
               <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                 g.enYakinGunKaldi < 0   ? 'bg-red-500' :
                 g.enYakinGunKaldi <= 7  ? 'bg-orange-500' :
@@ -350,7 +350,7 @@ export default function OzetClient({
               <Link
                 href={`/customers/${g.customerId}`}
                 onClick={e => e.stopPropagation()}
-                className="text-sm font-semibold text-gray-900 hover:text-[#C8102E] hover:underline"
+                className="text-sm font-semibold text-gray-900 dark:text-gray-100 hover:text-[#C8102E] hover:underline"
               >
                 {g.customerName}
               </Link>
@@ -361,24 +361,24 @@ export default function OzetClient({
           </td>
 
           {/* Cihaz */}
-          <td className="px-4 py-2.5 text-sm text-gray-700">
+          <td className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300">
             {g.devices[0] ? (
               <div>
                 <div className="font-medium">{g.devices[0].deviceName}</div>
                 {g.devices.length > 1 && (
-                  <div className="text-xs text-gray-400">+{g.devices.length - 1} cihaz daha</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">+{g.devices.length - 1} cihaz daha</div>
                 )}
               </div>
             ) : '—'}
           </td>
 
           {/* Son Bakım */}
-          <td className="px-4 py-2.5 text-sm text-gray-600">
+          <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">
             {g.devices[0]?.sonBakim ? formatTRDate(g.devices[0].sonBakim) : '—'}
           </td>
 
           {/* Sıradaki Bakım */}
-          <td className="px-4 py-2.5 text-sm text-gray-700">
+          <td className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300">
             {g.devices[0] && (
               <div className="flex items-center gap-1.5">
                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${
@@ -407,7 +407,7 @@ export default function OzetClient({
               <div className="flex items-center gap-2 justify-end">
                 <button
                   onClick={() => openPlanla(g)}
-                  className="text-xs border border-gray-300 text-gray-600 px-2.5 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="text-xs border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Planla
                 </button>
@@ -421,7 +421,7 @@ export default function OzetClient({
                 )}
                 <button
                   onClick={() => setKaldirModal(g)}
-                  className="text-xs text-gray-400 hover:text-red-600 px-1.5 py-1 rounded hover:bg-red-50 transition-colors font-bold"
+                  className="text-xs text-gray-400 dark:text-gray-500 hover:text-red-600 px-1.5 py-1 rounded hover:bg-red-50 transition-colors font-bold"
                   title="Listeden kaldır"
                 >
                   ✕
@@ -434,15 +434,15 @@ export default function OzetClient({
         {/* Accordion — cihaz alt satırları */}
         {isExpanded && g.devices.map((dev, i) => (
           <tr key={dev.deviceId + dev.tarihTipi + i}
-            className="bg-gray-50/80 border-t border-dashed border-gray-200">
-            <td className="pl-10 pr-4 py-2 text-xs text-gray-600">
-              <span className="text-gray-400 mr-1">└</span>
+            className="bg-gray-50 dark:bg-gray-700/80 border-t border-dashed border-gray-200 dark:border-gray-600">
+            <td className="pl-10 pr-4 py-2 text-xs text-gray-600 dark:text-gray-300">
+              <span className="text-gray-400 dark:text-gray-500 mr-1">└</span>
               {dev.deviceName}
             </td>
-            <td className="px-4 py-2 text-xs text-gray-500">
+            <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
               {dev.sonBakim ? formatTRDate(dev.sonBakim) : '—'}
             </td>
-            <td className="px-4 py-2 text-xs text-gray-500">
+            <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
               <span className={`px-1.5 py-0.5 rounded text-xs border mr-1 ${
                 dev.tarihTipi === 'skt'
                   ? 'bg-red-50 text-red-600 border-red-200'
@@ -480,30 +480,30 @@ export default function OzetClient({
 
       {/* KPI Kartlar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`bg-white border rounded-xl p-4 ${gecikmisSayisi > 0 ? 'bg-red-50 border-red-200' : ''}`}>
-          <div className="text-xs text-gray-500 mb-0.5">Gecikmiş Servisler</div>
-          <div className={`text-2xl font-bold ${gecikmisSayisi > 0 ? 'text-red-700' : 'text-gray-900'}`}>{gecikmisSayisi}</div>
-          <div className="text-xs text-gray-400 mt-0.5">kontrol tarihi geçmiş</div>
+        <div className={`bg-white dark:bg-gray-800 border rounded-xl p-4 ${gecikmisSayisi > 0 ? 'bg-red-50 border-red-200' : ''}`}>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Gecikmiş Servisler</div>
+          <div className={`text-2xl font-bold ${gecikmisSayisi > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>{gecikmisSayisi}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">kontrol tarihi geçmiş</div>
         </div>
-        <div className={`bg-white border rounded-xl p-4 ${buHaftaSayisi > 0 ? 'bg-orange-50 border-orange-200' : ''}`}>
-          <div className="text-xs text-gray-500 mb-0.5">Bu Hafta Yaklaşan</div>
-          <div className={`text-2xl font-bold ${buHaftaSayisi > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{buHaftaSayisi}</div>
-          <div className="text-xs text-gray-400 mt-0.5">0–7 gün içinde</div>
+        <div className={`bg-white dark:bg-gray-800 border rounded-xl p-4 ${buHaftaSayisi > 0 ? 'bg-orange-50 border-orange-200' : ''}`}>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Bu Hafta Yaklaşan</div>
+          <div className={`text-2xl font-bold ${buHaftaSayisi > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>{buHaftaSayisi}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">0–7 gün içinde</div>
         </div>
-        <div className={`bg-white border rounded-xl p-4 ${buAySayisi > 0 ? 'bg-yellow-50 border-yellow-200' : ''}`}>
-          <div className="text-xs text-gray-500 mb-0.5">Bu Ay Yaklaşan</div>
-          <div className={`text-2xl font-bold ${buAySayisi > 0 ? 'text-yellow-700' : 'text-gray-900'}`}>{buAySayisi}</div>
-          <div className="text-xs text-gray-400 mt-0.5">0–30 gün içinde</div>
+        <div className={`bg-white dark:bg-gray-800 border rounded-xl p-4 ${buAySayisi > 0 ? 'bg-yellow-50 border-yellow-200' : ''}`}>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Bu Ay Yaklaşan</div>
+          <div className={`text-2xl font-bold ${buAySayisi > 0 ? 'text-yellow-700' : 'text-gray-900 dark:text-gray-100'}`}>{buAySayisi}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">0–30 gün içinde</div>
         </div>
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-0.5">Toplam Müşteri</div>
-          <div className="text-2xl font-bold text-gray-900">{toplamMusteri}</div>
-          <div className="text-xs text-gray-400 mt-0.5">aktif kayıt</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Toplam Müşteri</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{toplamMusteri}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">aktif kayıt</div>
         </div>
       </div>
 
       {/* Filtre Barı */}
-      <div className="bg-white border rounded-xl px-4 py-3 flex flex-wrap gap-3 items-center">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl px-4 py-3 flex flex-wrap gap-3 items-center">
         <input
           type="text"
           placeholder="Müşteri ara..."
@@ -533,18 +533,18 @@ export default function OzetClient({
         {(aramaMetni || durumFiltre || urunFiltre) && (
           <button
             onClick={() => { setAramaMetni(''); setDurumFiltre(''); setUrunFiltre('') }}
-            className="text-xs text-gray-400 hover:text-gray-600 border rounded-lg px-2.5 py-1.5"
+            className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 border rounded-lg px-2.5 py-1.5"
           >
             Temizle
           </button>
         )}
-        <span className="text-xs text-gray-400 ml-auto">{filtrelenmisGruplar.length} sonuç</span>
+        <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{filtrelenmisGruplar.length} sonuç</span>
       </div>
 
       {/* Ana Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             Yaklaşan Bakımlar ({filtrelenmisGruplar.length} müşteri)
           </h2>
           {aktifGruplar.length > 0 && (
@@ -558,7 +558,7 @@ export default function OzetClient({
         </div>
 
         {filtrelenmisGruplar.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-400">
+          <div className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
             {aktifGruplar.length === 0
               ? '30 gün içinde yaklaşan kontrol veya SKT tarihi bulunamadı.'
               : 'Filtreye uyan müşteri bulunamadı.'}
@@ -568,11 +568,11 @@ export default function OzetClient({
             <table className="w-full text-sm">
               <thead className="border-b">
                 <tr>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Müşteri</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Cihaz</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Son Bakım</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Sıradaki Bakım</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Kalan Gün</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Müşteri</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Cihaz</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Son Bakım</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Sıradaki Bakım</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kalan Gün</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -586,16 +586,16 @@ export default function OzetClient({
 
       {/* Susturulan Müşteriler Toggle */}
       {susturulmusGruplar.length > 0 && (
-        <div className="bg-white border rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
           <button
             onClick={() => setSusturulanGoster(v => !v)}
-            className="w-full px-5 py-3 flex items-center justify-between text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+            className="w-full px-5 py-3 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 transition-colors"
           >
             <span>
-              <span className="font-semibold text-gray-700">Susturulan Müşteriler</span>{' '}
-              <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs ml-1">{susturulmusGruplar.length}</span>
+              <span className="font-semibold text-gray-700 dark:text-gray-300">Susturulan Müşteriler</span>{' '}
+              <span className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full text-xs ml-1">{susturulmusGruplar.length}</span>
             </span>
-            <span className="text-gray-400">{susturulanGoster ? '▲' : '▼'}</span>
+            <span className="text-gray-400 dark:text-gray-500">{susturulanGoster ? '▲' : '▼'}</span>
           </button>
 
           {susturulanGoster && (
@@ -613,19 +613,19 @@ export default function OzetClient({
       {/* ── Kaldır Onay Modali ─────────────────────────── */}
       {kaldirModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
             <div className="px-6 py-4 border-b">
-              <h2 className="text-base font-bold text-gray-900">Listeden Kaldır</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Listeden Kaldır</h2>
             </div>
             <div className="p-6 space-y-3">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
                 <span className="font-semibold">{kaldirModal.customerName}</span> müşterisini hatırlatma listesinden kaldırmak istediğinize emin misiniz?
               </p>
-              <p className="text-xs text-gray-400">Kaldırılan müşteri listeye geri eklenebilir.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Kaldırılan müşteri listeye geri eklenebilir.</p>
             </div>
             <div className="px-6 py-4 border-t flex gap-3">
               <button onClick={() => setKaldirModal(null)}
-                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                 İptal
               </button>
               <button
@@ -643,24 +643,24 @@ export default function OzetClient({
       {/* ── Planla Modali ──────────────────────────────── */}
       {planlaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-900">Hatırlatma Planla</h2>
-              <button onClick={() => setPlanlaModal(null)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Hatırlatma Planla</h2>
+              <button onClick={() => setPlanlaModal(null)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">×</button>
             </div>
             <div className="p-6 space-y-4">
               {/* Müşteri */}
-              <div className="bg-gray-50 rounded-lg px-3 py-2 text-sm">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2 text-sm">
                 <span className="font-semibold">{planlaModal.customerName}</span>
                 {planlaModal.devices[0] && (
-                  <span className="text-gray-500 ml-2">— {planlaModal.devices[0].deviceName}</span>
+                  <span className="text-gray-500 dark:text-gray-400 ml-2">— {planlaModal.devices[0].deviceName}</span>
                 )}
               </div>
 
               {/* Tarih + Saat */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Gönderim Tarihi</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Gönderim Tarihi</label>
                   <input
                     type="date"
                     value={planlaForm.tarih}
@@ -669,7 +669,7 @@ export default function OzetClient({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Gönderim Saati</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Gönderim Saati</label>
                   <input
                     type="time"
                     value={planlaForm.saat}
@@ -681,28 +681,28 @@ export default function OzetClient({
 
               {/* Kanallar */}
               <div>
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Kanallar</div>
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-2">Kanallar</div>
                 <div className="space-y-2">
                   <label className={`flex items-center gap-3 p-2.5 border rounded-lg cursor-pointer ${!planlaModal.customerEmail ? 'opacity-40 cursor-not-allowed' : 'hover:bg-blue-50'}`}>
                     <input type="checkbox" checked={planlaForm.email} disabled={!planlaModal.customerEmail}
                       onChange={e => setPlanlaForm(f => ({ ...f, email: e.target.checked }))}
                       className="w-4 h-4 text-[#C8102E]" />
                     <span className="text-sm font-medium">E-posta</span>
-                    {planlaModal.customerEmail && <span className="text-xs text-gray-400 ml-auto">{planlaModal.customerEmail}</span>}
+                    {planlaModal.customerEmail && <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{planlaModal.customerEmail}</span>}
                   </label>
                   <label className={`flex items-center gap-3 p-2.5 border rounded-lg cursor-pointer ${!planlaModal.customerPhone ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-50'}`}>
                     <input type="checkbox" checked={planlaForm.sms} disabled={!planlaModal.customerPhone}
                       onChange={e => setPlanlaForm(f => ({ ...f, sms: e.target.checked }))}
                       className="w-4 h-4 text-[#C8102E]" />
                     <span className="text-sm font-medium">SMS</span>
-                    {planlaModal.customerPhone && <span className="text-xs text-gray-400 ml-auto">{planlaModal.customerPhone}</span>}
+                    {planlaModal.customerPhone && <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{planlaModal.customerPhone}</span>}
                   </label>
                   <label className={`flex items-center gap-3 p-2.5 border rounded-lg cursor-pointer ${!planlaModal.customerPhone ? 'opacity-40 cursor-not-allowed' : 'hover:bg-purple-50'}`}>
                     <input type="checkbox" checked={planlaForm.whatsapp} disabled={!planlaModal.customerPhone}
                       onChange={e => setPlanlaForm(f => ({ ...f, whatsapp: e.target.checked }))}
                       className="w-4 h-4 text-[#C8102E]" />
                     <span className="text-sm font-medium">WhatsApp</span>
-                    <span className="text-xs text-gray-400 ml-auto">Gateway bağlı olmalı</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">Gateway bağlı olmalı</span>
                   </label>
                 </div>
               </div>
@@ -710,8 +710,8 @@ export default function OzetClient({
               {/* Mesaj önizlemesi */}
               {emailSablon && planlaForm.email && (
                 <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">Mesaj Önizlemesi</div>
-                  <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600 font-mono whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mesaj Önizlemesi</div>
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300 font-mono whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
                     {fillTemplate(emailSablon.mesaj_sablonu, makeVars(planlaModal))}
                   </div>
                 </div>
@@ -725,7 +725,7 @@ export default function OzetClient({
             </div>
             <div className="px-6 py-4 border-t flex gap-3">
               <button onClick={() => setPlanlaModal(null)}
-                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                 {planlaResult?.ok ? 'Kapat' : 'İptal'}
               </button>
               {!planlaResult?.ok && (
@@ -745,17 +745,17 @@ export default function OzetClient({
       {/* ── Gönder Modali ─────────────────────────────── */}
       {gonderModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-900">Hatırlatma Gönder</h2>
-              <button onClick={() => { setGonderModal(null); setGonderResult(null) }} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Hatırlatma Gönder</h2>
+              <button onClick={() => { setGonderModal(null); setGonderResult(null) }} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">×</button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm space-y-1">
                 <div className="font-semibold">{gonderModal.customerName}</div>
-                <div className="text-gray-500">{gonderModal.devices.length} cihaz — En yakın: {gonderModal.devices[0] && formatTRDate(gonderModal.devices[0].tarih)}</div>
-                {gonderModal.customerEmail && <div className="text-gray-500">✉ {gonderModal.customerEmail}</div>}
-                {gonderModal.customerPhone && <div className="text-gray-500">📞 {gonderModal.customerPhone}</div>}
+                <div className="text-gray-500 dark:text-gray-400">{gonderModal.devices.length} cihaz — En yakın: {gonderModal.devices[0] && formatTRDate(gonderModal.devices[0].tarih)}</div>
+                {gonderModal.customerEmail && <div className="text-gray-500 dark:text-gray-400">✉ {gonderModal.customerEmail}</div>}
+                {gonderModal.customerPhone && <div className="text-gray-500 dark:text-gray-400">📞 {gonderModal.customerPhone}</div>}
               </div>
               <div className="space-y-2">
                 {[
@@ -782,7 +782,7 @@ export default function OzetClient({
             </div>
             <div className="px-6 py-4 border-t flex gap-3">
               <button onClick={() => { setGonderModal(null); setGonderResult(null) }}
-                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                 {gonderResult?.ok ? 'Kapat' : 'İptal'}
               </button>
               {!gonderResult?.ok && (
@@ -799,13 +799,13 @@ export default function OzetClient({
       {/* ── Toplu Gönder Modali ───────────────────────── */}
       {topluModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-900">Tümünü Gönder</h2>
-              <button onClick={() => setTopluModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Tümünü Gönder</h2>
+              <button onClick={() => setTopluModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">×</button>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-sm text-gray-600"><strong>{aktifGruplar.length}</strong> müşteriye gönderilecek.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300"><strong>{aktifGruplar.length}</strong> müşteriye gönderilecek.</p>
               {[
                 { key: 'email' as const, label: 'E-posta', count: aktifGruplar.filter(g => g.customerEmail).length, warn: !hasResend ? '⚠ Resend eksik' : '' },
                 { key: 'sms'   as const, label: 'SMS',     count: aktifGruplar.filter(g => g.customerPhone).length, warn: !hasNetgsm ? '⚠ Netgsm eksik' : '' },
@@ -816,14 +816,14 @@ export default function OzetClient({
                     className="w-4 h-4 text-[#C8102E]" />
                   <div>
                     <div className="text-sm font-medium">{ch.label}</div>
-                    <div className="text-xs text-gray-400">{ch.count} müşteri</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500">{ch.count} müşteri</div>
                     {ch.warn && <div className="text-xs text-amber-600">{ch.warn}</div>}
                   </div>
                 </label>
               ))}
               {topluLoading && (
                 <div className="space-y-1.5">
-                  <div className="text-xs text-gray-500 text-center">{topluProgress} / {aktifGruplar.length} işleniyor...</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 text-center">{topluProgress} / {aktifGruplar.length} işleniyor...</div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5">
                     <div className="bg-[#C8102E] h-1.5 rounded-full transition-all" style={{ width: `${(topluProgress / aktifGruplar.length) * 100}%` }} />
                   </div>
@@ -836,7 +836,7 @@ export default function OzetClient({
               )}
             </div>
             <div className="px-6 py-4 border-t flex gap-3">
-              <button onClick={() => setTopluModal(false)} className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+              <button onClick={() => setTopluModal(false)} className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                 {topluResult ? 'Kapat' : 'İptal'}
               </button>
               {!topluResult && (

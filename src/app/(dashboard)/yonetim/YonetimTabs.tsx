@@ -21,7 +21,7 @@ export default function YonetimTabs() {
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               active
                 ? 'border-[#C8102E] text-[#C8102E]'
-                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 hover:border-gray-300'
             }`}>
             {tab.label}
           </Link>

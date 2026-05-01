@@ -4,7 +4,7 @@ export default function PrintButton({ label = 'Yazdır' }: { label?: string }) {
   return (
     <button
       onClick={() => window.print()}
-      className="no-print flex items-center gap-1.5 border border-gray-200 bg-white text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+      className="no-print flex items-center gap-1.5 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="6 9 6 2 18 2 18 9"/>

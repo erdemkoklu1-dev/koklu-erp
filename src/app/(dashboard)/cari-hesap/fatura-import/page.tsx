@@ -144,16 +144,16 @@ function PdfEditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
-          <h3 className="text-sm font-semibold text-gray-900">Fatura Düzenle</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50 dark:bg-gray-700">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Fatura Düzenle</h3>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-lg leading-none">×</button>
         </div>
         <div className="p-5 space-y-4">
 
           {/* Müşteri unvanı + autocomplete */}
           <div ref={custRef} className="relative">
-            <label className="text-xs font-medium text-gray-600">Müşteri Unvanı</label>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Müşteri Unvanı</label>
             <input
               value={name}
               onChange={e => { setName(e.target.value); setCustDrop(true) }}
@@ -161,12 +161,12 @@ function PdfEditModal({
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
             />
             {custDrop && filteredCust.length > 0 && (
-              <div className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+              <div className="absolute z-10 w-full bg-white dark:bg-gray-800 border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
                 {filteredCust.map(c => (
                   <button key={c.id} type="button" onMouseDown={() => pickCustomer(c)}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0">
-                    <div className="font-medium text-gray-900">{c.full_name}</div>
-                    {c.tax_number && <div className="text-xs text-gray-400 font-mono">{c.tax_number}</div>}
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{c.full_name}</div>
+                    {c.tax_number && <div className="text-xs text-gray-400 dark:text-gray-500 font-mono">{c.tax_number}</div>}
                   </button>
                 ))}
               </div>
@@ -176,12 +176,12 @@ function PdfEditModal({
           {/* VKN + Fatura No */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-600">Müşteri VKN</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Müşteri VKN</label>
               <input value={vkn} onChange={e => setVkn(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600">Fatura No</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Fatura No</label>
               <input value={faturaNo} onChange={e => setFaturaNo(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
@@ -190,12 +190,12 @@ function PdfEditModal({
           {/* Tarihler */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-600">Fatura Tarihi</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Fatura Tarihi</label>
               <input type="date" value={tarih} onChange={e => setTarih(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600">Vade Tarihi</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Vade Tarihi</label>
               <input type="date" value={vade} onChange={e => setVade(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
@@ -204,31 +204,31 @@ function PdfEditModal({
           {/* Tutar + Şube */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-600">Ödenecek Tutar (₺)</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Ödenecek Tutar (₺)</label>
               <input type="number" value={tutar} onChange={e => setTutar(e.target.value)} step="0.01" min="0"
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600">Şube</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Şube</label>
               <select value={subeId ?? ''} onChange={e => setSubeId(e.target.value || null)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                 <option value="">— Seçin</option>
                 {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-gray-400 dark:text-gray-500">
             Kalem sayısı: {row.kalemler?.length ?? 0} — Değiştirilemiyor
           </div>
         </div>
-        <div className="flex gap-3 px-5 py-4 border-t bg-gray-50">
+        <div className="flex gap-3 px-5 py-4 border-t bg-gray-50 dark:bg-gray-700">
           <button onClick={handleSave}
             className="flex-1 bg-[#C8102E] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#a50d26]">
             Kaydet
           </button>
           <button onClick={onClose}
-            className="px-5 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-100">
+            className="px-5 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100">
             İptal
           </button>
         </div>
@@ -426,19 +426,19 @@ function PdfFaturaImport() {
           onClick={() => fileRef.current?.click()}
           onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
           onDragOver={e => e.preventDefault()}
-          className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-[#C8102E] hover:bg-red-50 transition-colors"
+          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-12 text-center cursor-pointer hover:border-[#C8102E] hover:bg-red-50 transition-colors"
         >
           <input ref={fileRef} type="file" accept=".zip,.pdf" className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }} />
           <div className="space-y-2">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-gray-700">ZIP veya PDF dosyası seçin ya da sürükleyin</p>
-            <p className="text-xs text-gray-400">Tek fatura için PDF, çoklu fatura için ZIP</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">ZIP veya PDF dosyası seçin ya da sürükleyin</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Tek fatura için PDF, çoklu fatura için ZIP</p>
           </div>
         </div>
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
@@ -452,8 +452,8 @@ function PdfFaturaImport() {
       <div className="p-6 flex items-center justify-center min-h-64">
         <div className="text-center space-y-4">
           <div className="w-14 h-14 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-700 font-medium">PDF'ler analiz ediliyor...</p>
-          <p className="text-sm text-gray-400">Fatura okunuyor, lütfen bekleyin.</p>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">PDF'ler analiz ediliyor...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Fatura okunuyor, lütfen bekleyin.</p>
         </div>
       </div>
     )
@@ -477,10 +477,10 @@ function PdfFaturaImport() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={resetAll} className="text-sm text-gray-500 hover:text-gray-700">← Geri</button>
+            <button onClick={resetAll} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Geri</button>
             <span className="text-gray-300">/</span>
-            <h2 className="text-base font-semibold text-gray-900">Önizleme ve Onay</h2>
-            <span className="text-xs text-gray-400">{previewRows.length} PDF</span>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Önizleme ve Onay</h2>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{previewRows.length} PDF</span>
           </div>
           <button
             onClick={handleImport}
@@ -503,19 +503,19 @@ function PdfFaturaImport() {
             <div className="text-2xl font-bold text-yellow-700">{yeniMusteri}</div>
             <div className="text-xs text-yellow-600">oluşturulacak</div>
           </div>
-          <div className="bg-gray-100 border border-gray-200 rounded-lg p-3">
-            <div className="text-xs text-gray-500 font-medium">Duplicate</div>
-            <div className="text-2xl font-bold text-gray-500">{duplicate}</div>
-            <div className="text-xs text-gray-400">atlanacak</div>
+          <div className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Duplicate</div>
+            <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">{duplicate}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500">atlanacak</div>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <div className="text-xs text-red-600 font-medium">Parse Hatası</div>
             <div className="text-2xl font-bold text-red-600">{hatali}</div>
             <div className="text-xs text-red-500">manuel kontrol</div>
           </div>
-          <div className="bg-white border rounded-lg p-3">
-            <div className="text-xs text-gray-500 font-medium">Eklenecek Tutar</div>
-            <div className="text-lg font-bold text-gray-900">{fmtAmt(toplamTutar)}</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Eklenecek Tutar</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{fmtAmt(toplamTutar)}</div>
           </div>
         </div>
 
@@ -525,7 +525,7 @@ function PdfFaturaImport() {
           <select
             value={globalSubeId ?? ''}
             onChange={e => applyGlobalSube(e.target.value || null)}
-            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
           >
             <option value="">— Şube seçin</option>
             {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
@@ -548,17 +548,17 @@ function PdfFaturaImport() {
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
 
         {/* Satır listesi */}
-        <div className="bg-white border rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-28">Durum</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Müşteri Adı</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-28">Şube</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kalem</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-28">Durum</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri Adı</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-28">Şube</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kalem</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
                 <th className="px-4 py-3 w-8" />
                 <th className="px-4 py-3 w-8" />
                 <th className="px-4 py-3 w-8" />
@@ -570,13 +570,13 @@ function PdfFaturaImport() {
                 const isYeni = row.rowStatus === 'yeni_musteri'
                 const isHata = row.rowStatus === 'hata'
 
-                const rowBg = isDup  ? 'bg-gray-50 opacity-60'
+                const rowBg = isDup  ? 'bg-gray-50 dark:bg-gray-700 opacity-60'
                   : isYeni ? 'bg-yellow-50'
                   : isHata ? 'bg-red-50'
-                  : 'bg-white'
+                  : 'bg-white dark:bg-gray-800'
 
                 const badge = isDup
-                  ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">Atlanacak</span>
+                  ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600 dark:text-gray-300">Atlanacak</span>
                   : isYeni
                   ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Yeni Müşteri</span>
                   : isHata
@@ -590,34 +590,34 @@ function PdfFaturaImport() {
                     <tr className={`${rowBg} border-t`}>
                       <td className="px-4 py-2.5">{badge}</td>
                       <td className="px-4 py-2.5">
-                        <span className="text-gray-900 font-medium">
-                          {row.editedName || <span className="text-gray-400 italic">Bilinmiyor</span>}
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">
+                          {row.editedName || <span className="text-gray-400 dark:text-gray-500 italic">Bilinmiyor</span>}
                         </span>
                         {(row.editedVkn || row.musteri_vkn) && (
-                          <div className="text-xs text-gray-400 font-mono">{row.editedVkn || row.musteri_vkn}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 font-mono">{row.editedVkn || row.musteri_vkn}</div>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-gray-700">
-                        {row.editedFaturaNo || row.fatura_no || <span className="text-gray-400">—</span>}
+                      <td className="px-4 py-2.5 font-mono text-xs text-gray-700 dark:text-gray-300">
+                        {row.editedFaturaNo || row.fatura_no || <span className="text-gray-400 dark:text-gray-500">—</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap text-xs">
+                      <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 whitespace-nowrap text-xs">
                         <div>{row.editedTarih || row.fatura_tarihi || '—'}</div>
                         {(row.editedVade || row.vade_tarihi) && (
-                          <div className="text-gray-400">vade: {row.editedVade || row.vade_tarihi}</div>
+                          <div className="text-gray-400 dark:text-gray-500">vade: {row.editedVade || row.vade_tarihi}</div>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-gray-600">{subeAdi}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-600">
+                      <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">{subeAdi}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-600 dark:text-gray-300">
                         {isHata ? <span className="text-red-500 text-xs">{row.hata?.slice(0, 40)}</span> : (row.kalemler?.length ?? 0)}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-semibold ${isDup ? 'text-gray-400' : 'text-gray-900'}`}>
+                      <td className={`px-4 py-2.5 text-right font-semibold ${isDup ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
                         {row.editedTutar ? fmtAmt(parseFloat(row.editedTutar)) : fmtAmt(row.odenecek_tutar)}
                       </td>
                       <td className="px-2 py-2.5 text-center">
                         {!isHata && (row.kalemler?.length ?? 0) > 0 && (
                           <button
                             onClick={() => toggleExpand(idx)}
-                            className="text-gray-400 hover:text-gray-600 text-xs"
+                            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xs"
                             title="Kalemleri göster"
                           >
                             {row.expanded ? '▲' : '▼'}
@@ -627,7 +627,7 @@ function PdfFaturaImport() {
                       <td className="px-2 py-2.5 text-center">
                         <button
                           onClick={() => setEditRowIdx(idx)}
-                          className="text-gray-400 hover:text-blue-500 transition-colors"
+                          className="text-gray-400 dark:text-gray-500 hover:text-blue-500 transition-colors"
                           title="Düzenle"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -649,37 +649,37 @@ function PdfFaturaImport() {
                     {row.expanded && (row.kalemler?.length ?? 0) > 0 && (
                       <tr className={`${rowBg} border-t border-dashed`}>
                         <td colSpan={10} className="px-6 pb-3 pt-1">
-                          <div className="bg-white border rounded-lg overflow-hidden">
+                          <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                             <table className="w-full text-xs">
-                              <thead className="bg-gray-50 border-b">
+                              <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                                 <tr>
-                                  <th className="text-left px-3 py-2 text-gray-500">#</th>
-                                  <th className="text-left px-3 py-2 text-gray-500">Ürün / Hizmet</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">Miktar</th>
-                                  <th className="text-left px-3 py-2 text-gray-500">Birim</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">Birim Fiyat</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">İskonto</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">KDV %</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">KDV Tutarı</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">Satır Toplam</th>
+                                  <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">#</th>
+                                  <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">Ürün / Hizmet</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">Miktar</th>
+                                  <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">Birim</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">Birim Fiyat</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">İskonto</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">KDV %</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">KDV Tutarı</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">Satır Toplam</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y">
                                 {(row.kalemler ?? []).map((k, ki) => (
                                   <tr key={ki} className="hover:bg-gray-50">
-                                    <td className="px-3 py-1.5 text-gray-400">{ki + 1}</td>
-                                    <td className="px-3 py-1.5 text-gray-800">{k.urun_adi}</td>
-                                    <td className="px-3 py-1.5 text-right text-gray-700">{k.miktar}</td>
-                                    <td className="px-3 py-1.5 text-gray-500">{k.birim}</td>
-                                    <td className="px-3 py-1.5 text-right text-gray-700">{fmtAmt(k.birim_fiyat)}</td>
+                                    <td className="px-3 py-1.5 text-gray-400 dark:text-gray-500">{ki + 1}</td>
+                                    <td className="px-3 py-1.5 text-gray-800 dark:text-gray-200">{k.urun_adi}</td>
+                                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{k.miktar}</td>
+                                    <td className="px-3 py-1.5 text-gray-500 dark:text-gray-400">{k.birim}</td>
+                                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{fmtAmt(k.birim_fiyat)}</td>
                                     <td className="px-3 py-1.5 text-right text-orange-600">
                                       {k.iskonto_tutari > 0
                                         ? `${k.iskonto_orani > 0 ? `%${k.iskonto_orani} ` : ''}${fmtAmt(k.iskonto_tutari)}`
                                         : <span className="text-gray-300">—</span>}
                                     </td>
-                                    <td className="px-3 py-1.5 text-right text-gray-600">%{k.kdv_orani}</td>
-                                    <td className="px-3 py-1.5 text-right text-gray-600">{fmtAmt(k.kdv_tutari)}</td>
-                                    <td className="px-3 py-1.5 text-right font-medium text-gray-900">{fmtAmt(k.satir_toplam)}</td>
+                                    <td className="px-3 py-1.5 text-right text-gray-600 dark:text-gray-300">%{k.kdv_orani}</td>
+                                    <td className="px-3 py-1.5 text-right text-gray-600 dark:text-gray-300">{fmtAmt(k.kdv_tutari)}</td>
+                                    <td className="px-3 py-1.5 text-right font-medium text-gray-900 dark:text-gray-100">{fmtAmt(k.satir_toplam)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -703,7 +703,7 @@ function PdfFaturaImport() {
           >
             İçe Aktar ({eklenecek + yeniMusteri} fatura)
           </button>
-          <button onClick={resetAll} className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+          <button onClick={resetAll} className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
             İptal
           </button>
         </div>
@@ -729,8 +729,8 @@ function PdfFaturaImport() {
       <div className="p-6 flex items-center justify-center min-h-64">
         <div className="text-center space-y-4">
           <div className="w-14 h-14 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-700 font-medium">Faturalar kaydediliyor...</p>
-          <p className="text-sm text-gray-400">Lütfen bekleyin, sayfayı kapatmayın.</p>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">Faturalar kaydediliyor...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Lütfen bekleyin, sayfayı kapatmayın.</p>
         </div>
       </div>
     )
@@ -743,7 +743,7 @@ function PdfFaturaImport() {
     const hatalılar  = results.filter(r => r.status === 'hata')
     return (
       <div className="p-6 max-w-3xl mx-auto space-y-5">
-        <h2 className="text-base font-semibold text-gray-900">İçe Aktarma Sonucu</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">İçe Aktarma Sonucu</h2>
         <div className="grid grid-cols-5 gap-3">
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-green-700">{eklendi}</div>
@@ -757,9 +757,9 @@ function PdfFaturaImport() {
             <div className="text-2xl font-bold text-blue-700">{yeniMusteri}</div>
             <div className="text-xs text-blue-600 mt-1 font-medium">Yeni Müşteri</div>
           </div>
-          <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-gray-500">{atilandi}</div>
-            <div className="text-xs text-gray-500 mt-1 font-medium">Atlandı</div>
+          <div className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 text-center">
+            <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">{atilandi}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Atlandı</div>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-red-600">{hatalılar.length}</div>
@@ -768,19 +768,19 @@ function PdfFaturaImport() {
         </div>
 
         {eklenenler.length > 0 && (
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b">
-              <h3 className="text-sm font-semibold text-gray-900">Eklenen Faturalar</h3>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Eklenen Faturalar</h3>
             </div>
             <div className="divide-y max-h-64 overflow-y-auto">
               {eklenenler.map((r, i) => (
                 <div key={i} className="flex items-center justify-between px-4 py-2.5">
                   <div>
-                    <span className="text-sm font-medium text-gray-900">{r.musteri_adi}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{r.musteri_adi}</span>
                     {r.musteri_yeni && (
                       <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Yeni Müşteri</span>
                     )}
-                    <div className="text-xs text-gray-400 font-mono">{r.fatura_no}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 font-mono">{r.fatura_no}</div>
                   </div>
                   <div className="flex gap-2">
                     {r.invoice_id && (
@@ -789,7 +789,7 @@ function PdfFaturaImport() {
                       </Link>
                     )}
                     {r.customer_id && (
-                      <Link href={`/customers/${r.customer_id}`} className="text-xs text-gray-400 hover:text-gray-700">
+                      <Link href={`/customers/${r.customer_id}`} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700">
                         Müşteri →
                       </Link>
                     )}
@@ -801,7 +801,7 @@ function PdfFaturaImport() {
         )}
 
         {hatalılar.length > 0 && (
-          <div className="bg-white border border-red-200 rounded-xl overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 border border-red-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3 bg-red-50 border-b border-red-200">
               <h3 className="text-sm font-semibold text-red-800">Hatalı Kayıtlar</h3>
             </div>
@@ -821,7 +821,7 @@ function PdfFaturaImport() {
             className="flex-1 bg-[#C8102E] text-white py-3 rounded-lg font-semibold hover:bg-[#a50d26] text-center">
             Faturalara Git
           </Link>
-          <button onClick={resetAll} className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+          <button onClick={resetAll} className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
             Yeni Import
           </button>
         </div>
@@ -1071,19 +1071,19 @@ function GelenPdfFaturaImport() {
           onClick={() => fileRef.current?.click()}
           onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
           onDragOver={e => e.preventDefault()}
-          className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-[#C8102E] hover:bg-red-50 transition-colors"
+          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-12 text-center cursor-pointer hover:border-[#C8102E] hover:bg-red-50 transition-colors"
         >
           <input ref={fileRef} type="file" accept=".zip,.pdf" className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }} />
           <div className="space-y-2">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-gray-700">ZIP veya PDF dosyası seçin ya da sürükleyin</p>
-            <p className="text-xs text-gray-400">Tek fatura için PDF, çoklu fatura için ZIP</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">ZIP veya PDF dosyası seçin ya da sürükleyin</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Tek fatura için PDF, çoklu fatura için ZIP</p>
           </div>
         </div>
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
@@ -1097,8 +1097,8 @@ function GelenPdfFaturaImport() {
       <div className="p-6 flex items-center justify-center min-h-64">
         <div className="text-center space-y-4">
           <div className="w-14 h-14 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-700 font-medium">Gelen fatura PDF'leri analiz ediliyor...</p>
-          <p className="text-sm text-gray-400">Satıcı bilgileri ve ürün kalemleri çıkarılıyor.</p>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">Gelen fatura PDF'leri analiz ediliyor...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Satıcı bilgileri ve ürün kalemleri çıkarılıyor.</p>
         </div>
       </div>
     )
@@ -1122,10 +1122,10 @@ function GelenPdfFaturaImport() {
       <div className="p-6 space-y-4 max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={resetAll} className="text-sm text-gray-500 hover:text-gray-700">← Geri</button>
+            <button onClick={resetAll} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Geri</button>
             <span className="text-gray-300">/</span>
-            <h2 className="text-base font-semibold text-gray-900">Önizleme</h2>
-            <span className="text-xs text-gray-400">{previewRows.length} PDF</span>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Önizleme</h2>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{previewRows.length} PDF</span>
           </div>
           <button
             onClick={handleImport}
@@ -1147,10 +1147,10 @@ function GelenPdfFaturaImport() {
             <div className="text-2xl font-bold text-yellow-700">{yeniTed}</div>
             <div className="text-xs text-yellow-600">oluşturulacak</div>
           </div>
-          <div className="bg-gray-100 border border-gray-200 rounded-lg p-3">
-            <div className="text-xs text-gray-500 font-medium">Duplicate</div>
-            <div className="text-2xl font-bold text-gray-500">{duplicate}</div>
-            <div className="text-xs text-gray-400">atlanacak</div>
+          <div className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Duplicate</div>
+            <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">{duplicate}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500">atlanacak</div>
           </div>
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
             <div className="text-xs text-orange-600 font-medium">Manuel Kategori</div>
@@ -1162,9 +1162,9 @@ function GelenPdfFaturaImport() {
             <div className="text-2xl font-bold text-red-600">{hatali}</div>
             <div className="text-xs text-red-500">manuel kontrol</div>
           </div>
-          <div className="bg-white border rounded-lg p-3">
-            <div className="text-xs text-gray-500 font-medium">Toplam Tutar</div>
-            <div className="text-lg font-bold text-gray-900">{fmtAmt(toplamTutar)}</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Toplam Tutar</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{fmtAmt(toplamTutar)}</div>
           </div>
         </div>
 
@@ -1174,7 +1174,7 @@ function GelenPdfFaturaImport() {
           <select
             value={globalSubeId ?? ''}
             onChange={e => applyGlobalSube(e.target.value || null)}
-            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
           >
             <option value="">— Şube seçin</option>
             {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
@@ -1196,18 +1196,18 @@ function GelenPdfFaturaImport() {
 
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
 
-        <div className="bg-white border rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-32">Durum</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tedarikçi</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih / Vade</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-28">Şube</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kalem</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-32">Durum</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tedarikçi</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih / Vade</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kategori</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-28">Şube</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kalem</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
                 <th className="px-4 py-3 w-8" />
                 <th className="px-4 py-3 w-8" />
               </tr>
@@ -1219,14 +1219,14 @@ function GelenPdfFaturaImport() {
                 const isHata    = row.rowStatus === 'hata'
                 const isManuel  = row.rowStatus === 'manuel_kategori'
 
-                const rowBg = isDup    ? 'bg-gray-50 opacity-60'
+                const rowBg = isDup    ? 'bg-gray-50 dark:bg-gray-700 opacity-60'
                   : isYeni   ? 'bg-yellow-50'
                   : isHata   ? 'bg-red-50'
                   : isManuel ? 'bg-orange-50'
-                  : 'bg-white'
+                  : 'bg-white dark:bg-gray-800'
 
                 const badge = isDup
-                  ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">Atlanacak</span>
+                  ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600 dark:text-gray-300">Atlanacak</span>
                   : isYeni
                   ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Yeni Tedarikçi</span>
                   : isHata
@@ -1249,16 +1249,16 @@ function GelenPdfFaturaImport() {
                             className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                           />
                         ) : (
-                          <span className="text-gray-900 font-medium">{row.satici_adi || <span className="text-gray-400 italic">Bilinmiyor</span>}</span>
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">{row.satici_adi || <span className="text-gray-400 dark:text-gray-500 italic">Bilinmiyor</span>}</span>
                         )}
                         {row.satici_vkn && (
-                          <div className="text-xs text-gray-400 font-mono">{row.satici_vkn}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 font-mono">{row.satici_vkn}</div>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-gray-700">
-                        {row.fatura_no ?? <span className="text-gray-400">—</span>}
+                      <td className="px-4 py-2.5 font-mono text-xs text-gray-700 dark:text-gray-300">
+                        {row.fatura_no ?? <span className="text-gray-400 dark:text-gray-500">—</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap text-xs">
+                      <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 whitespace-nowrap text-xs">
                         <div>{row.fatura_tarihi ?? '—'}</div>
                         {row.vade_tarihi && (
                           <div className="text-orange-500">vade: {row.vade_tarihi}</div>
@@ -1280,22 +1280,22 @@ function GelenPdfFaturaImport() {
                               }
                               return { ...r, editedKategori: newKat, rowStatus: newStatus }
                             }))}
-                            className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C8102E] bg-white"
+                            className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C8102E] bg-white dark:bg-gray-800"
                           >
                             {GIDER_KATEGORILERI.map(k => (
                               <option key={k} value={k}>{k}</option>
                             ))}
                           </select>
                         ) : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-gray-600">
+                      <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">
                         {!isDup && !isHata ? (
                           <select
                             value={row.sube_id ?? ''}
                             onChange={e => setPreviewRows(prev => prev.map((r, i) => i === idx ? { ...r, sube_id: e.target.value || null } : r))}
-                            className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C8102E] bg-white"
+                            className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#C8102E] bg-white dark:bg-gray-800"
                           >
                             <option value="">—</option>
                             {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
@@ -1304,21 +1304,21 @@ function GelenPdfFaturaImport() {
                           <span className="text-gray-300">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-600">
+                      <td className="px-4 py-2.5 text-right text-gray-600 dark:text-gray-300">
                         {isHata ? (
                           <span className="text-red-500 text-xs">{row.hata?.slice(0, 30)}</span>
                         ) : (
                           row.kalemler?.length ?? 0
                         )}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-semibold ${isDup ? 'text-gray-400' : 'text-gray-900'}`}>
+                      <td className={`px-4 py-2.5 text-right font-semibold ${isDup ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
                         {fmtAmt(row.odenecek_tutar)}
                       </td>
                       <td className="px-4 py-2.5 text-center">
                         {!isHata && (row.kalemler?.length ?? 0) > 0 && (
                           <button
                             onClick={() => toggleExpand(idx)}
-                            className="text-gray-400 hover:text-gray-600 text-xs"
+                            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xs"
                             title="Kalemleri göster"
                           >
                             {row.expanded ? '▲' : '▼'}
@@ -1348,29 +1348,29 @@ function GelenPdfFaturaImport() {
                               IBAN: {row.banka_bilgileri.map(b => b.banka_adi ? `${b.banka_adi}: ${b.iban}` : b.iban).join(' | ')}
                             </div>
                           )}
-                          <div className="bg-white border rounded-lg overflow-hidden">
+                          <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                             <table className="w-full text-xs">
-                              <thead className="bg-gray-50 border-b">
+                              <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                                 <tr>
-                                  <th className="text-left px-3 py-2 text-gray-500">#</th>
-                                  <th className="text-left px-3 py-2 text-gray-500">Ürün / Hizmet</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">Miktar</th>
-                                  <th className="text-left px-3 py-2 text-gray-500">Birim</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">Birim Fiyat</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">KDV %</th>
-                                  <th className="text-right px-3 py-2 text-gray-500">Satır Toplam</th>
+                                  <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">#</th>
+                                  <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">Ürün / Hizmet</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">Miktar</th>
+                                  <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">Birim</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">Birim Fiyat</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">KDV %</th>
+                                  <th className="text-right px-3 py-2 text-gray-500 dark:text-gray-400">Satır Toplam</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y">
                                 {(row.kalemler ?? []).map((k, ki) => (
                                   <tr key={ki} className="hover:bg-gray-50">
-                                    <td className="px-3 py-1.5 text-gray-400">{ki + 1}</td>
-                                    <td className="px-3 py-1.5 text-gray-800">{k.urun_adi}</td>
-                                    <td className="px-3 py-1.5 text-right text-gray-700">{k.miktar}</td>
-                                    <td className="px-3 py-1.5 text-gray-500">{k.birim}</td>
-                                    <td className="px-3 py-1.5 text-right text-gray-700">{fmtAmt(k.birim_fiyat)}</td>
-                                    <td className="px-3 py-1.5 text-right text-gray-600">%{k.kdv_orani}</td>
-                                    <td className="px-3 py-1.5 text-right font-medium text-gray-900">{fmtAmt(k.satir_toplam)}</td>
+                                    <td className="px-3 py-1.5 text-gray-400 dark:text-gray-500">{ki + 1}</td>
+                                    <td className="px-3 py-1.5 text-gray-800 dark:text-gray-200">{k.urun_adi}</td>
+                                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{k.miktar}</td>
+                                    <td className="px-3 py-1.5 text-gray-500 dark:text-gray-400">{k.birim}</td>
+                                    <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{fmtAmt(k.birim_fiyat)}</td>
+                                    <td className="px-3 py-1.5 text-right text-gray-600 dark:text-gray-300">%{k.kdv_orani}</td>
+                                    <td className="px-3 py-1.5 text-right font-medium text-gray-900 dark:text-gray-100">{fmtAmt(k.satir_toplam)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -1394,7 +1394,7 @@ function GelenPdfFaturaImport() {
           >
             İçe Aktar ({eklenecek + yeniTed + manuelKat} fatura)
           </button>
-          <button onClick={resetAll} className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+          <button onClick={resetAll} className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
             İptal
           </button>
         </div>
@@ -1408,8 +1408,8 @@ function GelenPdfFaturaImport() {
       <div className="p-6 flex items-center justify-center min-h-64">
         <div className="text-center space-y-4">
           <div className="w-14 h-14 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-700 font-medium">Gelen faturalar kaydediliyor...</p>
-          <p className="text-sm text-gray-400">Lütfen bekleyin, sayfayı kapatmayın.</p>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">Gelen faturalar kaydediliyor...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Lütfen bekleyin, sayfayı kapatmayın.</p>
         </div>
       </div>
     )
@@ -1422,7 +1422,7 @@ function GelenPdfFaturaImport() {
     const hatalılar  = results.filter(r => r.status === 'hata')
     return (
       <div className="p-6 max-w-3xl mx-auto space-y-5">
-        <h2 className="text-base font-semibold text-gray-900">İçe Aktarma Sonucu</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">İçe Aktarma Sonucu</h2>
         <div className="grid grid-cols-4 gap-3">
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-green-700">{eklendi}</div>
@@ -1432,9 +1432,9 @@ function GelenPdfFaturaImport() {
             <div className="text-2xl font-bold text-blue-700">{yeniTedarikci}</div>
             <div className="text-xs text-blue-600 mt-1 font-medium">Yeni Tedarikçi</div>
           </div>
-          <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-bold text-gray-500">{atilandi}</div>
-            <div className="text-xs text-gray-500 mt-1 font-medium">Atlandı</div>
+          <div className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 text-center">
+            <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">{atilandi}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Atlandı</div>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
             <div className="text-2xl font-bold text-red-600">{hatalılar.length}</div>
@@ -1443,15 +1443,15 @@ function GelenPdfFaturaImport() {
         </div>
 
         {Object.keys(kategoriOzet ?? {}).length > 0 && (
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b">
-              <h3 className="text-sm font-semibold text-gray-900">Kategoriye Göre Gider</h3>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Kategoriye Göre Gider</h3>
             </div>
             <div className="divide-y">
               {Object.entries(kategoriOzet).map(([kat, sayi]) => (
                 <div key={kat} className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-sm text-gray-700">{kat}</span>
-                  <span className="text-sm font-semibold text-gray-900">{sayi} fatura</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{kat}</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{sayi} fatura</span>
                 </div>
               ))}
             </div>
@@ -1459,22 +1459,22 @@ function GelenPdfFaturaImport() {
         )}
 
         {eklenenler.length > 0 && (
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b">
-              <h3 className="text-sm font-semibold text-gray-900">Eklenen Faturalar</h3>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Eklenen Faturalar</h3>
             </div>
             <div className="divide-y max-h-52 overflow-y-auto">
               {eklenenler.map((r, i) => (
                 <div key={i} className="flex items-center justify-between px-4 py-2.5">
                   <div>
-                    <span className="text-sm font-medium text-gray-900">{r.satici_adi}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{r.satici_adi}</span>
                     {r.tedarikci_yeni && (
                       <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Yeni Tedarikçi</span>
                     )}
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-gray-400 font-mono">{r.fatura_no}</span>
-                      <span className="text-xs text-gray-400">·</span>
-                      <span className="text-xs text-gray-500">{r.gider_kategorisi}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">{r.fatura_no}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">·</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{r.gider_kategorisi}</span>
                     </div>
                   </div>
                   {r.invoice_id && (
@@ -1490,7 +1490,7 @@ function GelenPdfFaturaImport() {
         )}
 
         {hatalılar.length > 0 && (
-          <div className="bg-white border border-red-200 rounded-xl overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 border border-red-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3 bg-red-50 border-b border-red-200">
               <h3 className="text-sm font-semibold text-red-800">Hatalı Kayıtlar</h3>
             </div>
@@ -1511,10 +1511,10 @@ function GelenPdfFaturaImport() {
             Gelen Faturalara Git
           </Link>
           <Link href="/cari-hesap/gider-raporu"
-            className="px-6 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 text-center">
+            className="px-6 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 text-center">
             Gider Raporu
           </Link>
-          <button onClick={resetAll} className="px-6 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+          <button onClick={resetAll} className="px-6 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
             Yeni Import
           </button>
         </div>
@@ -1537,7 +1537,7 @@ function TabContent() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b px-6 flex-shrink-0">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 flex-shrink-0">
         <nav className="flex gap-1 -mb-px">
           {[
             { id: 'pdf',       label: 'Giden Fatura Yükle' },
@@ -1549,7 +1549,7 @@ function TabContent() {
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-[#C8102E] text-[#C8102E]'
-                  : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 hover:border-gray-300'
               }`}
             >
               {tab.label}
@@ -1564,7 +1564,7 @@ function TabContent() {
 
 export default function EFaturaImportPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-center text-sm text-gray-400">Yükleniyor...</div>}>
+    <Suspense fallback={<div className="p-6 text-center text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>}>
       <TabContent />
     </Suspense>
   )

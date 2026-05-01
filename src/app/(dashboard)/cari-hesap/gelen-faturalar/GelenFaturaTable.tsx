@@ -40,7 +40,7 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
   if (invoices.length === 0) {
     return (
       <tr>
-        <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+        <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
           Fatura bulunamadı
         </td>
       </tr>
@@ -79,17 +79,17 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
             <td className="px-4 py-3">
               <Link
                 href={`/cari-hesap/tedarikciler/${encodeURIComponent(inv.supplier_name ?? '')}`}
-                className="font-medium text-gray-900 hover:text-[#C8102E] hover:underline"
+                className="font-medium text-gray-900 dark:text-gray-100 hover:text-[#C8102E] hover:underline"
               >
                 {inv.supplier_name ?? '—'}
               </Link>
             </td>
-            <td className="px-4 py-3 font-mono text-xs text-gray-600">{inv.invoice_number}</td>
-            <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
+            <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-300">{inv.invoice_number}</td>
+            <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
             <td className="px-4 py-3 whitespace-nowrap">
               {inv.due_date ? (
                 <div className="flex items-center gap-1.5">
-                  <span className={isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-600'}>
+                  <span className={isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-600 dark:text-gray-300'}>
                     {formatTRDate(inv.due_date)}
                   </span>
                   {isOverdue && (
@@ -109,13 +109,13 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
                   )}
                 </div>
               ) : (
-                <span className="text-gray-400">—</span>
+                <span className="text-gray-400 dark:text-gray-500">—</span>
               )}
             </td>
-            <td className="px-4 py-3 text-right font-medium text-gray-800">
+            <td className="px-4 py-3 text-right font-medium text-gray-800 dark:text-gray-200">
               {formatCurrency(inv.total_amount)}
             </td>
-            <td className={`px-4 py-3 text-right font-semibold ${kalan > 0 ? (isOverdue ? 'text-red-600' : 'text-orange-600') : 'text-gray-400'}`}>
+            <td className={`px-4 py-3 text-right font-semibold ${kalan > 0 ? (isOverdue ? 'text-red-600' : 'text-orange-600') : 'text-gray-400 dark:text-gray-500'}`}>
               {kalan > 0 ? formatCurrency(kalan) : '—'}
             </td>
             <td className="px-4 py-3">

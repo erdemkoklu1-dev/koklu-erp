@@ -106,7 +106,7 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
       {/* Sol: Rol Listesi */}
       <div className="w-64 flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">Roller</h3>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Roller</h3>
           <button onClick={() => { setYeniRolModal(true); setHata('') }}
             className="text-xs bg-gray-800 text-white px-2.5 py-1.5 rounded-lg hover:bg-gray-700">
             + Yeni Rol
@@ -114,9 +114,9 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
         </div>
         {roller.map(r => (
           <button key={r.id} onClick={() => setSeciliRolId(r.id)}
-            className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors flex items-center gap-2 ${seciliRolId === r.id ? 'border-[#C8102E] bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
+            className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors flex items-center gap-2 ${seciliRolId === r.id ? 'border-[#C8102E] bg-red-50' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}>
             <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: r.renk }} />
-            <span className="text-sm font-medium text-gray-800">{r.ad}</span>
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{r.ad}</span>
           </button>
         ))}
       </div>
@@ -124,19 +124,19 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
       {/* Sağ: İzin Matrisi */}
       <div className="flex-1">
         {seciliRol && (
-          <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
             <div className="px-5 py-3 border-b flex items-center gap-3">
               <span className="w-4 h-4 rounded-full" style={{ backgroundColor: seciliRol.renk }} />
-              <h3 className="font-semibold text-gray-900">{seciliRol.ad}</h3>
-              {isAdmin && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Değiştirilemez</span>}
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{seciliRol.ad}</h3>
+              {isAdmin && <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">Değiştirilemez</span>}
             </div>
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                 <tr>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 w-1/2">MODÜL</th>
-                  <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500">OKUMA</th>
-                  <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500">YAZMA</th>
-                  <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500">SİLME</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 w-1/2">MODÜL</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">OKUMA</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">YAZMA</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">SİLME</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -144,7 +144,7 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
                   const iz = izinMap[seciliRol.id]?.[m.key]
                   return (
                     <tr key={m.key} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 text-sm text-gray-800">{m.label}</td>
+                      <td className="px-5 py-3 text-sm text-gray-800 dark:text-gray-200">{m.label}</td>
                       {(['okuma', 'yazma', 'silme'] as const).map(alan => (
                         <td key={alan} className="px-3 py-3 text-center">
                           <input
@@ -168,29 +168,29 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
       {/* Yeni Rol Modal */}
       {yeniRolModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm">
             <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Yeni Rol Ekle</h3>
-              <button onClick={() => setYeniRolModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Yeni Rol Ekle</h3>
+              <button onClick={() => setYeniRolModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">×</button>
             </div>
             <div className="px-5 py-4 space-y-3">
               {hata && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{hata}</div>}
               <div>
-                <label className="text-xs font-medium text-gray-600">Rol Adı *</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Rol Adı *</label>
                 <input value={yeniAd} onChange={e => setYeniAd(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Açıklama</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Açıklama</label>
                 <input value={yeniAciklama} onChange={e => setYeniAciklama(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Renk</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Renk</label>
                 <div className="flex items-center gap-2 mt-1">
                   <input type="color" value={yeniRenk} onChange={e => setYeniRenk(e.target.value)}
                     className="w-10 h-9 rounded cursor-pointer border" />
-                  <span className="text-sm text-gray-600">{yeniRenk}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">{yeniRenk}</span>
                 </div>
               </div>
             </div>
@@ -199,7 +199,7 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
                 className="flex-1 bg-[#C8102E] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#a50d26] disabled:opacity-50">
                 {kaydediliyor ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
-              <button onClick={() => setYeniRolModal(false)} className="flex-1 border py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">İptal</button>
+              <button onClick={() => setYeniRolModal(false)} className="flex-1 border py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">İptal</button>
             </div>
           </div>
         </div>

@@ -187,23 +187,23 @@ export default async function MaliDurumPage({
       {/* Dönem Seçici */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             {MONTHS_TR[month - 1]} {year} — Mali Durum
           </h2>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-400 dark:text-gray-500">
             Bugün: {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
         <div className="flex gap-2">
           <form method="GET" className="flex gap-2 items-center">
             <select name="ay" defaultValue={month}
-              className="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
+              className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
               {MONTHS_TR.map((m, i) => (
                 <option key={i + 1} value={i + 1}>{m}</option>
               ))}
             </select>
             <select name="yil" defaultValue={year}
-              className="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
+              className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
               {[year - 1, year, year + 1].map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -218,70 +218,70 @@ export default async function MaliDurumPage({
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-white border rounded-xl p-5">
-          <div className="text-xs font-medium text-gray-500 mb-1">Aylık Ciro (Fatura)</div>
-          <div className="text-2xl font-bold text-gray-900">{formatCurrency(ciro)}</div>
-          <div className="text-xs text-gray-400 mt-1">Tahsilat: {formatCurrency(tahsilat)}</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Aylık Ciro (Fatura)</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(ciro)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tahsilat: {formatCurrency(tahsilat)}</div>
         </div>
-        <div className={`rounded-xl p-5 border ${alacak > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-          <div className={`text-xs font-medium mb-1 ${alacak > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Tahsil Edilmemiş</div>
-          <div className={`text-2xl font-bold ${alacak > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{formatCurrency(alacak)}</div>
-          <div className="text-xs text-gray-400 mt-1">Bu ay kesilen faturalardan</div>
+        <div className={`rounded-xl p-5 border ${alacak > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs font-medium mb-1 ${alacak > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Tahsil Edilmemiş</div>
+          <div className={`text-2xl font-bold ${alacak > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(alacak)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Bu ay kesilen faturalardan</div>
         </div>
-        <div className={`rounded-xl p-5 border ${overdueTotal > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-          <div className={`text-xs font-medium mb-1 ${overdueTotal > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gecikmiş Alacak</div>
-          <div className={`text-2xl font-bold ${overdueTotal > 0 ? 'text-red-700' : 'text-gray-900'}`}>{formatCurrency(overdueTotal)}</div>
-          <div className="text-xs text-gray-400 mt-1">{overdueInvoices?.length ?? 0} fatura gecikmiş</div>
+        <div className={`rounded-xl p-5 border ${overdueTotal > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs font-medium mb-1 ${overdueTotal > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş Alacak</div>
+          <div className={`text-2xl font-bold ${overdueTotal > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(overdueTotal)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{overdueInvoices?.length ?? 0} fatura gecikmiş</div>
         </div>
-        <div className="bg-white border rounded-xl p-5">
-          <div className="text-xs font-medium text-gray-500 mb-1">Toplam Gider</div>
-          <div className="text-2xl font-bold text-gray-900">{formatCurrency(toplamGider)}</div>
-          <div className="text-xs text-gray-400 mt-1">Personel hariç nakit gider</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(toplamGider)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Personel hariç nakit gider</div>
         </div>
-        <div className="bg-white border rounded-xl p-5">
-          <div className="text-xs font-medium text-gray-500 mb-1">Personel Maliyeti</div>
-          <div className="text-2xl font-bold text-gray-700">{formatCurrency(personelMaliyet)}</div>
-          <div className="text-xs text-gray-400 mt-1">Net + SGK işveren</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Personel Maliyeti</div>
+          <div className="text-2xl font-bold text-gray-700 dark:text-gray-300">{formatCurrency(personelMaliyet)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Net + SGK işveren</div>
         </div>
         <div className={`rounded-xl p-5 border ${netKar >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
           <div className={`text-xs font-medium mb-1 ${netKar >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {netKar >= 0 ? 'Net Kâr' : 'Net Zarar'}
           </div>
           <div className={`text-2xl font-bold ${netKar >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(Math.abs(netKar))}</div>
-          <div className="text-xs text-gray-400 mt-1">Tahsilat − Gider − Personel</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tahsilat − Gider − Personel</div>
         </div>
       </div>
 
       {/* Gelen Fatura Özeti */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">Gelen Fatura Özeti</h3>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Gelen Fatura Özeti</h3>
           <Link href="/cari-hesap/gelen-faturalar" className="text-xs text-[#C8102E] hover:underline font-medium">
             Tümünü gör →
           </Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-white border rounded-xl p-4">
-            <div className="text-xs font-medium text-gray-500 mb-1">Bu Ay Gelen Fatura</div>
-            <div className="text-xl font-bold text-gray-900">{formatCurrency(buAyGelenToplam)}</div>
-            <div className="text-xs text-gray-400 mt-0.5">{monthAlisInvoices?.length ?? 0} fatura</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bu Ay Gelen Fatura</div>
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(buAyGelenToplam)}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{monthAlisInvoices?.length ?? 0} fatura</div>
           </div>
-          <div className={`rounded-xl p-4 border ${odenmemisGelenToplam > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-            <div className={`text-xs font-medium mb-1 ${odenmemisGelenToplam > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Ödenmemiş Borç</div>
-            <div className={`text-xl font-bold ${odenmemisGelenToplam > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{formatCurrency(odenmemisGelenToplam)}</div>
-            <div className="text-xs text-gray-400 mt-0.5">tüm ödenmemiş</div>
+          <div className={`rounded-xl p-4 border ${odenmemisGelenToplam > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+            <div className={`text-xs font-medium mb-1 ${odenmemisGelenToplam > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Ödenmemiş Borç</div>
+            <div className={`text-xl font-bold ${odenmemisGelenToplam > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(odenmemisGelenToplam)}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">tüm ödenmemiş</div>
           </div>
-          <div className={`rounded-xl p-4 border ${gecikmisBorcToplam > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-            <div className={`text-xs font-medium mb-1 ${gecikmisBorcToplam > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gecikmiş Borçlar</div>
-            <div className={`text-xl font-bold ${gecikmisBorcToplam > 0 ? 'text-red-700' : 'text-gray-900'}`}>{formatCurrency(gecikmisBorcToplam)}</div>
-            <div className="text-xs text-gray-400 mt-0.5">
+          <div className={`rounded-xl p-4 border ${gecikmisBorcToplam > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+            <div className={`text-xs font-medium mb-1 ${gecikmisBorcToplam > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş Borçlar</div>
+            <div className={`text-xl font-bold ${gecikmisBorcToplam > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(gecikmisBorcToplam)}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
               <Link href="/cari-hesap/gecikis" className="hover:underline">Detay →</Link>
             </div>
           </div>
-          <div className={`rounded-xl p-4 border ${buHaftaVadeliSayi > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-            <div className={`text-xs font-medium mb-1 ${buHaftaVadeliSayi > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Bu Hafta Vadeli</div>
-            <div className={`text-xl font-bold ${buHaftaVadeliSayi > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{buHaftaVadeliSayi}</div>
-            <div className="text-xs text-gray-400 mt-0.5">fatura vadesi dolacak</div>
+          <div className={`rounded-xl p-4 border ${buHaftaVadeliSayi > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+            <div className={`text-xs font-medium mb-1 ${buHaftaVadeliSayi > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Bu Hafta Vadeli</div>
+            <div className={`text-xl font-bold ${buHaftaVadeliSayi > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>{buHaftaVadeliSayi}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">fatura vadesi dolacak</div>
           </div>
         </div>
       </div>
@@ -290,10 +290,10 @@ export default async function MaliDurumPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Son 6 Ay Trend */}
-        <div className="lg:col-span-2 bg-white border rounded-xl p-5">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">Son 6 Ay — Ciro Trendi</h3>
-            <div className="flex gap-3 text-xs text-gray-500">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Son 6 Ay — Ciro Trendi</h3>
+            <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-[#C8102E] inline-block" /> Satış</span>
               <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-gray-300 inline-block" /> Alış</span>
             </div>
@@ -313,26 +313,26 @@ export default async function MaliDurumPage({
                     title={formatCurrency(bar.alis)}
                   />
                 </div>
-                <span className="text-xs text-gray-400">{bar.label}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{bar.label}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Yaklaşan Vadeler */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">30 Gün İçinde Vadeler</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">30 Gün İçinde Vadeler</h3>
           </div>
           <div className="divide-y max-h-48 overflow-y-auto">
             {(upcomingTax ?? []).length === 0 && (upcomingInvoices ?? []).length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-gray-400">Yaklaşan vade yok</div>
+              <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">Yaklaşan vade yok</div>
             ) : null}
             {(upcomingTax ?? []).map((t, i) => (
               <div key={i} className="px-4 py-2.5 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-medium text-gray-800">{TAX_LABELS[t.tax_type] ?? t.tax_type}</div>
-                  <div className="text-xs text-gray-400">{formatTRDate(t.due_date)}</div>
+                  <div className="text-xs font-medium text-gray-800 dark:text-gray-200">{TAX_LABELS[t.tax_type] ?? t.tax_type}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{formatTRDate(t.due_date)}</div>
                 </div>
                 <span className="text-xs font-medium text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-full">
                   Vergi
@@ -346,8 +346,8 @@ export default async function MaliDurumPage({
                 <Link key={inv.id} href={`/cari-hesap/faturalar/${inv.id}`}
                   className="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div>
-                    <div className="text-xs font-medium text-gray-800">{c?.full_name ?? '—'}</div>
-                    <div className="text-xs text-gray-400">{formatTRDate(inv.due_date)} · {inv.invoice_number}</div>
+                    <div className="text-xs font-medium text-gray-800 dark:text-gray-200">{c?.full_name ?? '—'}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500">{formatTRDate(inv.due_date)} · {inv.invoice_number}</div>
                   </div>
                   <span className="text-xs font-semibold text-orange-700">{formatCurrency(remaining)}</span>
                 </Link>
@@ -362,7 +362,7 @@ export default async function MaliDurumPage({
 
         {/* Gecikmiş Alacaklar */}
         {(overdueInvoices ?? []).length > 0 && (
-          <div className="bg-white border border-red-200 rounded-xl overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 border border-red-200 rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-red-100 bg-red-50 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-red-800">
                 Gecikmiş Alacaklar
@@ -381,8 +381,8 @@ export default async function MaliDurumPage({
                   <Link key={inv.id} href={`/cari-hesap/faturalar/${inv.id}`}
                     className="flex items-center justify-between px-4 py-3 hover:bg-red-50 transition-colors">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{c?.full_name ?? '—'}</div>
-                      <div className="text-xs text-gray-400">{inv.invoice_number} · {daysOver} gün gecikmiş</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{c?.full_name ?? '—'}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{inv.invoice_number} · {daysOver} gün gecikmiş</div>
                     </div>
                     <div className="text-sm font-bold text-red-600">{formatCurrency(remaining)}</div>
                   </Link>
@@ -393,15 +393,15 @@ export default async function MaliDurumPage({
         )}
 
         {/* Son İşlemler */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Son İşlemler</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Son İşlemler</h3>
             <Link href="/cari-hesap/gelir-gider" className="text-xs text-[#C8102E] hover:underline font-medium">
               Tümü →
             </Link>
           </div>
           {(recentTransactions ?? []).length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">Henüz işlem yok</div>
+            <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Henüz işlem yok</div>
           ) : (
             <div className="divide-y">
               {(recentTransactions ?? []).map(t => {
@@ -409,8 +409,8 @@ export default async function MaliDurumPage({
                 return (
                   <div key={t.id} className="flex items-center justify-between px-4 py-3">
                     <div>
-                      <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]">{t.description}</div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[200px]">{t.description}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">
                         {cat?.name} · {formatTRDate(t.transaction_date)}
                       </div>
                     </div>
@@ -422,7 +422,7 @@ export default async function MaliDurumPage({
               })}
             </div>
           )}
-          <div className="px-4 py-3 border-t bg-gray-50">
+          <div className="px-4 py-3 border-t bg-gray-50 dark:bg-gray-700">
             <Link href="/cari-hesap/gelir-gider/new"
               className="block text-center text-sm text-[#C8102E] font-medium hover:underline">
               + Yeni Gelir / Gider Ekle

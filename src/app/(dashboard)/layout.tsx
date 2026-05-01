@@ -25,7 +25,7 @@ export default async function DashboardLayout({
     .single()
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 print:block print:h-auto print:overflow-visible">
       <div className="print:hidden">
         <Sidebar />
       </div>

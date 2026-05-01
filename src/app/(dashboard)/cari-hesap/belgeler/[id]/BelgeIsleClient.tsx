@@ -64,7 +64,7 @@ export default function BelgeIsleClient({
 
       {/* Fatura seç */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Hangi Faturaya Ödeme? *</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Hangi Faturaya Ödeme? *</label>
         <select
           value={invoiceId}
           onChange={e => {
@@ -82,7 +82,7 @@ export default function BelgeIsleClient({
           ))}
         </select>
         {selectedInvoice && (
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             Fatura toplamı: {formatCur(selectedInvoice.total_amount)} · Ödenen: {formatCur(selectedInvoice.paid_amount)} · Kalan: {formatCur(kalan!)}
           </div>
         )}
@@ -91,7 +91,7 @@ export default function BelgeIsleClient({
       <div className="grid grid-cols-2 gap-4">
         {/* Tutar */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Ödeme Tutarı *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Ödeme Tutarı *</label>
           <div className="relative">
             <input
               type="number"
@@ -102,7 +102,7 @@ export default function BelgeIsleClient({
               onChange={e => setAmount(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
             />
-            <span className="absolute right-3 top-2 text-sm text-gray-400">₺</span>
+            <span className="absolute right-3 top-2 text-sm text-gray-400 dark:text-gray-500">₺</span>
           </div>
           {kalan && amount && parseFloat(amount) > kalan && (
             <div className="text-xs text-orange-600 mt-1">Tutar kalan bakiyeyi ({formatCur(kalan)}) aşıyor</div>
@@ -111,7 +111,7 @@ export default function BelgeIsleClient({
 
         {/* Tarih */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Ödeme Tarihi *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Ödeme Tarihi *</label>
           <input
             type="date"
             required
@@ -125,7 +125,7 @@ export default function BelgeIsleClient({
       <div className="grid grid-cols-2 gap-4">
         {/* Ödeme yöntemi */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Ödeme Yöntemi</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Ödeme Yöntemi</label>
           <select
             value={method}
             onChange={e => setMethod(e.target.value)}
@@ -142,7 +142,7 @@ export default function BelgeIsleClient({
 
         {/* Referans No */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Referans / Dekont No</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Referans / Dekont No</label>
           <input
             type="text"
             value={referenceNo}
@@ -170,7 +170,7 @@ export default function BelgeIsleClient({
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+          className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50"
         >
           İptal
         </button>

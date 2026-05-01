@@ -156,7 +156,7 @@ export default function HammaddeDepo() {
     setHareketLoading(false)
   }
 
-  if (loading) return <div className="p-6 text-sm text-gray-400">Yükleniyor...</div>
+  if (loading) return <div className="p-6 text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
   if (hata) return (
     <div className="p-6">
       <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{hata}</div>
@@ -189,7 +189,7 @@ export default function HammaddeDepo() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => setStokOpen(true)}
-            className="flex items-center gap-1 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">
+            className="flex items-center gap-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">
             📦 Stok Girişi
           </button>
           <button onClick={() => setEkleOpen(true)}
@@ -200,9 +200,9 @@ export default function HammaddeDepo() {
       </div>
 
       {/* Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase border-b">
+          <thead className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase border-b">
             <tr>
               <th className="px-4 py-2 text-left">Hammadde</th>
               <th className="px-4 py-2 text-left">Kategori</th>
@@ -216,17 +216,17 @@ export default function HammaddeDepo() {
           </thead>
           <tbody className="divide-y">
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Hammadde bulunamadı</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">Hammadde bulunamadı</td></tr>
             )}
             {filtered.map(h => {
               const durum = STOK_DURUM(h)
               const toplam = Number(h.mevcut_stok) * Number(h.birim_maliyet)
               return (
                 <tr key={h.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{h.ad}</td>
-                  <td className="px-4 py-3 text-gray-500 capitalize">{h.kategori}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{h.ad}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">{h.kategori}</td>
                   <td className="px-4 py-3 text-right">{Number(h.mevcut_stok).toLocaleString('tr-TR')} {h.birim}</td>
-                  <td className="px-4 py-3 text-right text-gray-500">{Number(h.minimum_stok).toLocaleString('tr-TR')} {h.birim}</td>
+                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{Number(h.minimum_stok).toLocaleString('tr-TR')} {h.birim}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${DURUM_BADGE[durum]}`}>
                       {DURUM_LABEL[durum]}
@@ -253,52 +253,52 @@ export default function HammaddeDepo() {
       {/* Hammadde Ekle Modal */}
       {ekleOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-lg shadow-2xl">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Hammadde Ekle</h3>
-              <button onClick={() => setEkleOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Hammadde Ekle</h3>
+              <button onClick={() => setEkleOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">✕</button>
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Ad *</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ad *</label>
                   <input value={ekleForm.ad} onChange={e => setEkleForm(f => ({ ...f, ad: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Kategori *</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori *</label>
                   <select value={ekleForm.kategori} onChange={e => setEkleForm(f => ({ ...f, kategori: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
                     {KATEGORILER.map(k => <option key={k} value={k}>{k}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Birim *</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Birim *</label>
                   <select value={ekleForm.birim} onChange={e => setEkleForm(f => ({ ...f, birim: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
                     {['kg','litre','adet','m3','metre'].map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Mevcut Stok</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Mevcut Stok</label>
                   <input type="number" min="0" step="0.001" value={ekleForm.mevcut_stok}
                     onChange={e => setEkleForm(f => ({ ...f, mevcut_stok: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Minimum Stok</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum Stok</label>
                   <input type="number" min="0" step="0.001" value={ekleForm.minimum_stok}
                     onChange={e => setEkleForm(f => ({ ...f, minimum_stok: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Birim Maliyet (₺)</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Birim Maliyet (₺)</label>
                   <input type="number" min="0" step="0.01" value={ekleForm.birim_maliyet}
                     onChange={e => setEkleForm(f => ({ ...f, birim_maliyet: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Tedarikçi</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tedarikçi</label>
                   <select value={ekleForm.tedarikci_id} onChange={e => setEkleForm(f => ({ ...f, tedarikci_id: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
                     <option value="">Seçiniz</option>
@@ -306,14 +306,14 @@ export default function HammaddeDepo() {
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Notlar</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Notlar</label>
                   <textarea value={ekleForm.notlar} onChange={e => setEkleForm(f => ({ ...f, notlar: e.target.value }))}
                     rows={2} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
               </div>
             </div>
             <div className="px-6 py-4 border-t flex justify-end gap-2">
-              <button onClick={() => setEkleOpen(false)} className="px-4 py-2 text-sm border rounded-lg text-gray-600 hover:bg-gray-50">İptal</button>
+              <button onClick={() => setEkleOpen(false)} className="px-4 py-2 text-sm border rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50">İptal</button>
               <button onClick={handleEkle} disabled={ekleSaving || !ekleForm.ad}
                 className="px-4 py-2 text-sm bg-[#C8102E] text-white rounded-lg hover:bg-[#a50d26] disabled:opacity-50">
                 {ekleSaving ? 'Kaydediliyor...' : 'Kaydet'}
@@ -326,14 +326,14 @@ export default function HammaddeDepo() {
       {/* Stok Giriş Modal */}
       {stokOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-2xl">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Stok Girişi</h3>
-              <button onClick={() => setStokOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Stok Girişi</h3>
+              <button onClick={() => setStokOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">✕</button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Hammadde *</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Hammadde *</label>
                 <select value={stokForm.hammadde_id} onChange={e => setStokForm(f => ({ ...f, hammadde_id: e.target.value }))}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
                   <option value="">Seçiniz</option>
@@ -341,33 +341,33 @@ export default function HammaddeDepo() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Miktar *</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Miktar *</label>
                 <input type="number" min="0.001" step="0.001" value={stokForm.miktar}
                   onChange={e => setStokForm(f => ({ ...f, miktar: e.target.value }))}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tarih</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tarih</label>
                 <input type="date" value={stokForm.tarih}
                   onChange={e => setStokForm(f => ({ ...f, tarih: e.target.value }))}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Referans No</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Referans No</label>
                 <input value={stokForm.referans_no}
                   onChange={e => setStokForm(f => ({ ...f, referans_no: e.target.value }))}
                   placeholder="İrsaliye / Fatura no"
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Açıklama</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
                 <input value={stokForm.aciklama}
                   onChange={e => setStokForm(f => ({ ...f, aciklama: e.target.value }))}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
             </div>
             <div className="px-6 py-4 border-t flex justify-end gap-2">
-              <button onClick={() => setStokOpen(false)} className="px-4 py-2 text-sm border rounded-lg text-gray-600 hover:bg-gray-50">İptal</button>
+              <button onClick={() => setStokOpen(false)} className="px-4 py-2 text-sm border rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50">İptal</button>
               <button onClick={handleStokGiris} disabled={stokSaving || !stokForm.hammadde_id || !stokForm.miktar}
                 className="px-4 py-2 text-sm bg-[#C8102E] text-white rounded-lg hover:bg-[#a50d26] disabled:opacity-50">
                 {stokSaving ? 'Kaydediliyor...' : 'Stok Ekle'}
@@ -380,22 +380,22 @@ export default function HammaddeDepo() {
       {/* Hareket Geçmişi Modal */}
       {hareketModal.hammadde && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl max-h-[80vh] flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl shadow-2xl max-h-[80vh] flex flex-col">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                 Hareket Geçmişi — {hareketModal.hammadde.ad}
               </h3>
               <button onClick={() => setHareketModal({ hammadde: null, items: [] })}
-                className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">✕</button>
             </div>
             <div className="overflow-auto flex-1">
               {hareketLoading ? (
-                <div className="p-6 text-center text-sm text-gray-400">Yükleniyor...</div>
+                <div className="p-6 text-center text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
               ) : hareketModal.items.length === 0 ? (
-                <div className="p-6 text-center text-sm text-gray-400">Hareket kaydı yok</div>
+                <div className="p-6 text-center text-sm text-gray-400 dark:text-gray-500">Hareket kaydı yok</div>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-xs text-gray-500 uppercase sticky top-0">
+                  <thead className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase sticky top-0">
                     <tr>
                       <th className="px-4 py-2 text-left">Tarih</th>
                       <th className="px-4 py-2 text-left">Tür</th>
@@ -407,7 +407,7 @@ export default function HammaddeDepo() {
                   <tbody className="divide-y">
                     {hareketModal.items.map(d => (
                       <tr key={d.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-gray-500">{d.tarih}</td>
+                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{d.tarih}</td>
                         <td className="px-4 py-2">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             d.hareket_tipi === 'giris'    ? 'bg-green-100 text-green-700' :
@@ -417,8 +417,8 @@ export default function HammaddeDepo() {
                           }`}>{d.hareket_tipi}</span>
                         </td>
                         <td className="px-4 py-2 text-right font-medium">{Number(d.miktar).toLocaleString('tr-TR')}</td>
-                        <td className="px-4 py-2 text-gray-500">{d.referans_no ?? '—'}</td>
-                        <td className="px-4 py-2 text-gray-500">{d.aciklama ?? '—'}</td>
+                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{d.referans_no ?? '—'}</td>
+                        <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{d.aciklama ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>

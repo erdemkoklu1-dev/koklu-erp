@@ -6,12 +6,12 @@ import { TeklifSilButton } from './TeklifSilButton'
 import PrintButton from '@/components/PrintButton'
 
 const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
-  taslak:     { label: 'Taslak',     className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  taslak:     { label: 'Taslak',     className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
   gonderildi: { label: 'Gönderildi', className: 'bg-blue-50 text-blue-700 border-blue-200' },
   bekliyor:   { label: 'Bekliyor',   className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
   kazanildi:  { label: 'Kazanıldı',  className: 'bg-green-50 text-green-700 border-green-200' },
   kaybedildi: { label: 'Kaybedildi', className: 'bg-red-50 text-red-700 border-red-200' },
-  iptal:      { label: 'İptal',      className: 'bg-gray-100 text-gray-500 border-gray-200' },
+  iptal:      { label: 'İptal',      className: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
 }
 
 function formatAmount(amount: number, currency: string) {
@@ -72,7 +72,7 @@ export default async function FiyatTeklifleriPage({
   const printDate = new Date().toLocaleString('tr-TR')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
       {/* Print header */}
       <div className="print-header hidden">
         <div>KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI</div>
@@ -81,15 +81,15 @@ export default async function FiyatTeklifleriPage({
       </div>
 
       {/* Header */}
-      <div className="no-print bg-white border-b px-6 py-4 flex items-center justify-between">
+      <div className="no-print bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-          <h1 className="text-lg font-bold text-gray-900">Fiyat Teklifleri</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Fiyat Teklifleri</h1>
         </div>
         <div className="flex gap-2">
           <PrintButton />
           <Link href="/fiyat-teklifleri/fiyat-listesi" target="_blank"
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+            className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
             📄 Fiyat Listesi
           </Link>
           <Link href="/fiyat-teklifleri/yeni"
@@ -103,9 +103,9 @@ export default async function FiyatTeklifleriPage({
 
         {/* Özet kartlar */}
         <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-gray-500">Toplam Teklif</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">{toplam}</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Toplam Teklif</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{toplam}</div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="text-xs text-green-600">Kazanılan</div>
@@ -122,7 +122,7 @@ export default async function FiyatTeklifleriPage({
         </div>
 
         {/* Filtreler */}
-        <div className="bg-white border rounded-lg p-4 flex flex-wrap items-center gap-3">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 flex flex-wrap items-center gap-3">
           {/* Durum filtresi */}
           <div className="flex gap-1 flex-wrap">
             {[
@@ -138,14 +138,14 @@ export default async function FiyatTeklifleriPage({
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   durumFilter === opt.value
                     ? 'bg-[#C8102E] text-white border-[#C8102E]'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
                 }`}>
                 {opt.label}
               </Link>
             ))}
           </div>
 
-          <div className="h-4 border-l border-gray-200 hidden sm:block" />
+          <div className="h-4 border-l border-gray-200 dark:border-gray-600 hidden sm:block" />
 
           {/* Tarih / Müşteri / Şehir form */}
           <form method="GET" action="/fiyat-teklifleri" className="flex flex-wrap items-center gap-2">
@@ -153,7 +153,7 @@ export default async function FiyatTeklifleriPage({
 
             <input type="date" name="from" defaultValue={from}
               className="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
-            <span className="text-xs text-gray-400">–</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">–</span>
             <input type="date" name="to" defaultValue={to}
               className="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
 
@@ -178,7 +178,7 @@ export default async function FiyatTeklifleriPage({
               Filtrele
             </button>
             {(from || to || q || sehir) && (
-              <Link href="/fiyat-teklifleri" className="text-xs text-gray-400 hover:text-gray-600 underline">
+              <Link href="/fiyat-teklifleri" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 underline">
                 Temizle
               </Link>
             )}
@@ -186,19 +186,19 @@ export default async function FiyatTeklifleriPage({
         </div>
 
         {/* Teklif listesi */}
-        <div className="bg-white border rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">TEKLİF NO</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">MÜŞTERİ</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">ŞEHİR</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">TARİH</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">TUTAR</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">PARA</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">KDV</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">DURUM</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">İŞLEM</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TEKLİF NO</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">MÜŞTERİ</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">ŞEHİR</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TARİH</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TUTAR</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">PARA</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">KDV</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">DURUM</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">İŞLEM</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -209,14 +209,14 @@ export default async function FiyatTeklifleriPage({
                 return (
                   <tr key={t.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-mono font-medium text-[#C8102E]">{t.teklif_no}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{musteriAdi || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{t.musteri_sehir || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatTRDate(t.tarih)}</td>
-                    <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{musteriAdi || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{t.musteri_sehir || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatTRDate(t.tarih)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">
                       {formatAmount(t.genel_toplam ?? 0, t.para_birimi)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{t.para_birimi}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{kdvLabel}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{t.para_birimi}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{kdvLabel}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${conf.className}`}>
                         {conf.label}
@@ -243,7 +243,7 @@ export default async function FiyatTeklifleriPage({
                 )
               }) : (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">
                     Henüz teklif oluşturulmamış.{' '}
                     <Link href="/fiyat-teklifleri/yeni" className="text-[#C8102E] hover:underline">
                       İlk teklifi oluştur →

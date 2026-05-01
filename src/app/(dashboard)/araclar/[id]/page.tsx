@@ -30,14 +30,14 @@ export default async function AraciDetayPage({ params }: { params: Promise<{ id:
   const totalJobs         = rows.length
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
       {/* Üst bar */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-          <Link href="/araclar" className="text-gray-500 hover:text-gray-700 text-sm">← Aracılar</Link>
+          <Link href="/araclar" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 text-sm">← Aracılar</Link>
           <span className="text-gray-300">/</span>
-          <h1 className="text-lg font-bold text-gray-900">{broker.full_name}</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{broker.full_name}</h1>
         </div>
         <BrokerActions brokerId={id} />
       </div>
@@ -45,29 +45,29 @@ export default async function AraciDetayPage({ params }: { params: Promise<{ id:
       <div className="p-6 max-w-5xl mx-auto space-y-5">
 
         {/* Bilgi kartı */}
-        <div className="bg-white border rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Aracı Bilgileri</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 pb-2 border-b">Aracı Bilgileri</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
-              <div className="text-xs text-gray-400 mb-1">Ad Soyad</div>
-              <div className="text-sm font-medium text-gray-900">{broker.full_name}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">Ad Soyad</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{broker.full_name}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400 mb-1">Firma</div>
-              <div className="text-sm font-medium text-gray-900">{broker.company_name ?? '-'}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">Firma</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{broker.company_name ?? '-'}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400 mb-1">Telefon</div>
-              <div className="text-sm font-medium text-gray-900">{broker.phone ?? '-'}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">Telefon</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{broker.phone ?? '-'}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400 mb-1">E-posta</div>
-              <div className="text-sm font-medium text-gray-900">{broker.email ?? '-'}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">E-posta</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{broker.email ?? '-'}</div>
             </div>
             {broker.notes && (
               <div className="col-span-2 sm:col-span-4">
-                <div className="text-xs text-gray-400 mb-1">Notlar</div>
-                <div className="text-sm text-gray-600">{broker.notes}</div>
+                <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">Notlar</div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">{broker.notes}</div>
               </div>
             )}
           </div>
@@ -75,21 +75,21 @@ export default async function AraciDetayPage({ params }: { params: Promise<{ id:
 
         {/* Özet kartlar */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="bg-white border rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{totalJobs}</div>
-            <div className="text-xs text-gray-500 mt-1">Toplam İş</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalJobs}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam İş</div>
           </div>
-          <div className="bg-white border rounded-lg p-4 text-center">
-            <div className="text-xl font-bold text-gray-900">{formatCurrency(totalCommission)}</div>
-            <div className="text-xs text-gray-500 mt-1">Toplam Komisyon</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 text-center">
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totalCommission)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Komisyon</div>
           </div>
-          <div className="bg-white border rounded-lg p-4 text-center">
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 text-center">
             <div className="text-xl font-bold text-green-600">{formatCurrency(paidCommission)}</div>
-            <div className="text-xs text-gray-500 mt-1">Ödenen Komisyon</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ödenen Komisyon</div>
           </div>
-          <div className="bg-white border rounded-lg p-4 text-center">
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 text-center">
             <div className="text-xl font-bold text-orange-500">{formatCurrency(pendingCommission)}</div>
-            <div className="text-xs text-gray-500 mt-1">Bekleyen Komisyon</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Bekleyen Komisyon</div>
           </div>
         </div>
 

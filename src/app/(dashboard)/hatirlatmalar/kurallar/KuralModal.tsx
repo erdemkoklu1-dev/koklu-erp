@@ -106,17 +106,17 @@ export default function KuralModal({ sablonlar, kural, trigger }: Props) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-900">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
                 {kural?.id ? 'Kuralı Düzenle' : 'Yeni Kural'}
               </h2>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+              <button onClick={() => setOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Tetikleyici</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tetikleyici</label>
                 <select
                   value={form.tetikleyici_tip}
                   onChange={e => setForm(f => ({ ...f, tetikleyici_tip: e.target.value }))}
@@ -129,7 +129,7 @@ export default function KuralModal({ sablonlar, kural, trigger }: Props) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   Kaç Gün Önce (0 = tarih geçince)
                 </label>
                 <input
@@ -142,7 +142,7 @@ export default function KuralModal({ sablonlar, kural, trigger }: Props) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Mesaj Şablonu</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Mesaj Şablonu</label>
                 <select
                   value={form.sablon_id}
                   onChange={e => setForm(f => ({ ...f, sablon_id: e.target.value }))}
@@ -164,7 +164,7 @@ export default function KuralModal({ sablonlar, kural, trigger }: Props) {
                   onChange={e => setForm(f => ({ ...f, aktif: e.target.checked }))}
                   className="w-4 h-4 text-[#C8102E]"
                 />
-                <span className="text-sm text-gray-700">Aktif</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Aktif</span>
               </label>
 
               {error && (
@@ -183,7 +183,7 @@ export default function KuralModal({ sablonlar, kural, trigger }: Props) {
                   </button>
                 )}
                 <button type="button" onClick={() => setOpen(false)}
-                  className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+                  className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                   İptal
                 </button>
                 <button

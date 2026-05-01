@@ -221,19 +221,19 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href={`/cari-hesap/faturalar/${invoiceId}`} className="text-sm text-gray-500 hover:text-gray-700">← Fatura Detayı</Link>
+        <Link href={`/cari-hesap/faturalar/${invoiceId}`} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Fatura Detayı</Link>
         <span className="text-gray-300">/</span>
-        <h2 className="text-base font-semibold text-gray-900">Fatura Düzenle</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Fatura Düzenle</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-white border rounded-xl p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900 pb-2 border-b">Fatura Bilgileri</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b">Fatura Bilgileri</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Fatura Tipi</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fatura Tipi</label>
               <select value={form.invoice_type} onChange={e => setForm(p => ({ ...p, invoice_type: e.target.value }))}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                 <option value="satis">Satış Faturası</option>
                 <option value="alis">Alış Faturası</option>
                 <option value="iade_satis">İade (Satış)</option>
@@ -241,17 +241,17 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Fatura Tarihi <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fatura Tarihi <span className="text-red-500">*</span></label>
               <input type="date" value={form.invoice_date} onChange={e => setForm(p => ({ ...p, invoice_date: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Vade Tarihi</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Vade Tarihi</label>
               <input type="date" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Açıklama</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Açıklama</label>
               <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
@@ -260,12 +260,12 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
           {/* Müşteri / Tedarikçi */}
           {(form.invoice_type === 'satis' || form.invoice_type === 'iade_satis') ? (
             <div className="relative">
-              <label className="text-sm font-medium text-gray-700">Müşteri</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Müşteri</label>
               {selectedCustomer ? (
-                <div className="mt-1 flex items-center justify-between border rounded-lg px-3 py-2 bg-gray-50">
-                  <span className="text-sm font-medium text-gray-900">{selectedCustomer.full_name}</span>
+                <div className="mt-1 flex items-center justify-between border rounded-lg px-3 py-2 bg-gray-50 dark:bg-gray-700">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{selectedCustomer.full_name}</span>
                   <button type="button" onClick={() => { setSelectedCustomer(null); setForm(p => ({ ...p, customer_id: '' })); setCustomerSearch('') }}
-                    className="text-xs text-gray-400 hover:text-gray-600">Değiştir</button>
+                    className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600">Değiştir</button>
                 </div>
               ) : (
                 <div className="relative mt-1">
@@ -274,7 +274,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
                     placeholder="Müşteri ara..."
                     className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                   {showDropdown && filteredCustomers.length > 0 && (
-                    <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredCustomers.slice(0, 15).map(c => (
                         <button key={c.id} type="button"
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
@@ -290,12 +290,12 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700">Tedarikçi Adı</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tedarikçi Adı</label>
                 <input value={form.supplier_name} onChange={e => setForm(p => ({ ...p, supplier_name: e.target.value }))}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Vergi No</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Vergi No</label>
                 <input value={form.supplier_tax_no} onChange={e => setForm(p => ({ ...p, supplier_tax_no: e.target.value }))}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
@@ -304,9 +304,9 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
         </div>
 
         {/* Kalemler */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Fatura Kalemleri</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Fatura Kalemleri</h3>
             <button type="button"
               onClick={() => setItems(p => [...p, { description: '', quantity: '1', unit: 'adet', unit_price: '', kdv_rate: '20' }])}
               className="text-sm bg-[#C8102E] text-white px-3 py-1.5 rounded-lg hover:bg-[#a50d26]">
@@ -315,14 +315,14 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                 <tr>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500">Açıklama</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-20">Miktar</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-20">Birim</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-28">Birim Fiyat</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-20">KDV %</th>
-                  <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 w-28">Toplam</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Açıklama</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 w-20">Miktar</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 w-20">Birim</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 w-28">Birim Fiyat</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 w-20">KDV %</th>
+                  <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 w-28">Toplam</th>
                   <th className="w-8" />
                 </tr>
               </thead>
@@ -342,7 +342,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
                       </td>
                       <td className="px-3 py-2">
                         <select value={item.unit} onChange={e => updateItem(idx, 'unit', e.target.value)}
-                          className="w-full border rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]">
+                          className="w-full border rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-[#C8102E]">
                           {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                         </select>
                       </td>
@@ -352,7 +352,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
                       </td>
                       <td className="px-3 py-2">
                         <select value={item.kdv_rate} onChange={e => updateItem(idx, 'kdv_rate', e.target.value)}
-                          className="w-full border rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]">
+                          className="w-full border rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-[#C8102E]">
                           {KDV_RATES.map(r => <option key={r} value={r}>%{r}</option>)}
                         </select>
                       </td>
@@ -370,14 +370,14 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
               </tbody>
             </table>
           </div>
-          <div className="border-t bg-gray-50 px-5 py-4 flex justify-end">
+          <div className="border-t bg-gray-50 dark:bg-gray-700 px-5 py-4 flex justify-end">
             <div className="w-72 space-y-1.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Ara Toplam</span>
+                <span className="text-gray-600 dark:text-gray-300">Ara Toplam</span>
                 <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">KDV</span>
+                <span className="text-gray-600 dark:text-gray-300">KDV</span>
                 <span className="font-medium">{formatCurrency(totals.kdv_amount)}</span>
               </div>
               <div className="flex justify-between text-base font-bold border-t pt-1.5">
@@ -389,24 +389,24 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Notlar</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notlar</label>
           <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2}
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
         </div>
 
         {/* Aracılar */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50">
-            <h3 className="text-sm font-semibold text-gray-900">Aracılar</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Aracılar</h3>
           </div>
           <div className="p-5 space-y-3">
             {brokerLines.map((line, idx) => {
               if (line._deleted) return null
               return (
-                <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1 text-sm font-medium text-gray-900">{line.broker_name}</div>
+                <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100">{line.broker_name}</div>
                   <div className="flex items-center gap-1.5">
-                    <label className="text-xs text-gray-500 whitespace-nowrap">Oran %</label>
+                    <label className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Oran %</label>
                     <input type="number" min="0" max="100" step="0.1"
                       value={line.commission_rate}
                       onChange={e => updateBrokerLine(idx, 'commission_rate', e.target.value)}
@@ -414,7 +414,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
                       placeholder="0" />
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <label className="text-xs text-gray-500 whitespace-nowrap">Tutar ₺</label>
+                    <label className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Tutar ₺</label>
                     <input type="number" min="0" step="0.01"
                       value={line.commission_amount}
                       onChange={e => updateBrokerLine(idx, 'commission_amount', e.target.value)}
@@ -434,16 +434,16 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
                 onFocus={() => setShowBrokerDropdown(true)}
                 onBlur={() => setTimeout(() => setShowBrokerDropdown(false), 150)}
                 placeholder="+ Aracı ekle..."
-                className="w-full border border-dashed rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] text-gray-500"
+                className="w-full border border-dashed rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] text-gray-500 dark:text-gray-400"
               />
               {showBrokerDropdown && filteredBrokers.length > 0 && (
-                <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredBrokers.slice(0, 15).map(b => (
                     <button key={b.id} type="button"
                       className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
                       onMouseDown={e => { e.preventDefault(); addBroker(b) }}>
                       <span className="font-medium">{b.full_name}</span>
-                      {b.company_name && <span className="ml-2 text-xs text-gray-400">{b.company_name}</span>}
+                      {b.company_name && <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{b.company_name}</span>}
                     </button>
                   ))}
                 </div>
@@ -460,7 +460,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
             {loading ? 'Kaydediliyor...' : 'Güncelle'}
           </button>
           <Link href={`/cari-hesap/faturalar/${invoiceId}`}
-            className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 text-center">
+            className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 text-center">
             İptal
           </Link>
         </div>

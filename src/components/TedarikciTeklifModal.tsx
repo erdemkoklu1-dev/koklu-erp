@@ -158,14 +158,14 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
 
         {/* Header */}
         <div className="px-5 py-4 border-b flex items-center justify-between shrink-0">
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             Teklif Önizleme{edited.tedarikci ? ` — ${edited.tedarikci}` : ''}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">
             &times;
           </button>
         </div>
@@ -173,9 +173,9 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
         <div className="overflow-y-auto flex-1 p-5 space-y-4">
 
           {/* Tedarikçi & para birimi */}
-          <div className="grid grid-cols-3 gap-4 bg-gray-50 p-3 rounded-lg">
+          <div className="grid grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Tedarikçi</label>
+              <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Tedarikçi</label>
               <input
                 value={edited.tedarikci}
                 onChange={e => setEdited(p => p ? { ...p, tedarikci: e.target.value } : p)}
@@ -184,9 +184,9 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">
+              <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
                 Para Birimi
-                {kurYukleniyor && <span className="ml-1 text-gray-400">(kur yükleniyor…)</span>}
+                {kurYukleniyor && <span className="ml-1 text-gray-400 dark:text-gray-500">(kur yükleniyor…)</span>}
               </label>
               <select
                 value={edited.para_birimi}
@@ -202,8 +202,8 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
               )}
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Toplam</label>
-              <p className="font-bold text-base text-gray-900 pt-1">
+              <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Toplam</label>
+              <p className="font-bold text-base text-gray-900 dark:text-gray-100 pt-1">
                 {genelToplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {edited.para_birimi}
               </p>
             </div>
@@ -211,7 +211,7 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
 
           {/* Kalem tablosu */}
           {edited.kalemler.length === 0 ? (
-            <div className="text-center py-6 text-sm text-gray-400 border rounded-lg">
+            <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 border rounded-lg">
               Kalem bulunamadı. Aşağıdan manuel satır ekleyebilirsiniz.
             </div>
           ) : (
@@ -231,7 +231,7 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
                 <tbody>
                   {edited.kalemler.map((kalem, idx) => (
                     <tr key={idx} className="border-b hover:bg-gray-50">
-                      <td className="px-2 py-1.5 text-center text-gray-400 text-xs">{idx + 1}</td>
+                      <td className="px-2 py-1.5 text-center text-gray-400 dark:text-gray-500 text-xs">{idx + 1}</td>
                       <td className="px-2 py-1.5">
                         <input
                           value={kalem.aciklama}
@@ -264,7 +264,7 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
                           className="w-full border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                         />
                       </td>
-                      <td className="px-2 py-1.5 text-right text-xs font-medium text-gray-700">
+                      <td className="px-2 py-1.5 text-right text-xs font-medium text-gray-700 dark:text-gray-300">
                         {kalem.toplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-2 py-1.5 text-center">
@@ -289,7 +289,7 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
           {/* Kar marjı */}
           <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
             <div className="flex items-center gap-3 flex-wrap">
-              <label className="text-sm font-medium text-gray-700">Kar Marjı (%)</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Kar Marjı (%)</label>
               <input
                 type="number"
                 value={karMarji}
@@ -303,7 +303,7 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500 mt-1">Tüm fiyatlara bu oran uygulanarak müşteriye teklif fiyatı oluşturulur.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tüm fiyatlara bu oran uygulanarak müşteriye teklif fiyatı oluşturulur.</p>
           </div>
         </div>
 
@@ -311,7 +311,7 @@ export default function TedarikciTeklifModal({ open, data, onClose, onAktar }: P
         <div className="px-5 py-4 border-t flex justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="border border-gray-300 px-5 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+            className="border border-gray-300 dark:border-gray-600 px-5 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50"
           >
             İptal
           </button>

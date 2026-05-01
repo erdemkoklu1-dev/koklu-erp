@@ -33,7 +33,7 @@ export default function DeleteCustomerButton({ customerId, customerName }: { cus
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -42,9 +42,9 @@ export default function DeleteCustomerButton({ customerId, customerName }: { cus
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Müşteriyi Sil</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  <span className="font-medium text-gray-800">{customerName}</span> adlı müşteri ve
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Müşteriyi Sil</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{customerName}</span> adlı müşteri ve
                   bağlı tüm cihazlar, faturalar, ön kayıtlar kalıcı olarak silinecek. Bu işlem geri alınamaz.
                 </p>
               </div>
@@ -65,7 +65,7 @@ export default function DeleteCustomerButton({ customerId, customerName }: { cus
               <button
                 onClick={() => { setOpen(false); setError('') }}
                 disabled={loading}
-                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50"
+                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50"
               >
                 İptal
               </button>

@@ -186,10 +186,10 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
   }
 
   return (
-    <div className="bg-white border rounded-lg">
+    <div className="bg-white dark:bg-gray-800 border rounded-lg">
       {/* Tablo başlığı */}
-      <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">Bağlı Faturalar ({rows.length || totalJobs})</h2>
+      <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Bağlı Faturalar ({rows.length || totalJobs})</h2>
         <button
           onClick={() => setShowAddForm(v => !v)}
           className="bg-[#C8102E] text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-[#a50d26] transition-colors"
@@ -205,15 +205,15 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
 
           {/* Fatura seç */}
           <div className="relative">
-            <label className="text-xs font-medium text-gray-700">Fatura</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Fatura</label>
             {selectedInvoice ? (
-              <div className="mt-1 flex items-center justify-between border rounded-lg px-3 py-2 bg-white">
-                <span className="text-sm font-medium text-gray-900">
+              <div className="mt-1 flex items-center justify-between border rounded-lg px-3 py-2 bg-white dark:bg-gray-800">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {selectedInvoice.invoice_number} — {selectedInvoice.customer_name ?? '-'}
-                  <span className="ml-2 text-xs text-gray-400">{formatCurrency(selectedInvoice.total_amount)}</span>
+                  <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{formatCurrency(selectedInvoice.total_amount)}</span>
                 </span>
                 <button type="button" onClick={() => setSelectedInvoice(null)}
-                  className="text-xs text-gray-400 hover:text-gray-600">Değiştir</button>
+                  className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600">Değiştir</button>
               </div>
             ) : (
               <div className="relative mt-1">
@@ -226,20 +226,20 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 />
                 {showInvoiceDrop && filteredInvoices.length > 0 && (
-                  <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredInvoices.slice(0, 15).map(inv => (
                       <button key={inv.id} type="button"
                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
                         onMouseDown={e => { e.preventDefault(); setSelectedInvoice(inv); setInvoiceSearch(''); setShowInvoiceDrop(false) }}>
                         <span className="font-medium">{inv.invoice_number}</span>
-                        <span className="ml-2 text-gray-500">{inv.customer_name ?? '-'}</span>
-                        <span className="ml-2 text-xs text-gray-400">{formatCurrency(inv.total_amount)}</span>
+                        <span className="ml-2 text-gray-500 dark:text-gray-400">{inv.customer_name ?? '-'}</span>
+                        <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{formatCurrency(inv.total_amount)}</span>
                       </button>
                     ))}
                   </div>
                 )}
                 {showInvoiceDrop && filteredInvoices.length === 0 && invoiceSearch && (
-                  <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg px-3 py-3 text-sm text-gray-400">
+                  <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border rounded-lg shadow-lg px-3 py-3 text-sm text-gray-400 dark:text-gray-500">
                     Fatura bulunamadı.
                   </div>
                 )}
@@ -249,14 +249,14 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
 
           <div className="flex gap-4">
             <div>
-              <label className="text-xs font-medium text-gray-700">Komisyon Oranı (%)</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Komisyon Oranı (%)</label>
               <input type="number" min="0" max="100" step="0.1" value={addRate}
                 onChange={e => handleAddRateChange(e.target.value)}
                 className="mt-1 w-28 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="0" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700">Komisyon Tutarı (₺)</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Komisyon Tutarı (₺)</label>
               <input type="number" min="0" step="0.01" value={addAmount}
                 onChange={e => setAddAmount(e.target.value)}
                 className="mt-1 w-36 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
@@ -272,7 +272,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
               {addSaving ? 'Kaydediliyor...' : 'Kaydet'}
             </button>
             <button type="button" onClick={() => { setShowAddForm(false); setSelectedInvoice(null); setInvoiceSearch(''); setAddRate(''); setAddAmount(''); setAddError('') }}
-              className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
+              className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
               İptal
             </button>
           </div>
@@ -281,23 +281,23 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
 
       {/* Tablo */}
       {rows.length === 0 && !showAddForm ? (
-        <div className="px-4 py-10 text-center text-gray-400 text-sm">
+        <div className="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">
           Bu aracıya bağlı fatura kaydı bulunmuyor.{' '}
           <button onClick={() => setShowAddForm(true)} className="text-[#C8102E] hover:underline">Fatura bağla →</button>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Müşteri</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Fatura Tarihi</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Fatura Tutarı</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Kom. Oranı</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Kom. Tutarı</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Ödeme</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Ödeme Tarihi</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura Tarihi</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura Tutarı</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kom. Oranı</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kom. Tutarı</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Ödeme</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Ödeme Tarihi</th>
                 <th className="w-16" />
               </tr>
             </thead>
@@ -315,13 +315,13 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
                           className="text-sm font-medium text-[#C8102E] hover:underline">
                           {inv.invoice_number}
                         </Link>
-                      ) : <span className="text-sm text-gray-400">-</span>}
+                      ) : <span className="text-sm text-gray-400 dark:text-gray-500">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{inv?.customers?.full_name ?? '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{inv?.customers?.full_name ?? '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {inv?.invoice_date ? formatTRDate(inv.invoice_date) : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 text-right font-medium">
                       {inv ? formatCurrency(inv.total_amount) : '-'}
                     </td>
 
@@ -332,7 +332,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
                           onChange={e => handleEditRateChange(e.target.value, inv?.total_amount ?? 0)}
                           className="w-16 border rounded px-1.5 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                       ) : (
-                        <span className="text-sm text-gray-700">%{row.commission_rate}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">%{row.commission_rate}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -341,7 +341,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
                           onChange={e => setEditAmount(e.target.value)}
                           className="w-24 border rounded px-1.5 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                       ) : (
-                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(row.commission_amount)}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(row.commission_amount)}</span>
                       )}
                     </td>
 
@@ -356,7 +356,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
                             {saving ? '...' : 'Onayla'}
                           </button>
                           <button onClick={() => setPayingId(null)}
-                            className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+                            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xs">✕</button>
                         </div>
                       ) : row.is_paid ? (
                         <button onClick={() => unmarkPaid(row)} disabled={saving}
@@ -372,7 +372,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
                       )}
                     </td>
 
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       {row.paid_date ? formatTRDate(row.paid_date) : '-'}
                     </td>
 
@@ -385,13 +385,13 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
                             {saving ? '...' : 'Kaydet'}
                           </button>
                           <button onClick={() => setEditingId(null)}
-                            className="text-xs border border-gray-300 text-gray-500 px-2 py-1 rounded hover:bg-gray-50">
+                            className="text-xs border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 px-2 py-1 rounded hover:bg-gray-50">
                             İptal
                           </button>
                         </div>
                       ) : (
                         <button onClick={() => startEdit(row)}
-                          className="text-xs text-gray-400 hover:text-gray-700 px-1">
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700 px-1">
                           Düzenle
                         </button>
                       )}

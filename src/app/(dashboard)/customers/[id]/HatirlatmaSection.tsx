@@ -32,7 +32,7 @@ function durumStyle(d: string) {
   if (d === 'gonderildi') return 'bg-green-50 text-green-700 border-green-200'
   if (d === 'basarisiz')  return 'bg-red-50 text-red-700 border-red-200'
   if (d === 'planlandı')  return 'bg-blue-50 text-blue-700 border-blue-200'
-  return 'bg-gray-100 text-gray-600 border-gray-200'
+  return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
 }
 
 function durumText(d: string) {
@@ -63,9 +63,9 @@ export default function HatirlatmaSection({ customerId, customerName, phone, ema
   useEffect(() => { fetchKayitlar() }, [fetchKayitlar])
 
   return (
-    <div className="bg-white border rounded-lg overflow-hidden" id="hatirlatmalar">
-      <div className="px-5 py-3 border-b flex items-center justify-between bg-gray-50">
-        <h2 className="text-sm font-semibold text-gray-900">Hatırlatmalar</h2>
+    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden" id="hatirlatmalar">
+      <div className="px-5 py-3 border-b flex items-center justify-between bg-gray-50 dark:bg-gray-700">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Hatırlatmalar</h2>
         <button
           onClick={() => setModalOpen(true)}
           className="bg-[#C8102E] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#a50d26] transition-colors"
@@ -75,30 +75,30 @@ export default function HatirlatmaSection({ customerId, customerName, phone, ema
       </div>
 
       {loading ? (
-        <div className="px-4 py-8 text-center text-gray-400 text-sm">Yükleniyor...</div>
+        <div className="px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">Yükleniyor...</div>
       ) : kayitlar.length === 0 ? (
-        <div className="px-4 py-8 text-center text-gray-400 text-sm">
+        <div className="px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
           Bu müşteriye henüz hatırlatma gönderilmemiş.
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">Tarih</th>
-                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">Kanal</th>
-                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">Alıcı</th>
-                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">Durum</th>
+                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Tarih</th>
+                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Kanal</th>
+                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Alıcı</th>
+                <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Durum</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {kayitlar.map(k => (
                 <tr key={k.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-2.5 text-sm text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                     {formatTRDate(k.created_at)}
                   </td>
-                  <td className="px-4 py-2.5 text-sm text-gray-700">{kanalLabel(k.kanal)}</td>
-                  <td className="px-4 py-2.5 text-sm text-gray-500">
+                  <td className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300">{kanalLabel(k.kanal)}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
                     {k.alici_email ?? k.alici_telefon ?? '—'}
                   </td>
                   <td className="px-4 py-2.5">

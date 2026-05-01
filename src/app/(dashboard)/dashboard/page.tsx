@@ -28,7 +28,7 @@ function DurumBadge({ durum }: { durum: string }) {
     beklemede:   'Beklemede',
     devam_ediyor:'Devam Ediyor',
   }
-  const cls = cfg[durum] ?? 'bg-gray-100 text-gray-600 border-gray-200'
+  const cls = cfg[durum] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
   return (
     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
       {label[durum] ?? durum}
@@ -42,9 +42,9 @@ function KpiKart({
   href: string; baslik: string; deger: string | number
   alt?: string; color?: 'default' | 'yellow' | 'red' | 'green'
 }) {
-  const bg   = { default: 'bg-white', yellow: 'bg-yellow-50 border-yellow-200', red: 'bg-red-50 border-red-200', green: 'bg-green-50 border-green-200' }
-  const text = { default: 'text-gray-900', yellow: 'text-yellow-700', red: 'text-red-700', green: 'text-green-700' }
-  const sub  = { default: 'text-gray-400', yellow: 'text-yellow-600', red: 'text-red-500', green: 'text-green-600' }
+  const bg   = { default: 'bg-white dark:bg-gray-800', yellow: 'bg-yellow-50 border-yellow-200', red: 'bg-red-50 border-red-200', green: 'bg-green-50 border-green-200' }
+  const text = { default: 'text-gray-900 dark:text-gray-100', yellow: 'text-yellow-700', red: 'text-red-700', green: 'text-green-700' }
+  const sub  = { default: 'text-gray-400 dark:text-gray-500', yellow: 'text-yellow-600', red: 'text-red-500', green: 'text-green-600' }
   return (
     <Link href={href} className={`${bg[color]} border rounded-xl p-5 hover:shadow-sm transition-shadow block`}>
       <div className={`text-xs font-medium mb-1 ${sub[color]}`}>{baslik}</div>
@@ -156,43 +156,43 @@ export default async function DashboardPage() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Fabrika Paneli</h1>
-            <p className="text-sm text-gray-400 mt-0.5 capitalize">{dateLabel}</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Fabrika Paneli</h1>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5 capitalize">{dateLabel}</p>
           </div>
-          <Link href="/fabrika" className="border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+          <Link href="/fabrika" className="border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
             Fabrika →
           </Link>
         </div>
 
         {/* KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className={`border rounded-xl p-5 ${kritikler.length > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-            <div className={`text-xs font-medium mb-1 ${kritikler.length > 0 ? 'text-red-500' : 'text-gray-500'}`}>Kritik Stok</div>
+          <div className={`border rounded-xl p-5 ${kritikler.length > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+            <div className={`text-xs font-medium mb-1 ${kritikler.length > 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>Kritik Stok</div>
             <div className={`text-2xl font-bold ${kritikler.length > 0 ? 'text-red-700' : 'text-green-700'}`}>{kritikler.length}</div>
-            <div className="text-xs text-gray-400 mt-1">{kritikler.length > 0 ? 'hammadde kritik' : 'stok yeterli'}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{kritikler.length > 0 ? 'hammadde kritik' : 'stok yeterli'}</div>
           </div>
-          <div className="bg-white border rounded-xl p-5">
-            <div className="text-xs font-medium text-gray-500 mb-1">Aktif Emir</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Aktif Emir</div>
             <div className="text-2xl font-bold text-blue-700">{(aktifEmir ?? []).length}</div>
-            <div className="text-xs text-gray-400 mt-1">üretim emri</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">üretim emri</div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-xl p-5">
             <div className="text-xs font-medium text-green-600 mb-1">Bu Ay Tamamlanan</div>
             <div className="text-2xl font-bold text-green-700">{tamamlananEmir ?? 0}</div>
             <div className="text-xs text-green-500 mt-1">üretim emri</div>
           </div>
-          <div className="bg-white border rounded-xl p-5">
-            <div className="text-xs font-medium text-gray-500 mb-1">Hammadde</div>
-            <div className="text-2xl font-bold text-gray-900">{(hammaddeler ?? []).length}</div>
-            <div className="text-xs text-gray-400 mt-1">kayıtlı hammadde</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hammadde</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{(hammaddeler ?? []).length}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">kayıtlı hammadde</div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Kritik Stok */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Düşük Stok Uyarıları</h2>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Düşük Stok Uyarıları</h2>
               <Link href="/fabrika" className="text-xs text-[#C8102E] hover:underline">Fabrika →</Link>
             </div>
             {kritikler.length > 0 ? (
@@ -204,8 +204,8 @@ export default async function DashboardPage() {
                   return (
                     <div key={h.id} className="px-5 py-3 flex items-center justify-between">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{h.ad}</div>
-                        <div className="text-xs text-gray-400">{Number(h.mevcut_stok).toLocaleString('tr-TR')} / min {Number(h.minimum_stok).toLocaleString('tr-TR')} {h.birim}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{h.ad}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">{Number(h.mevcut_stok).toLocaleString('tr-TR')} / min {Number(h.minimum_stok).toLocaleString('tr-TR')} {h.birim}</div>
                       </div>
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${badge}`}>{label}</span>
                     </div>
@@ -213,14 +213,14 @@ export default async function DashboardPage() {
                 })}
               </div>
             ) : (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">Tüm stoklar yeterli.</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Tüm stoklar yeterli.</div>
             )}
           </div>
 
           {/* Aktif Üretim Emirleri */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Aktif Üretim Emirleri</h2>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Aktif Üretim Emirleri</h2>
               <Link href="/fabrika" className="text-xs text-[#C8102E] hover:underline">Tümü →</Link>
             </div>
             {(aktifEmir ?? []).length > 0 ? (
@@ -228,15 +228,15 @@ export default async function DashboardPage() {
                 {(aktifEmir ?? []).map((e: any) => (
                   <div key={e.id} className="px-5 py-3 flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{e.urun_adi}</div>
-                      <div className="text-xs text-gray-400">{Number(e.miktar).toLocaleString('tr-TR')} adet</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{e.urun_adi}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{Number(e.miktar).toLocaleString('tr-TR')} adet</div>
                     </div>
                     <DurumBadge durum={e.durum} />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">Aktif üretim emri yok.</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Aktif üretim emri yok.</div>
             )}
           </div>
         </div>
@@ -345,12 +345,12 @@ export default async function DashboardPage() {
       {/* ── TOPBAR ──────────────────────────────────────────────── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Genel Bakış</h1>
-          <p className="text-sm text-gray-400 mt-0.5 capitalize">{dateLabel}</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Genel Bakış</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5 capitalize">{dateLabel}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/service-forms/new"
-            className="border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+            className="border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
             + Servis Formu
           </Link>
           <Link href="/customers/new"
@@ -423,22 +423,22 @@ export default async function DashboardPage() {
         {/* ── KOLON 1: HIZLI İŞLEMLER + MALİ ÖZET ─────────────────── */}
         <div className="space-y-4">
           {/* Hızlı İşlemler */}
-          <div className="bg-white border rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">Hızlı İşlemler</h2>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Hızlı İşlemler</h2>
             <div className="grid grid-cols-2 gap-2">
               <Link href="/service-forms/new"
                 className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors">
                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                   <ClipboardList size={18} className="text-[#C8102E]" />
                 </div>
-                <span className="text-xs text-center text-gray-700 font-medium leading-tight">Servis Formu Oluştur</span>
+                <span className="text-xs text-center text-gray-700 dark:text-gray-300 font-medium leading-tight">Servis Formu Oluştur</span>
               </Link>
               <Link href="/customers/new"
                 className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-colors">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <Users size={18} className="text-blue-600" />
                 </div>
-                <span className="text-xs text-center text-gray-700 font-medium leading-tight">Yeni Müşteri</span>
+                <span className="text-xs text-center text-gray-700 dark:text-gray-300 font-medium leading-tight">Yeni Müşteri</span>
               </Link>
               {isAdminOrIdari && (
                 <Link href="/cari-hesap/giden-faturalar/new"
@@ -446,7 +446,7 @@ export default async function DashboardPage() {
                   <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                     <Wallet size={18} className="text-green-600" />
                   </div>
-                  <span className="text-xs text-center text-gray-700 font-medium leading-tight">Fatura Ekle</span>
+                  <span className="text-xs text-center text-gray-700 dark:text-gray-300 font-medium leading-tight">Fatura Ekle</span>
                 </Link>
               )}
               <Link href="/fiyat-teklifleri/yeni"
@@ -454,38 +454,38 @@ export default async function DashboardPage() {
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
                   <FileText size={18} className="text-orange-600" />
                 </div>
-                <span className="text-xs text-center text-gray-700 font-medium leading-tight">Teklif Oluştur</span>
+                <span className="text-xs text-center text-gray-700 dark:text-gray-300 font-medium leading-tight">Teklif Oluştur</span>
               </Link>
             </div>
           </div>
 
           {/* Bu Ay Mali Özet — SADECE Admin/İdari */}
           {isAdminOrIdari && (
-            <div className="bg-white border rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Bu Ay Mali Özet</h2>
+            <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Bu Ay Mali Özet</h2>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <TrendingUp size={14} className="text-green-500" />
                     Toplam Gelir
                   </div>
                   <span className="text-sm font-semibold text-green-700">{formatCurrency(buAyGelir)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <TrendingDown size={14} className="text-red-500" />
                     Toplam Gider
                   </div>
                   <span className="text-sm font-semibold text-red-700">{formatCurrency(buAyGider)}</span>
                 </div>
                 <div className="border-t pt-2 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-700">Net Kar</span>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Net Kar</span>
                   <span className={`text-sm font-bold ${buAyGelir - buAyGider >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                     {formatCurrency(buAyGelir - buAyGider)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-gray-500">Bekleyen Teklifler</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Bekleyen Teklifler</span>
                   <Link href="/fiyat-teklifleri" className="text-xs font-semibold text-orange-600 hover:underline">
                     {bekleyenTeklifSayisi} adet →
                   </Link>
@@ -496,11 +496,11 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── KOLON 2: HATIRLATMALAR / SON TEKLİFLER (Pazarlamacı) ── */}
-        <div className="bg-white border rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
           {isPazarlamaci ? (
             <>
-              <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-900">Son Fiyat Teklifleri</h2>
+              <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Son Fiyat Teklifleri</h2>
                 <Link href="/fiyat-teklifleri" className="text-xs text-[#C8102E] hover:underline font-medium">Tümü →</Link>
               </div>
               {sonTeklifler.length > 0 ? (
@@ -510,23 +510,23 @@ export default async function DashboardPage() {
                       className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                       <div>
                         <div className="text-sm font-mono font-medium text-[#C8102E]">{t.teklif_no}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{t.musteri_adi || '—'}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t.musteri_adi || '—'}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-gray-500">{formatTRDate(t.tarih)}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{formatTRDate(t.tarih)}</div>
                         <DurumBadge durum={t.durum} />
                       </div>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <div className="px-4 py-8 text-center text-sm text-gray-400">Teklif bulunamadı.</div>
+                <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Teklif bulunamadı.</div>
               )}
             </>
           ) : (
             <>
-              <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-900">Hatırlatmalar</h2>
+              <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Hatırlatmalar</h2>
                 <Link href="/hatirlatmalar" className="text-xs text-[#C8102E] hover:underline font-medium">Tümü →</Link>
               </div>
               {hatirlatmalar.length > 0 ? (
@@ -535,24 +535,24 @@ export default async function DashboardPage() {
                     <Link key={row.id} href={`/customers/${row.id}`}
                       className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{row.full_name}</div>
-                        <div className="text-xs text-gray-400">{row.count} cihaz</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{row.full_name}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">{row.count} cihaz</div>
                       </div>
                       <GunBadge days={row.minDays} />
                     </Link>
                   ))}
                 </div>
               ) : (
-                <div className="px-4 py-8 text-center text-sm text-gray-400">90 gün içinde bakım gerektiren cihaz yok.</div>
+                <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">90 gün içinde bakım gerektiren cihaz yok.</div>
               )}
             </>
           )}
         </div>
 
         {/* ── KOLON 3: SON SERVİS FORMLARI ─────────────────────────── */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Son Servis Formları</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Son Servis Formları</h2>
             <Link href="/service-forms" className="text-xs text-[#C8102E] hover:underline font-medium">Tümü →</Link>
           </div>
           {(recentServices ?? []).length > 0 ? (
@@ -566,10 +566,10 @@ export default async function DashboardPage() {
                       <div className="text-sm font-mono font-medium text-[#C8102E]">
                         {sf.form_number ?? `#${sf.id.slice(0, 6)}`}
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5">{customer?.full_name ?? '—'}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{customer?.full_name ?? '—'}</div>
                     </div>
                     <div className="text-right space-y-1">
-                      <div className="text-xs text-gray-400">{formatTRDate(sf.service_date)}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{formatTRDate(sf.service_date)}</div>
                       <DurumBadge durum={sf.status ?? 'completed'} />
                     </div>
                   </Link>
@@ -577,9 +577,9 @@ export default async function DashboardPage() {
               })}
             </div>
           ) : (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">Henüz servis formu yok.</div>
+            <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Henüz servis formu yok.</div>
           )}
-          <div className="px-4 py-3 border-t bg-gray-50">
+          <div className="px-4 py-3 border-t bg-gray-50 dark:bg-gray-700">
             <Link href="/service-forms/new"
               className="block text-center text-xs text-[#C8102E] font-medium hover:underline">
               + Yeni Servis Formu →
@@ -593,37 +593,37 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Aylık Servis Dağılımı */}
-          <div className="bg-white border rounded-xl p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Aylık Servis Dağılımı</h2>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Aylık Servis Dağılımı</h2>
             <div className="space-y-3">
               {dagilim.map(cat => (
                 <div key={cat.label} className="flex items-center gap-3">
-                  <div className="w-32 text-xs text-gray-600 truncate flex-shrink-0">{cat.label}</div>
-                  <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                  <div className="w-32 text-xs text-gray-600 dark:text-gray-300 truncate flex-shrink-0">{cat.label}</div>
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-5 overflow-hidden">
                     <div
                       className="h-5 bg-[#C8102E] rounded-full transition-all duration-500 flex items-center justify-end pr-2"
                       style={{ width: `${Math.max(cat.sayi > 0 ? (cat.sayi / maxDagilim) * 100 : 0, cat.sayi > 0 ? 8 : 0)}%` }}
                     />
                   </div>
-                  <div className="w-7 text-xs font-bold text-gray-700 text-right flex-shrink-0">{cat.sayi}</div>
+                  <div className="w-7 text-xs font-bold text-gray-700 dark:text-gray-300 text-right flex-shrink-0">{cat.sayi}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Kritik Stok Uyarıları */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Kritik Stok Uyarıları</h2>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Kritik Stok Uyarıları</h2>
               <Link href="/fabrika" className="text-xs text-[#C8102E] hover:underline font-medium">Fabrika →</Link>
             </div>
             {stokYuklenemedi ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">
+              <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                 <Package size={24} className="mx-auto mb-2 text-gray-300" />
                 Fabrika modülü henüz yapılandırılmadı.
               </div>
             ) : kritikStoklar.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">
+              <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                 <Package size={24} className="mx-auto mb-2 text-gray-300" />
                 Kritik stok uyarısı bulunmuyor.
               </div>
@@ -640,8 +640,8 @@ export default async function DashboardPage() {
                   return (
                     <div key={h.id} className="px-5 py-3 flex items-center justify-between">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{h.ad}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{h.ad}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                           {Number(h.mevcut_stok).toLocaleString('tr-TR')} / min {Number(h.minimum_stok).toLocaleString('tr-TR')} {h.birim}
                         </div>
                       </div>

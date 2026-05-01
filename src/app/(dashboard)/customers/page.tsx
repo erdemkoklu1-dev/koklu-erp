@@ -117,7 +117,7 @@ export default async function CustomersPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
       {/* Print header */}
       <div className="print-header hidden">
         <div>KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI</div>
@@ -125,10 +125,10 @@ export default async function CustomersPage() {
       </div>
 
       {/* Üst bar */}
-      <div className="no-print bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div className="no-print bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-          <h1 className="text-lg font-bold text-gray-900">Müşteri Yönetimi</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Müşteri Yönetimi</h1>
         </div>
         <div className="flex gap-2">
           <PrintButton />

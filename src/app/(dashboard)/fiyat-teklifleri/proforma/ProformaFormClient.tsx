@@ -437,28 +437,28 @@ export default function ProformaFormClient({
 
   // ─── Render ───────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
 
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">P</div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
               {mode === 'yeni' ? 'Yeni Proforma Fatura' : `Proforma Düzenle — ${initialData?.proforma_no}`}
             </h1>
-            <Link href="/fiyat-teklifleri/proforma" className="text-xs text-gray-400 hover:text-gray-600">
+            <Link href="/fiyat-teklifleri/proforma" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600">
               ← Proforma Listesi
             </Link>
           </div>
         </div>
         <div className="flex gap-2">
           <Link href="/fiyat-teklifleri/proforma"
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+            className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
             İptal
           </Link>
           <button onClick={() => handleSave(false)} disabled={saving}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+            className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
             {saving ? 'Kaydediliyor...' : 'Kaydet (Taslak)'}
           </button>
           <button onClick={() => handleSave(true)} disabled={saving}
@@ -475,24 +475,24 @@ export default function ProformaFormClient({
         )}
 
         {/* ─── Genel Bilgiler */}
-        <div className="bg-white border rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Genel Bilgiler</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Genel Bilgiler</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Proforma No</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Proforma No</label>
               <input type="text" value={proformaNo} readOnly
-                className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 font-mono text-gray-600" />
+                className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 font-mono text-gray-600 dark:text-gray-300" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Tarih</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tarih</label>
               <input type="date" value={tarih} onChange={e => setTarih(e.target.value)} className={INPUT} />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Vade Tarihi</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Vade Tarihi</label>
               <input type="date" value={vadeTarihi} onChange={e => setVadeTarihi(e.target.value)} className={INPUT} />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Para Birimi</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Para Birimi</label>
               <select value={paraBirimi} onChange={e => setParaBirimi(e.target.value as ParaBirimi)} className={INPUT}>
                 <option value="TRY">TRY</option>
                 <option value="USD">USD</option>
@@ -500,7 +500,7 @@ export default function ProformaFormClient({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Durum</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Durum</label>
               <select value={durum} onChange={e => setDurum(e.target.value as Durum)} className={INPUT}>
                 <option value="taslak">Taslak</option>
                 <option value="gonderildi">Gönderildi</option>
@@ -516,11 +516,11 @@ export default function ProformaFormClient({
         </div>
 
         {/* ─── Müşteri Bilgileri */}
-        <div className="bg-white border rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Müşteri Bilgileri</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Müşteri Bilgileri</h2>
 
           <div className="relative mb-4" ref={musteriRef}>
-            <label className="block text-xs text-gray-500 mb-1">Kayıtlı Müşteriden Ara</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Kayıtlı Müşteriden Ara</label>
             <input
               type="text"
               value={musteriArama}
@@ -530,13 +530,13 @@ export default function ProformaFormClient({
               className={INPUT}
             />
             {showMusteriDrop && filteredMusteriler.length > 0 && (
-              <div className="absolute z-20 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+              <div className="absolute z-20 w-full bg-white dark:bg-gray-800 border rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
                 {filteredMusteriler.map(m => (
                   <button key={m.id} type="button"
                     onMouseDown={() => selectMusteri(m)}
                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b last:border-0">
-                    <div className="font-medium text-gray-900">{m.full_name}</div>
-                    {m.il && <div className="text-xs text-gray-400">{m.il}</div>}
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{m.full_name}</div>
+                    {m.il && <div className="text-xs text-gray-400 dark:text-gray-500">{m.il}</div>}
                   </button>
                 ))}
               </div>
@@ -545,32 +545,32 @@ export default function ProformaFormClient({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Müşteri Unvanı *</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Müşteri Unvanı *</label>
               <input type="text" value={musteriUnvan} onChange={e => setMusteriUnvan(e.target.value)}
                 className={INPUT} placeholder="Firma veya kişi adı" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Adres</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Adres</label>
               <textarea value={musteriAdres} onChange={e => setMusteriAdres(e.target.value)}
                 className={INPUT} rows={2} placeholder="Müşteri adresi" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">VKN / TC</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">VKN / TC</label>
               <input type="text" value={musteriVkn} onChange={e => setMusteriVkn(e.target.value)}
                 className={INPUT} placeholder="Vergi kimlik no" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Vergi Dairesi</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Vergi Dairesi</label>
               <input type="text" value={musteriVergiDairesi} onChange={e => setMusteriVergiDairesi(e.target.value)}
                 className={INPUT} placeholder="Vergi dairesi adı" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Telefon</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Telefon</label>
               <input type="text" value={musteriTelefon} onChange={e => setMusteriTelefon(e.target.value)}
                 className={INPUT} />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">E-posta</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">E-posta</label>
               <input type="email" value={musteriEmail} onChange={e => setMusteriEmail(e.target.value)}
                 className={INPUT} />
             </div>
@@ -578,9 +578,9 @@ export default function ProformaFormClient({
         </div>
 
         {/* ─── Kalem Tablosu */}
-        <div className="bg-white border rounded-lg p-5" ref={acRef}>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5" ref={acRef}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">Kalemler</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Kalemler</h2>
             <div className="flex items-center gap-2">
               {importHata && <span className="text-xs text-red-600">{importHata}</span>}
               <button
@@ -597,7 +597,7 @@ export default function ProformaFormClient({
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[900px]">
               <thead>
-                <tr className="border-b bg-gray-50 text-xs text-gray-500">
+                <tr className="border-b bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400">
                   <th className="px-2 py-2 text-center w-8">#</th>
                   <th className="px-2 py-2 text-left">Mal / Hizmet</th>
                   <th className="px-2 py-2 text-center w-20">Miktar</th>
@@ -614,7 +614,7 @@ export default function ProformaFormClient({
               <tbody>
                 {kalemler.map((k, idx) => (
                   <tr key={k.id} className="border-b last:border-0 align-top">
-                    <td className="px-2 py-2 text-center text-gray-400 text-xs pt-3">{idx + 1}</td>
+                    <td className="px-2 py-2 text-center text-gray-400 dark:text-gray-500 text-xs pt-3">{idx + 1}</td>
                     <td className="px-2 py-2 relative">
                       <input
                         type="text"
@@ -633,13 +633,13 @@ export default function ProformaFormClient({
                         className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E] min-w-[200px]"
                       />
                       {acDropId === k.id && acFiltered.length > 0 && (
-                        <div className="absolute z-30 left-2 w-80 bg-white border rounded-lg shadow-lg mt-0.5 max-h-40 overflow-y-auto">
+                        <div className="absolute z-30 left-2 w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-lg mt-0.5 max-h-40 overflow-y-auto">
                           {acFiltered.map(u => (
                             <button key={u.id} type="button"
                               onMouseDown={() => selectUrun(k.id, u)}
                               className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 border-b last:border-0">
-                              <div className="font-medium text-gray-900">{u.ad}</div>
-                              <div className="text-gray-400">{u.kategori} · {fmtN(u.kdv_haric_fiyat)} {sembol}</div>
+                              <div className="font-medium text-gray-900 dark:text-gray-100">{u.ad}</div>
+                              <div className="text-gray-400 dark:text-gray-500">{u.kategori} · {fmtN(u.kdv_haric_fiyat)} {sembol}</div>
                             </button>
                           ))}
                         </div>
@@ -649,7 +649,7 @@ export default function ProformaFormClient({
                         value={k.aciklama}
                         onChange={e => updateKalem(k.id, 'aciklama', e.target.value)}
                         placeholder="Açıklama (opsiyonel)"
-                        className="w-full border rounded px-2 py-1 text-xs text-gray-500 mt-1 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                        className="w-full border rounded px-2 py-1 text-xs text-gray-500 dark:text-gray-400 mt-1 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                       />
                     </td>
                     <td className="px-2 py-2">
@@ -673,7 +673,7 @@ export default function ProformaFormClient({
                         onChange={e => updateKalem(k.id, 'iskonto_orani', parseFloat(e.target.value) || 0)}
                         className="w-full border rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                     </td>
-                    <td className="px-2 py-2 text-right text-xs text-gray-500 pt-3 pr-3">
+                    <td className="px-2 py-2 text-right text-xs text-gray-500 dark:text-gray-400 pt-3 pr-3">
                       {fmtN(k.iskonto_tutari)}
                     </td>
                     <td className="px-2 py-2">
@@ -682,7 +682,7 @@ export default function ProformaFormClient({
                         {KDV_ORANLARI.map(r => <option key={r} value={r}>%{r}</option>)}
                       </select>
                     </td>
-                    <td className="px-2 py-2 text-right text-xs text-gray-500 pt-3 pr-3">
+                    <td className="px-2 py-2 text-right text-xs text-gray-500 dark:text-gray-400 pt-3 pr-3">
                       {fmtN(k.kdv_tutari)}
                     </td>
                     <td className="px-2 py-2 text-right font-medium pt-3">
@@ -708,70 +708,70 @@ export default function ProformaFormClient({
         </div>
 
         {/* ─── Toplamlar */}
-        <div className="bg-white border rounded-lg p-5">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
           <div className="flex justify-end">
             <table className="text-sm" style={{ width: 320 }}>
               <tbody>
                 <tr>
-                  <td className="py-1.5 text-gray-500 pr-8">Mal/Hizmet Toplam Tutarı</td>
+                  <td className="py-1.5 text-gray-500 dark:text-gray-400 pr-8">Mal/Hizmet Toplam Tutarı</td>
                   <td className="py-1.5 text-right font-medium">{fmtN(araToplam)} {sembol}</td>
                 </tr>
                 <tr>
-                  <td className="py-1.5 text-gray-500">Toplam İskonto</td>
+                  <td className="py-1.5 text-gray-500 dark:text-gray-400">Toplam İskonto</td>
                   <td className="py-1.5 text-right text-red-600">-{fmtN(toplamIskonto)} {sembol}</td>
                 </tr>
                 <tr>
-                  <td className="py-1.5 text-gray-500">KDV Matrahı</td>
+                  <td className="py-1.5 text-gray-500 dark:text-gray-400">KDV Matrahı</td>
                   <td className="py-1.5 text-right font-medium">{fmtN(kdvMatrahi)} {sembol}</td>
                 </tr>
                 <tr>
-                  <td className="py-1.5 text-gray-500">Hesaplanan KDV</td>
+                  <td className="py-1.5 text-gray-500 dark:text-gray-400">Hesaplanan KDV</td>
                   <td className="py-1.5 text-right font-medium">{fmtN(toplamKdv)} {sembol}</td>
                 </tr>
                 <tr className="border-t">
-                  <td className="pt-2 pb-1 font-bold text-gray-900">Vergiler Dahil Toplam</td>
+                  <td className="pt-2 pb-1 font-bold text-gray-900 dark:text-gray-100">Vergiler Dahil Toplam</td>
                   <td className="pt-2 pb-1 text-right font-bold text-[#C8102E] text-base">{fmtN(genelToplam)} {sembol}</td>
                 </tr>
                 <tr>
-                  <td className="pb-2 font-bold text-gray-900">Ödenecek Tutar</td>
+                  <td className="pb-2 font-bold text-gray-900 dark:text-gray-100">Ödenecek Tutar</td>
                   <td className="pb-2 text-right font-bold text-[#C8102E] text-base">{fmtN(genelToplam)} {sembol}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           {paraBirimi === 'TRY' && (
-            <div className="mt-3 text-right text-xs text-gray-500 italic">
+            <div className="mt-3 text-right text-xs text-gray-500 dark:text-gray-400 italic">
               {tutarYaziya(genelToplam)}
             </div>
           )}
         </div>
 
         {/* ─── Ödeme Bilgileri */}
-        <div className="bg-white border rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Ödeme Bilgileri</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Ödeme Bilgileri</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">IBAN</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">IBAN</label>
               <input type="text" value={iban} onChange={e => setIban(e.target.value)} className={INPUT} />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Banka</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Banka</label>
               <input type="text" value={bankaAdi} onChange={e => setBankaAdi(e.target.value)} className={INPUT} />
             </div>
           </div>
         </div>
 
         {/* ─── Notlar */}
-        <div className="bg-white border rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Notlar</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Notlar</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Notlar</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Notlar</label>
               <textarea value={notlar} onChange={e => setNotlar(e.target.value)}
                 className={INPUT} rows={3} placeholder="Ek notlar..." />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Özel Şartlar</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Özel Şartlar</label>
               <textarea value={ozelSartlar} onChange={e => setOzelSartlar(e.target.value)}
                 className={INPUT} rows={3} placeholder="Özel şartlar ve koşullar..." />
             </div>
@@ -781,11 +781,11 @@ export default function ProformaFormClient({
         {/* ─── Alt Butonlar */}
         <div className="flex gap-3 justify-end pb-8">
           <Link href="/fiyat-teklifleri/proforma"
-            className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+            className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">
             İptal
           </Link>
           <button onClick={() => handleSave(false)} disabled={saving}
-            className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
+            className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50">
             {saving ? 'Kaydediliyor...' : 'Kaydet (Taslak)'}
           </button>
           <button onClick={() => handleSave(true)} disabled={saving}

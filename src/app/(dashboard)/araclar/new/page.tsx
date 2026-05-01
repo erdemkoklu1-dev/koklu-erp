@@ -42,26 +42,26 @@ export default function NewAraciPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3">
         <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-        <Link href="/araclar" className="text-gray-500 hover:text-gray-700 text-sm">← Aracılar</Link>
+        <Link href="/araclar" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 text-sm">← Aracılar</Link>
         <span className="text-gray-300">/</span>
-        <h1 className="text-lg font-bold text-gray-900">Yeni Aracı</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Yeni Aracı</h1>
       </div>
 
       <div className="p-6 max-w-xl mx-auto">
-        <form onSubmit={handleSubmit} className="bg-white border rounded-lg p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 border rounded-lg p-6 space-y-5">
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Ad Soyad <span className="text-red-500">*</span></label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ad Soyad <span className="text-red-500">*</span></label>
             <input name="full_name" value={form.full_name} onChange={handleChange}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
               placeholder="" />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Firma Adı</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Firma Adı</label>
             <input name="company_name" value={form.company_name} onChange={handleChange}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
               placeholder="Firma adı (opsiyonel)" />
@@ -69,13 +69,13 @@ export default function NewAraciPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Telefon</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Telefon</label>
               <input name="phone" value={form.phone} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">E-posta</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">E-posta</label>
               <input name="email" type="email" value={form.email} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="ad@example.com" />
@@ -83,7 +83,7 @@ export default function NewAraciPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Notlar</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notlar</label>
             <textarea name="notes" value={form.notes} onChange={handleChange} rows={3}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
               placeholder="Aracı hakkında ek bilgiler..." />
@@ -97,7 +97,7 @@ export default function NewAraciPage() {
               {loading ? 'Kaydediliyor...' : 'Aracıyı Kaydet'}
             </button>
             <Link href="/araclar"
-              className="px-6 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors text-center">
+              className="px-6 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors text-center">
               İptal
             </Link>
           </div>

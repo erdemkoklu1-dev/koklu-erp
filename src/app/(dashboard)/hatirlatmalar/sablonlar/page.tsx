@@ -21,8 +21,8 @@ export default async function SablonlarPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Mesaj Şablonları</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Mesaj Şablonları</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             Kullanılabilir değişkenler: {'{musteri_adi}'}, {'{cihaz_adi}'}, {'{kontrol_tarihi}'}, {'{gun_kaldi}'}, {'{firma_adi}'}
           </p>
         </div>
@@ -30,21 +30,21 @@ export default async function SablonlarPage() {
       </div>
 
       {(sablonlar ?? []).length === 0 ? (
-        <div className="bg-white border rounded-xl px-4 py-12 text-center text-sm text-gray-400">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
           Henüz şablon yok. <span className="text-[#C8102E]">+ Yeni Şablon ile başlayın.</span>
         </div>
       ) : (
         <div className="space-y-3">
           {(sablonlar ?? []).map(s => (
-            <div key={s.id} className="bg-white border rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
+            <div key={s.id} className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-900">{s.ad}</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${KANAL_BADGE[s.kanal] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{s.ad}</span>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${KANAL_BADGE[s.kanal] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>
                     {s.kanal}
                   </span>
                   {!s.aktif && (
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600">
                       Pasif
                     </span>
                   )}
@@ -52,7 +52,7 @@ export default async function SablonlarPage() {
                 <SablonModal
                   sablon={s as any}
                   trigger={
-                    <button className="text-xs text-gray-500 hover:text-[#C8102E] underline">
+                    <button className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#C8102E] underline">
                       Düzenle
                     </button>
                   }
@@ -61,13 +61,13 @@ export default async function SablonlarPage() {
               <div className="px-5 py-4 space-y-2">
                 {s.konu && (
                   <div>
-                    <div className="text-xs text-gray-400 mb-0.5">Konu</div>
-                    <div className="text-sm text-gray-700 font-medium">{s.konu}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Konu</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 font-medium">{s.konu}</div>
                   </div>
                 )}
                 <div>
-                  <div className="text-xs text-gray-400 mb-0.5">Mesaj</div>
-                  <div className="text-sm text-gray-700 whitespace-pre-line bg-gray-50 rounded-lg px-3 py-2 font-mono text-xs leading-relaxed">
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Mesaj</div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2 font-mono text-xs leading-relaxed">
                     {s.mesaj_sablonu}
                   </div>
                 </div>

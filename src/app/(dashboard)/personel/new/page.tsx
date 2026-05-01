@@ -34,9 +34,9 @@ const emptyForm = {
   notlar: '',
 }
 
-const LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+const LABEL = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
 const INPUT = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500'
-const SELECT = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white'
+const SELECT = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800'
 
 export default function YeniPersonelPage() {
   const router = useRouter()
@@ -108,10 +108,10 @@ export default function YeniPersonelPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.push('/personel')} className="text-gray-400 hover:text-gray-600">
+        <button onClick={() => router.push('/personel')} className="text-gray-400 dark:text-gray-500 hover:text-gray-600">
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">Yeni Personel Ekle</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Yeni Personel Ekle</h1>
       </div>
 
       {/* Adım göstergesi */}
@@ -123,10 +123,10 @@ export default function YeniPersonelPage() {
           return (
             <div key={a.no} className="flex items-center flex-1 last:flex-none">
               <div className="flex flex-col items-center gap-1">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${done ? 'bg-green-500 text-white' : active ? 'bg-[#C8102E] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${done ? 'bg-green-500 text-white' : active ? 'bg-[#C8102E] text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'}`}>
                   {done ? <Check size={16} /> : <Icon size={16} />}
                 </div>
-                <span className={`text-xs hidden sm:block ${active ? 'text-[#C8102E] font-semibold' : 'text-gray-400'}`}>{a.label}</span>
+                <span className={`text-xs hidden sm:block ${active ? 'text-[#C8102E] font-semibold' : 'text-gray-400 dark:text-gray-500'}`}>{a.label}</span>
               </div>
               {i < ADIMLAR.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${adim > a.no ? 'bg-green-400' : 'bg-gray-200'}`} />}
             </div>
@@ -135,10 +135,10 @@ export default function YeniPersonelPage() {
       </div>
 
       {/* Form alanları */}
-      <div className="bg-white rounded-xl border p-6 space-y-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border p-6 space-y-4">
         {adim === 1 && (
           <>
-            <h2 className="font-semibold text-gray-800 mb-4">Kişisel Bilgiler</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Kişisel Bilgiler</h2>
             <div className="grid grid-cols-2 gap-4">
               <div><label className={LABEL}>Ad *</label><input value={form.ad} onChange={e => set('ad', e.target.value)} className={INPUT} /></div>
               <div><label className={LABEL}>Soyad *</label><input value={form.soyad} onChange={e => set('soyad', e.target.value)} className={INPUT} /></div>
@@ -182,7 +182,7 @@ export default function YeniPersonelPage() {
 
         {adim === 2 && (
           <>
-            <h2 className="font-semibold text-gray-800 mb-4">İletişim Bilgileri</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">İletişim Bilgileri</h2>
             <div className="grid grid-cols-2 gap-4">
               <div><label className={LABEL}>Telefon</label><input value={form.telefon} onChange={e => set('telefon', e.target.value)} className={INPUT} /></div>
               <div><label className={LABEL}>E-posta</label><input type="email" value={form.email} onChange={e => set('email', e.target.value)} className={INPUT} /></div>
@@ -193,7 +193,7 @@ export default function YeniPersonelPage() {
               <div><label className={LABEL}>Posta Kodu</label><input value={form.posta_kodu} onChange={e => set('posta_kodu', e.target.value)} className={INPUT} /></div>
             </div>
             <div className="border-t pt-4 mt-2">
-              <p className="text-sm font-semibold text-gray-700 mb-3">Acil İletişim</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Acil İletişim</p>
               <div className="grid grid-cols-3 gap-4">
                 <div><label className={LABEL}>Ad Soyad</label><input value={form.acil_iletisim_adi} onChange={e => set('acil_iletisim_adi', e.target.value)} className={INPUT} /></div>
                 <div><label className={LABEL}>Telefon</label><input value={form.acil_iletisim_telefonu} onChange={e => set('acil_iletisim_telefonu', e.target.value)} className={INPUT} /></div>
@@ -205,7 +205,7 @@ export default function YeniPersonelPage() {
 
         {adim === 3 && (
           <>
-            <h2 className="font-semibold text-gray-800 mb-4">Özlük Bilgileri</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Özlük Bilgileri</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={LABEL}>Şube</label>
@@ -266,7 +266,7 @@ export default function YeniPersonelPage() {
 
         {adim === 4 && (
           <>
-            <h2 className="font-semibold text-gray-800 mb-4">Mali Bilgiler</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Mali Bilgiler</h2>
             <div className="grid grid-cols-2 gap-4">
               <div><label className={LABEL}>Maaş (₺)</label><input type="number" value={form.maas} onChange={e => set('maas', e.target.value)} className={INPUT} /></div>
               <div>
@@ -287,17 +287,17 @@ export default function YeniPersonelPage() {
         {adim === 5 && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-800">Belgeler ve Sertifikalar</h2>
+              <h2 className="font-semibold text-gray-800 dark:text-gray-200">Belgeler ve Sertifikalar</h2>
               <button onClick={addBelge} className="text-sm text-[#C8102E] hover:underline font-medium">+ Belge Ekle</button>
             </div>
             {belgeler.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-8">Henüz belge eklenmedi. İsteğe bağlıdır.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">Henüz belge eklenmedi. İsteğe bağlıdır.</p>
             )}
             <div className="space-y-4">
               {belgeler.map((b, i) => (
                 <div key={i} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-700">Belge #{i + 1}</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Belge #{i + 1}</p>
                     <button onClick={() => removeBelge(i)} className="text-xs text-red-500 hover:underline">Sil</button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -334,7 +334,7 @@ export default function YeniPersonelPage() {
       <div className="flex items-center justify-between mt-6">
         <button
           onClick={() => adim > 1 ? setAdim(a => a - 1) : router.push('/personel')}
-          className="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors"
         >
           <ChevronLeft size={16} /> {adim === 1 ? 'İptal' : 'Geri'}
         </button>

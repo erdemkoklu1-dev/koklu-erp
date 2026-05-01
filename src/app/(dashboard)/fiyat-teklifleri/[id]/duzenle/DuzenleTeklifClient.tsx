@@ -289,47 +289,47 @@ export default function DuzenleTeklifClient({
   const kur = paraBirimi === 'USD' ? dovizKuru?.USD : paraBirimi === 'EUR' ? dovizKuru?.EUR : null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
         <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-        <Link href={`/fiyat-teklifleri/${teklif.id}`} className="text-gray-500 text-sm hover:text-gray-700">← {teklif.teklif_no}</Link>
+        <Link href={`/fiyat-teklifleri/${teklif.id}`} className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700">← {teklif.teklif_no}</Link>
         <span className="text-gray-300">/</span>
-        <h1 className="text-lg font-bold text-gray-900">Teklifi Düzenle</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Teklifi Düzenle</h1>
       </div>
 
       <form onSubmit={handleKaydet} className="p-4 max-w-5xl mx-auto space-y-4">
 
         {/* ── Bölüm 1: Teklif Bilgileri ── */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Teklif Bilgileri</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b">Teklif Bilgileri</h2>
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-600">Teklif No</label>
-                <input value={teklif.teklif_no} readOnly className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 font-mono text-gray-700 focus:outline-none" />
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Teklif No</label>
+                <input value={teklif.teklif_no} readOnly className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 font-mono text-gray-700 dark:text-gray-300 focus:outline-none" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Teklif Tarihi</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Teklif Tarihi</label>
                 <input type="date" value={tarih} onChange={e => setTarih(e.target.value)} className={`mt-1 ${INPUT}`} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Geçerlilik Süresi (gün)</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Geçerlilik Süresi (gün)</label>
                 <input type="number" min={1} value={gecerlilik} onChange={e => setGecerlilik(parseInt(e.target.value) || 7)} className={`mt-1 ${INPUT}`} />
               </div>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-600">Geçerlilik Bitiş</label>
-                <input value={gecerlilikBitis} readOnly className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 focus:outline-none" />
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Geçerlilik Bitiş</label>
+                <input value={gecerlilikBitis} readOnly className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Şehir</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Şehir</label>
                 <select value={sehir} onChange={e => setSehir(e.target.value)} className={`mt-1 ${INPUT}`}>
                   {SEHIR_SELECT}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Durum</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Durum</label>
                 <select value={durum} onChange={e => setDurum(e.target.value as Durum)} className={`mt-1 ${INPUT}`}>
                   <option value="taslak">Taslak</option>
                   <option value="gonderildi">Gönderildi</option>
@@ -340,7 +340,7 @@ export default function DuzenleTeklifClient({
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Şube</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Şube</label>
                 <SubeSelect value={subeId} onChange={setSubeId} label="" />
               </div>
             </div>
@@ -348,13 +348,13 @@ export default function DuzenleTeklifClient({
         </div>
 
         {/* ── Bölüm 2: Müşteri ── */}
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
           <div className="flex items-center justify-between mb-3 pb-2 border-b">
-            <h2 className="text-sm font-semibold text-gray-700">Müşteri</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Müşteri</h2>
             <div className="flex gap-1">
               {(['kayitli', 'manuel'] as const).map(mod => (
                 <button key={mod} type="button" onClick={() => setMusteriMod(mod)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${musteriMod === mod ? 'bg-[#C8102E] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${musteriMod === mod ? 'bg-[#C8102E] text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'}`}>
                   {mod === 'kayitli' ? 'Kayıtlı Müşteri' : 'Manuel Gir'}
                 </button>
               ))}
@@ -366,13 +366,13 @@ export default function DuzenleTeklifClient({
                 onChange={e => { setMusteriArama(e.target.value); setShowDropdown(true); setSeciliMusteri(null) }}
                 onFocus={() => setShowDropdown(true)} placeholder="Müşteri ara..." className={INPUT} />
               {showDropdown && musteriArama.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                  {filteredMusteriler.length === 0 ? <div className="px-3 py-2 text-sm text-gray-400">Bulunamadı</div>
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                  {filteredMusteriler.length === 0 ? <div className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">Bulunamadı</div>
                     : filteredMusteriler.map(m => (
                       <div key={m.id} onClick={() => { setSeciliMusteri(m); setMusteriArama(m.full_name); setShowDropdown(false) }}
                         className="px-3 py-2 hover:bg-red-50 cursor-pointer border-b last:border-0">
                         <div className="text-sm font-medium">{m.full_name}</div>
-                        {m.phone && <div className="text-xs text-gray-400">{m.phone}</div>}
+                        {m.phone && <div className="text-xs text-gray-400 dark:text-gray-500">{m.phone}</div>}
                       </div>
                     ))}
                 </div>
@@ -382,21 +382,21 @@ export default function DuzenleTeklifClient({
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600">Ad / Ünvan <span className="text-red-500">*</span></label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Ad / Ünvan <span className="text-red-500">*</span></label>
                 <input value={manuelAdi} onChange={e => setManuelAdi(e.target.value)} placeholder="Firma veya kişi adı" className={`mt-1 ${INPUT}`} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Şehir</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Şehir</label>
                 <select value={manuelSehir} onChange={e => setManuelSehir(e.target.value)} className={`mt-1 ${INPUT}`}>
                   {SEHIR_SELECT}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Telefon</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Telefon</label>
                 <input value={manuelTel} onChange={e => setManuelTel(e.target.value)} placeholder="0530 000 00 00" className={`mt-1 ${INPUT}`} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">E-posta</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">E-posta</label>
                 <input type="email" value={manuelEmail} onChange={e => setManuelEmail(e.target.value)} placeholder="ornek@firma.com" className={`mt-1 ${INPUT}`} />
               </div>
             </div>
@@ -404,28 +404,28 @@ export default function DuzenleTeklifClient({
         </div>
 
         {/* ── Bölüm 3: Para Birimi ve KDV ── */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Para Birimi ve KDV</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b">Para Birimi ve KDV</h2>
           <div className="flex flex-wrap items-end gap-6">
             <div>
-              <div className="text-xs font-medium text-gray-600 mb-1.5">Para Birimi</div>
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">Para Birimi</div>
               <div className="flex gap-1">
                 {(['TL', 'USD', 'EUR'] as const).map(pb => (
                   <button key={pb} type="button" onClick={() => setParaBirimi(pb)}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${paraBirimi === pb ? 'bg-[#C8102E] text-white border-[#C8102E]' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${paraBirimi === pb ? 'bg-[#C8102E] text-white border-[#C8102E]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-500'}`}>
                     {pb}
                   </button>
                 ))}
               </div>
               {kur && <div className="mt-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1">1 {paraBirimi} ≈ {kur.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</div>}
             </div>
-            <div className="h-8 border-l border-gray-200 self-center hidden sm:block" />
+            <div className="h-8 border-l border-gray-200 dark:border-gray-600 self-center hidden sm:block" />
             <div>
-              <div className="text-xs font-medium text-gray-600 mb-1.5">KDV Durumu</div>
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">KDV Durumu</div>
               <div className="flex gap-1">
                 {([{ value: 'haric', label: 'KDV Hariç' }, { value: 'dahil', label: 'KDV Dahil' }, { value: 'yok', label: 'KDV Yok' }] as const).map(opt => (
                   <button key={opt.value} type="button" onClick={() => setKdvDurumu(opt.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${kdvDurumu === opt.value ? 'bg-[#C8102E] text-white border-[#C8102E]' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${kdvDurumu === opt.value ? 'bg-[#C8102E] text-white border-[#C8102E]' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-500'}`}>
                     {opt.label}
                   </button>
                 ))}
@@ -433,18 +433,18 @@ export default function DuzenleTeklifClient({
             </div>
             {kdvDurumu !== 'yok' && (
               <>
-                <div className="h-8 border-l border-gray-200 self-center hidden sm:block" />
+                <div className="h-8 border-l border-gray-200 dark:border-gray-600 self-center hidden sm:block" />
                 <div>
-                  <div className="text-xs font-medium text-gray-600 mb-1.5">KDV Oranı</div>
+                  <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5">KDV Oranı</div>
                   <div className="flex gap-1 items-center">
                     {[1, 10, 20].map(oran => (
                       <button key={oran} type="button" onClick={() => { setKdvOrani(oran); setKdvManuelVal('') }}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${kdvOrani === oran && !kdvManuelVal ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${kdvOrani === oran && !kdvManuelVal ? 'bg-gray-800 text-white border-gray-800' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-500'}`}>
                         %{oran}
                       </button>
                     ))}
                     <div className="flex items-center border rounded-lg overflow-hidden">
-                      <span className="px-2 text-sm text-gray-500 bg-gray-50 border-r select-none">%</span>
+                      <span className="px-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-r select-none">%</span>
                       <input
                         type="number" min={0} max={100} step={1}
                         value={kdvManuelVal}
@@ -466,15 +466,15 @@ export default function DuzenleTeklifClient({
         </div>
 
         {/* ── Bölüm 4: Teklif Kalemleri ── */}
-        <div className="bg-white border rounded-lg overflow-hidden" ref={acRef}>
-          <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">Teklif Kalemleri</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden" ref={acRef}>
+          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Teklif Kalemleri</h2>
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1">
                 <input type="number" value={karOrani} onChange={e => setKarOrani(e.target.value)} placeholder="örn: 20 veya -10"
                   className="w-28 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                 <button type="button" onClick={applyKarOrani}
-                  className="text-xs border border-gray-300 text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-50 whitespace-nowrap">
+                  className="text-xs border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1.5 rounded-lg hover:bg-gray-50 whitespace-nowrap">
                   Kar Uygula
                 </button>
               </div>
@@ -485,7 +485,7 @@ export default function DuzenleTeklifClient({
             </div>
           </div>
 
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
             <div className="col-span-1 text-center">S.NO</div>
             <div className="col-span-1 text-center">ADET</div>
             <div className="col-span-5">MALIN CİNSİ</div>
@@ -498,7 +498,7 @@ export default function DuzenleTeklifClient({
           <div className="divide-y">
             {kalemler.map((k, idx) => (
               <div key={k.id} className="grid grid-cols-12 gap-2 px-4 py-1.5 items-center relative">
-                <div className="col-span-1 text-center text-xs text-gray-400">{idx + 1}</div>
+                <div className="col-span-1 text-center text-xs text-gray-400 dark:text-gray-500">{idx + 1}</div>
                 <div className="col-span-1">
                   <input type="number" min={0.001} step="any" value={k.miktar}
                     onChange={e => updateKalem(k.id, 'miktar', parseFloat(e.target.value) || 0)}
@@ -516,12 +516,12 @@ export default function DuzenleTeklifClient({
                     placeholder="Ürün / hizmet adı yazın veya seçin..."
                     className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                   {acDropId === k.id && acFiltered.length > 0 && (
-                    <div className="absolute z-30 left-0 right-0 top-full mt-0.5 bg-white border border-gray-200 rounded-lg shadow-xl max-h-52 overflow-y-auto">
+                    <div className="absolute z-30 left-0 right-0 top-full mt-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-52 overflow-y-auto">
                       {acFiltered.map(u => (
                         <div key={u.id} onMouseDown={e => { e.preventDefault(); selectUrun(k.id, u) }}
                           className="px-3 py-2 hover:bg-red-50 cursor-pointer border-b last:border-0">
-                          <div className="text-sm font-medium text-gray-900">{u.ad}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{u.ad}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {u.kategori === 'dolum' ? (
                               <>Bakım: {u.periyodik_bakim_fiyati?.toLocaleString('tr-TR') ?? '-'} ₺ · Dolum: {u.dolum_fiyati?.toLocaleString('tr-TR') ?? '-'} ₺</>
                             ) : (
@@ -544,7 +544,7 @@ export default function DuzenleTeklifClient({
                     placeholder="0"
                     className="w-full border rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                 </div>
-                <div className="col-span-1 text-right text-sm font-medium text-gray-800 pr-1">
+                <div className="col-span-1 text-right text-sm font-medium text-gray-800 dark:text-gray-200 pr-1">
                   {k.toplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                 </div>
                 <div className="col-span-1 text-center">
@@ -555,19 +555,19 @@ export default function DuzenleTeklifClient({
           </div>
 
           {/* Alt toplamlar */}
-          <div className="px-4 py-3 bg-gray-50 border-t">
+          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t">
             <div className="ml-auto w-72 space-y-1.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">KDV Hariç Toplam</span>
+                <span className="text-gray-600 dark:text-gray-300">KDV Hariç Toplam</span>
                 <span className="font-medium">{araToplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {paraBirimi}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600 shrink-0">Genel İskonto</span>
+                <span className="text-gray-600 dark:text-gray-300 shrink-0">Genel İskonto</span>
                 <div className="flex items-center gap-1 ml-auto">
                   <button type="button" onClick={() => setGenelIskontoTip('yuzde')}
-                    className={`px-2 py-0.5 text-xs rounded border transition-colors ${genelIskontoTip === 'yuzde' ? 'bg-gray-700 text-white border-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'}`}>%</button>
+                    className={`px-2 py-0.5 text-xs rounded border transition-colors ${genelIskontoTip === 'yuzde' ? 'bg-gray-700 text-white border-gray-700' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}>%</button>
                   <button type="button" onClick={() => setGenelIskontoTip('tl')}
-                    className={`px-2 py-0.5 text-xs rounded border transition-colors ${genelIskontoTip === 'tl' ? 'bg-gray-700 text-white border-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-100'}`}>TL</button>
+                    className={`px-2 py-0.5 text-xs rounded border transition-colors ${genelIskontoTip === 'tl' ? 'bg-gray-700 text-white border-gray-700' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100'}`}>TL</button>
                   <input type="number" min={0} step="any" value={genelIskonto}
                     onChange={e => setGenelIskonto(e.target.value)}
                     placeholder="0"
@@ -582,44 +582,44 @@ export default function DuzenleTeklifClient({
               )}
               {genelIskontoTutari > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">İskonto Sonrası</span>
+                  <span className="text-gray-600 dark:text-gray-300">İskonto Sonrası</span>
                   <span className="font-medium">{iskontoSonrasi.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {paraBirimi}</span>
                 </div>
               )}
               {kdvDurumu !== 'yok' && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">KDV (%{kdvOrani})</span>
+                  <span className="text-gray-600 dark:text-gray-300">KDV (%{kdvOrani})</span>
                   <span className="font-medium">{kdvTutari.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {paraBirimi}</span>
                 </div>
               )}
-              <div className="flex justify-between pt-2 border-t border-gray-300">
-                <span className="font-bold text-gray-900">Genel Toplam</span>
+              <div className="flex justify-between pt-2 border-t border-gray-300 dark:border-gray-600">
+                <span className="font-bold text-gray-900 dark:text-gray-100">Genel Toplam</span>
                 <span className="font-bold text-[#C8102E] text-base">{genelToplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {paraBirimi}</span>
               </div>
-              <div className="text-xs text-gray-500 italic">{tutarYaziyla}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 italic">{tutarYaziyla}</div>
             </div>
           </div>
         </div>
 
         {/* ── Bölüm 5: Notlar ── */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-2 pb-2 border-b">Notlar</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 pb-2 border-b">Notlar</h2>
           <textarea value={notlar} onChange={e => setNotlar(e.target.value)} rows={3} placeholder="Teklif ile ilgili notlar..." className={INPUT} />
         </div>
 
         {/* ── Bölüm 6: Ticari Şartname ── */}
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
           <div className="flex items-center justify-between mb-2 pb-2 border-b">
-            <h2 className="text-sm font-semibold text-gray-700">Ticari Şartname</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Ticari Şartname</h2>
             <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-xs text-gray-600">PDF'e Ekle</span>
+              <span className="text-xs text-gray-600 dark:text-gray-300">PDF'e Ekle</span>
               <div onClick={() => setSartname((p: boolean) => !p)} className={`relative w-10 h-5 rounded-full cursor-pointer transition-colors ${sartname ? 'bg-[#C8102E]' : 'bg-gray-300'}`}>
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${sartname ? 'left-5' : 'left-0.5'}`} />
+                <div className={`absolute top-0.5 w-4 h-4 bg-white dark:bg-gray-800 rounded-full shadow transition-all ${sartname ? 'left-5' : 'left-0.5'}`} />
               </div>
             </label>
           </div>
           {sartname ? <textarea value={sartnameMetin} onChange={e => setSartnameMetin(e.target.value)} rows={10} className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
-            : <p className="text-xs text-gray-400 italic">Kapalı — PDF'e eklenmeyecek.</p>}
+            : <p className="text-xs text-gray-400 dark:text-gray-500 italic">Kapalı — PDF'e eklenmeyecek.</p>}
         </div>
 
         {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>}
@@ -629,38 +629,38 @@ export default function DuzenleTeklifClient({
             className="flex-1 bg-[#C8102E] text-white py-3 rounded-lg font-semibold hover:bg-[#a50d26] disabled:opacity-50 transition-colors text-sm">
             {saving ? 'Kaydediliyor...' : '💾 Güncelle'}
           </button>
-          <Link href={`/fiyat-teklifleri/${teklif.id}`} className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors text-center">İptal</Link>
+          <Link href={`/fiyat-teklifleri/${teklif.id}`} className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors text-center">İptal</Link>
         </div>
       </form>
 
       {/* ── Dolum fiyat tipi seçim popup ── */}
       {dolumPopup && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm">
             <div className="px-5 py-4 border-b">
-              <h3 className="text-base font-bold text-gray-900">Fiyat Tipi Seçin</h3>
-              <p className="text-sm text-gray-500 mt-1">{dolumPopup.urun.ad}</p>
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Fiyat Tipi Seçin</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{dolumPopup.urun.ad}</p>
             </div>
             <div className="p-5 space-y-3">
               <button onClick={() => selectDolumTip('bakim')}
-                className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg hover:border-[#C8102E] hover:bg-red-50 transition-colors text-left">
+                className="w-full flex items-center justify-between p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-[#C8102E] hover:bg-red-50 transition-colors text-left">
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">🔧 Periyodik Bakım</div>
-                  <div className="text-xs text-gray-500">Kontrol, basınç testi, rapor</div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">🔧 Periyodik Bakım</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Kontrol, basınç testi, rapor</div>
                 </div>
                 <div className="text-base font-bold text-[#C8102E]">{dolumPopup.urun.periyodik_bakim_fiyati?.toLocaleString('tr-TR')} ₺</div>
               </button>
               <button onClick={() => selectDolumTip('dolum')}
-                className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left">
+                className="w-full flex items-center justify-between p-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left">
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">💧 Dolum</div>
-                  <div className="text-xs text-gray-500">Tam dolum ve bakım</div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">💧 Dolum</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Tam dolum ve bakım</div>
                 </div>
                 <div className="text-base font-bold text-blue-700">{dolumPopup.urun.dolum_fiyati?.toLocaleString('tr-TR')} ₺</div>
               </button>
             </div>
             <div className="px-5 py-3 border-t">
-              <button onClick={() => setDolumPopup(null)} className="w-full py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">İptal</button>
+              <button onClick={() => setDolumPopup(null)} className="w-full py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">İptal</button>
             </div>
           </div>
         </div>

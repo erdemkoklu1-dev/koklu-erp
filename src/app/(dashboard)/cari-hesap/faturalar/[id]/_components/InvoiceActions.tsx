@@ -99,13 +99,13 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
   if (confirmDelete) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600">Kalıcı olarak silinecek, emin misiniz?</span>
+        <span className="text-sm text-gray-600 dark:text-gray-300">Kalıcı olarak silinecek, emin misiniz?</span>
         <button onClick={handleDelete} disabled={loading}
           className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50">
           {loading ? 'Siliniyor...' : 'Evet, Sil'}
         </button>
         <button onClick={() => setConfirmDelete(false)}
-          className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+          className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50">
           İptal
         </button>
       </div>
@@ -118,7 +118,7 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
             <div className={`px-5 py-4 rounded-t-2xl ${isMahsup ? 'bg-violet-600' : 'bg-green-600'}`}>
               <div className="text-white font-semibold">Ödeme Ekle</div>
               {kalan > 0 && (
@@ -131,9 +131,9 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
 
               {/* Ödeme Yöntemi — önce seçilsin */}
               <div>
-                <label className="text-xs font-semibold text-gray-600">Ödeme Yöntemi</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Ödeme Yöntemi</label>
                 <select value={form.method} onChange={e => onMethodChange(e.target.value)}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-800">
                   <option value="nakit">Nakit</option>
                   <option value="havale_eft">Havale / EFT</option>
                   <option value="kredi_karti">Kredi Kartı</option>
@@ -150,13 +150,13 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
                     Bu tutara nakit tahsilat yapılmaz. Devlet bu fatura bedelini vergi borcunuza mahsup eder.
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Mahsup Tarihi <span className="text-red-500">*</span></label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Mahsup Tarihi <span className="text-red-500">*</span></label>
                     <input type="date" value={form.mahsup_tarihi}
                       onChange={e => setForm(p => ({ ...p, mahsup_tarihi: e.target.value }))}
                       className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Tutar (₺) <span className="text-red-500">*</span></label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Tutar (₺) <span className="text-red-500">*</span></label>
                     <input type="number" step="0.01" min="0.01" value={form.amount}
                       onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
                       className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
@@ -165,7 +165,7 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Açıklama (Vergi Dönemi / Kurum)</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Açıklama (Vergi Dönemi / Kurum)</label>
                     <textarea value={form.mahsup_aciklama}
                       onChange={e => setForm(p => ({ ...p, mahsup_aciklama: e.target.value }))}
                       placeholder="Örn: 2025/Q1 KDV beyannamesi, Hazine ve Maliye Bakanlığı"
@@ -176,13 +176,13 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
               ) : (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Ödeme Tarihi</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Ödeme Tarihi</label>
                     <input type="date" value={form.payment_date}
                       onChange={e => setForm(p => ({ ...p, payment_date: e.target.value }))}
                       className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Tutar (₺) <span className="text-red-500">*</span></label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Tutar (₺) <span className="text-red-500">*</span></label>
                     <input type="number" step="0.01" min="0.01" value={form.amount}
                       onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
                       className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
@@ -191,13 +191,13 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Referans / Dekont No</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Referans / Dekont No</label>
                     <input value={form.reference_no} onChange={e => setForm(p => ({ ...p, reference_no: e.target.value }))}
                       placeholder="Opsiyonel"
                       className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Notlar</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Notlar</label>
                     <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2}
                       className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                   </div>
@@ -213,7 +213,7 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
                   {paying ? 'Kaydediliyor...' : isMahsup ? 'Mahsubu Kaydet' : 'Ödemeyi Kaydet'}
                 </button>
                 <button type="button" onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                  className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                   İptal
                 </button>
               </div>
@@ -224,7 +224,7 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
 
       <div className="flex gap-2">
         <Link href={`/cari-hesap/faturalar/${invoiceId}/edit`}
-          className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+          className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50">
           Düzenle
         </Link>
         {status !== 'odendi' && status !== 'iptal' && (

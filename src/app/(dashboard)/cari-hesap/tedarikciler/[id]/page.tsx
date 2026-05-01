@@ -24,7 +24,7 @@ export default async function TedarikciDetailPage({
     const { data } = await supabase.from('tedarikciler').select('*').eq('id', id).single()
     if (!data) {
       return (
-        <div className="p-6 text-sm text-gray-400">
+        <div className="p-6 text-sm text-gray-400 dark:text-gray-500">
           Tedarikçi bulunamadı.{' '}
           <Link href="/cari-hesap/tedarikciler" className="text-[#C8102E] hover:underline">← Geri</Link>
         </div>
@@ -73,17 +73,17 @@ export default async function TedarikciDetailPage({
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/cari-hesap/tedarikciler" className="text-sm text-gray-500 hover:text-gray-700">
+          <Link href="/cari-hesap/tedarikciler" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">
             ← Tedarikçiler
           </Link>
           <span className="text-gray-300">/</span>
-          <h2 className="text-base font-semibold text-gray-900">{supplierName}</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{supplierName}</h2>
         </div>
         {editInitial && (
           <TedarikciModal
             initial={editInitial}
             trigger={
-              <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+              <button className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
                 Düzenle
               </button>
             }
@@ -93,46 +93,46 @@ export default async function TedarikciDetailPage({
 
       {/* Manuel tedarikçi bilgileri */}
       {manuelData && (
-        <div className="bg-white border rounded-xl p-5 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           {manuelData.vergi_no && (
-            <div><span className="text-xs text-gray-500 block">Vergi No</span>{manuelData.vergi_no}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Vergi No</span>{manuelData.vergi_no}</div>
           )}
           {manuelData.vergi_dairesi && (
-            <div><span className="text-xs text-gray-500 block">Vergi Dairesi</span>{manuelData.vergi_dairesi}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Vergi Dairesi</span>{manuelData.vergi_dairesi}</div>
           )}
           {manuelData.sehir && (
-            <div><span className="text-xs text-gray-500 block">Şehir</span>{manuelData.sehir}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Şehir</span>{manuelData.sehir}</div>
           )}
           {manuelData.telefon && (
-            <div><span className="text-xs text-gray-500 block">Telefon</span>{manuelData.telefon}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Telefon</span>{manuelData.telefon}</div>
           )}
           {manuelData.email && (
-            <div><span className="text-xs text-gray-500 block">E-posta</span>{manuelData.email}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">E-posta</span>{manuelData.email}</div>
           )}
           {manuelData.web_sitesi && (
-            <div><span className="text-xs text-gray-500 block">Web</span>{manuelData.web_sitesi}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Web</span>{manuelData.web_sitesi}</div>
           )}
           {manuelData.yetkili_adi && (
-            <div><span className="text-xs text-gray-500 block">Yetkili</span>{manuelData.yetkili_adi}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Yetkili</span>{manuelData.yetkili_adi}</div>
           )}
           {manuelData.yetkili_telefon && (
-            <div><span className="text-xs text-gray-500 block">Yetkili Tel.</span>{manuelData.yetkili_telefon}</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Yetkili Tel.</span>{manuelData.yetkili_telefon}</div>
           )}
           {manuelData.odeme_vadesi != null && (
-            <div><span className="text-xs text-gray-500 block">Ödeme Vadesi</span>{manuelData.odeme_vadesi} gün</div>
+            <div><span className="text-xs text-gray-500 dark:text-gray-400 block">Ödeme Vadesi</span>{manuelData.odeme_vadesi} gün</div>
           )}
           {manuelData.adres && (
-            <div className="col-span-2"><span className="text-xs text-gray-500 block">Adres</span>{manuelData.adres}</div>
+            <div className="col-span-2"><span className="text-xs text-gray-500 dark:text-gray-400 block">Adres</span>{manuelData.adres}</div>
           )}
           {manuelData.urunler_hizmetler && (
             <div className="col-span-2 md:col-span-3">
-              <span className="text-xs text-gray-500 block">Sattığı Ürünler / Hizmetler</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 block">Sattığı Ürünler / Hizmetler</span>
               {manuelData.urunler_hizmetler}
             </div>
           )}
           {manuelData.notlar && (
             <div className="col-span-2 md:col-span-3">
-              <span className="text-xs text-gray-500 block">Notlar</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 block">Notlar</span>
               {manuelData.notlar}
             </div>
           )}
@@ -141,51 +141,51 @@ export default async function TedarikciDetailPage({
 
       {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-0.5">Toplam Fatura</div>
-          <div className="text-xl font-bold text-gray-900">{formatCurrency(toplamTutar)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">{rows.length} fatura</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Toplam Fatura</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(toplamTutar)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{rows.length} fatura</div>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
           <div className="text-xs text-green-600 mb-0.5">Ödenen</div>
           <div className="text-xl font-bold text-green-700">{formatCurrency(toplamOdenen)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">toplam ödeme</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">toplam ödeme</div>
         </div>
-        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Kalan Borç</div>
-          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{formatCurrency(toplamKalan)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">ödenmemiş</div>
+        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Kalan Borç</div>
+          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(toplamKalan)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">ödenmemiş</div>
         </div>
-        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gecikmiş</div>
-          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900'}`}>{gecikmisSayi}</div>
-          <div className="text-xs text-gray-400 mt-0.5">vadesi geçmiş fatura</div>
+        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş</div>
+          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>{gecikmisSayi}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">vadesi geçmiş fatura</div>
         </div>
       </div>
 
       {/* Fatura Listesi */}
-      <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Fatura Listesi</h3>
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Fatura Listesi</h3>
           <Link href="/cari-hesap/faturalar/new"
             className="text-xs text-[#C8102E] hover:underline font-medium">
             + Alış Faturası
           </Link>
         </div>
         {rows.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-gray-400">Bu tedarikçiye ait fatura bulunamadı.</div>
+          <div className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">Bu tedarikçiye ait fatura bulunamadı.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b">
                 <tr>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Fatura No</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Fatura Tarihi</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Vade Tarihi</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500">Tutar</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500">Ödenen</th>
-                  <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500">Kalan</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Durum</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Fatura No</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Fatura Tarihi</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Vade Tarihi</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Tutar</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Ödenen</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kalan</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -209,11 +209,11 @@ export default async function TedarikciDetailPage({
                           {inv.invoice_number}
                         </Link>
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600">{formatTRDate(inv.invoice_date)}</td>
+                      <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300">{formatTRDate(inv.invoice_date)}</td>
                       <td className="px-4 py-2.5">
                         {inv.due_date ? (
                           <div className="flex items-center gap-1">
-                            <span className={isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-600'}>
+                            <span className={isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-600 dark:text-gray-300'}>
                               {formatTRDate(inv.due_date)}
                             </span>
                             {daysLeft !== null && daysLeft <= 7 && kalan > 0 && (
@@ -224,11 +224,11 @@ export default async function TedarikciDetailPage({
                           </div>
                         ) : '—'}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-gray-800">{formatCurrency(inv.total_amount)}</td>
+                      <td className="px-4 py-2.5 text-right font-medium text-gray-800 dark:text-gray-200">{formatCurrency(inv.total_amount)}</td>
                       <td className="px-4 py-2.5 text-right text-green-700">
                         {(inv.paid_amount ?? 0) > 0 ? formatCurrency(inv.paid_amount) : '—'}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-semibold ${kalan > 0 ? (isOverdue ? 'text-red-600' : 'text-orange-600') : 'text-gray-400'}`}>
+                      <td className={`px-4 py-2.5 text-right font-semibold ${kalan > 0 ? (isOverdue ? 'text-red-600' : 'text-orange-600') : 'text-gray-400 dark:text-gray-500'}`}>
                         {kalan > 0 ? formatCurrency(kalan) : '—'}
                       </td>
                       <td className="px-4 py-2.5">
@@ -250,12 +250,12 @@ export default async function TedarikciDetailPage({
                   )
                 })}
               </tbody>
-              <tfoot className="border-t bg-gray-50/50">
+              <tfoot className="border-t bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                  <td colSpan={3} className="px-4 py-2.5 text-xs font-semibold text-gray-600">Toplam</td>
-                  <td className="px-4 py-2.5 text-right text-sm font-bold text-gray-800">{formatCurrency(toplamTutar)}</td>
+                  <td colSpan={3} className="px-4 py-2.5 text-xs font-semibold text-gray-600 dark:text-gray-300">Toplam</td>
+                  <td className="px-4 py-2.5 text-right text-sm font-bold text-gray-800 dark:text-gray-200">{formatCurrency(toplamTutar)}</td>
                   <td className="px-4 py-2.5 text-right text-sm font-bold text-green-700">{formatCurrency(toplamOdenen)}</td>
-                  <td className={`px-4 py-2.5 text-right text-sm font-bold ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                  <td className={`px-4 py-2.5 text-right text-sm font-bold ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-400 dark:text-gray-500'}`}>
                     {toplamKalan > 0 ? formatCurrency(toplamKalan) : '—'}
                   </td>
                   <td colSpan={2} />

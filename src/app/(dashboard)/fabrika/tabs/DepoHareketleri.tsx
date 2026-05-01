@@ -98,23 +98,23 @@ export default function DepoHareketleri() {
           <input type="date" value={bitis} onChange={e => setBitis(e.target.value)}
             className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
           <button onClick={load}
-            className="border border-gray-300 text-gray-600 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">
+            className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">
             Filtrele
           </button>
         </div>
         <button onClick={exportCsv} disabled={hareketler.length === 0}
-          className="border border-gray-300 text-gray-600 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40">
+          className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40">
           ⬇ Excel'e Aktar
         </button>
       </div>
 
       {/* Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         {loading ? (
-          <div className="p-6 text-center text-sm text-gray-400">Yükleniyor...</div>
+          <div className="p-6 text-center text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase border-b">
               <tr>
                 <th className="px-4 py-2 text-left">Tarih</th>
                 <th className="px-4 py-2 text-left">Tür</th>
@@ -127,21 +127,21 @@ export default function DepoHareketleri() {
             </thead>
             <tbody className="divide-y">
               {hareketler.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Hareket kaydı yok</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">Hareket kaydı yok</td></tr>
               )}
               {hareketler.map(h => (
                 <tr key={h.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-500 text-xs">{h.tarih}</td>
+                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{h.tarih}</td>
                   <td className="px-4 py-2">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TIP_BADGE[h.hareket_tipi] ?? ''}`}>
                       {h.hareket_tipi}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-gray-500 capitalize text-xs">{h.kaynak}</td>
+                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400 capitalize text-xs">{h.kaynak}</td>
                   <td className="px-4 py-2 font-medium">{h.kaynak_adi}</td>
                   <td className="px-4 py-2 text-right font-medium">{Number(h.miktar).toLocaleString('tr-TR')}</td>
-                  <td className="px-4 py-2 text-gray-500 text-xs">{h.referans_no ?? '—'}</td>
-                  <td className="px-4 py-2 text-gray-500 text-xs max-w-xs truncate">{h.aciklama ?? '—'}</td>
+                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{h.referans_no ?? '—'}</td>
+                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs max-w-xs truncate">{h.aciklama ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -150,7 +150,7 @@ export default function DepoHareketleri() {
       </div>
 
       {!loading && (
-        <div className="text-xs text-gray-400 text-right">{hareketler.length} kayıt gösteriliyor</div>
+        <div className="text-xs text-gray-400 dark:text-gray-500 text-right">{hareketler.length} kayıt gösteriliyor</div>
       )}
     </div>
   )

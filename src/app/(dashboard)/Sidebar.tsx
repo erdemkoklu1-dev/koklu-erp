@@ -68,7 +68,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors ${
         active
           ? 'bg-[#C8102E] text-white'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
       }`}
     >
       <item.icon size={20} className="flex-shrink-0" />
@@ -81,7 +81,7 @@ function NavSkeleton() {
   return (
     <div className="space-y-0.5 px-3 py-3 animate-pulse">
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="h-11 bg-gray-100 rounded-lg" />
+        <div key={i} className="h-11 bg-gray-100 dark:bg-gray-700 rounded-lg" />
       ))}
     </div>
   )
@@ -171,15 +171,15 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-white border-r flex-shrink-0 flex flex-col h-full">
+    <aside className="w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex-shrink-0 flex flex-col h-full">
       {/* Logo */}
-      <div className="px-5 py-5 border-b flex items-center gap-3">
+      <div className="px-5 py-5 border-b dark:border-gray-700 flex items-center gap-3">
         <div className="w-10 h-10 bg-[#C8102E] rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-sm">
           K
         </div>
         <div>
-          <p className="font-bold text-gray-900 text-base leading-tight tracking-wide">KÖKLÜ ERP</p>
-          <p className="text-xs text-gray-400 leading-tight mt-0.5">Yangın Yönetim</p>
+          <p className="font-bold text-gray-900 dark:text-white text-base leading-tight tracking-wide">KÖKLÜ ERP</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight mt-0.5">Yangın Yönetim</p>
         </div>
       </div>
 

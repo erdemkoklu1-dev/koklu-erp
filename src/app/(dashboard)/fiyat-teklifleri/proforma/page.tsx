@@ -4,10 +4,10 @@ import { formatTRDate } from '@/lib/finance/formatters'
 import { ProformaSilButton } from './ProformaSilButton'
 
 const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
-  taslak:      { label: 'Taslak',      className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  taslak:      { label: 'Taslak',      className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
   gonderildi:  { label: 'Gönderildi',  className: 'bg-blue-50 text-blue-700 border-blue-200' },
   onaylandi:   { label: 'Onaylandı',   className: 'bg-green-50 text-green-700 border-green-200' },
-  iptal:       { label: 'İptal',       className: 'bg-gray-100 text-gray-500 border-gray-200' },
+  iptal:       { label: 'İptal',       className: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
   faturalandi: { label: 'Faturalandı', className: 'bg-purple-50 text-purple-700 border-purple-200' },
 }
 
@@ -49,14 +49,14 @@ export default async function ProformaListesiPage({
   const durumFilter = durum ?? 'tumu'
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">P</div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Proforma Faturalar</h1>
-            <Link href="/fiyat-teklifleri" className="text-xs text-gray-400 hover:text-gray-600">← Fiyat Teklifleri</Link>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Proforma Faturalar</h1>
+            <Link href="/fiyat-teklifleri" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600">← Fiyat Teklifleri</Link>
           </div>
         </div>
         <Link href="/fiyat-teklifleri/proforma/yeni"
@@ -68,7 +68,7 @@ export default async function ProformaListesiPage({
       <div className="p-6 max-w-6xl mx-auto space-y-5">
 
         {/* Filtreler */}
-        <div className="bg-white border rounded-lg p-4 flex flex-wrap items-center gap-3">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 flex flex-wrap items-center gap-3">
           <div className="flex gap-1 flex-wrap">
             {[
               { value: 'tumu',       label: 'Tümü' },
@@ -83,20 +83,20 @@ export default async function ProformaListesiPage({
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   durumFilter === opt.value
                     ? 'bg-[#C8102E] text-white border-[#C8102E]'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
                 }`}>
                 {opt.label}
               </Link>
             ))}
           </div>
 
-          <div className="h-4 border-l border-gray-200 hidden sm:block" />
+          <div className="h-4 border-l border-gray-200 dark:border-gray-600 hidden sm:block" />
 
           <form method="GET" action="/fiyat-teklifleri/proforma" className="flex flex-wrap items-center gap-2">
             {durum && <input type="hidden" name="durum" value={durum} />}
             <input type="date" name="from" defaultValue={from}
               className="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
-            <span className="text-xs text-gray-400">–</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">–</span>
             <input type="date" name="to" defaultValue={to}
               className="border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
             <input type="text" name="q" defaultValue={q} placeholder="Müşteri ara..."
@@ -113,7 +113,7 @@ export default async function ProformaListesiPage({
               Filtrele
             </button>
             {(from || to || q || para_birimi) && (
-              <Link href="/fiyat-teklifleri/proforma" className="text-xs text-gray-400 hover:text-gray-600 underline">
+              <Link href="/fiyat-teklifleri/proforma" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 underline">
                 Temizle
               </Link>
             )}
@@ -121,18 +121,18 @@ export default async function ProformaListesiPage({
         </div>
 
         {/* Tablo */}
-        <div className="bg-white border rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">PROFORMA NO</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">TARİH</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">MÜŞTERİ</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">ARA TOPLAM</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">KDV</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">TOPLAM</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">DURUM</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">İŞLEM</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">PROFORMA NO</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TARİH</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">MÜŞTERİ</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">ARA TOPLAM</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">KDV</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TOPLAM</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">DURUM</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">İŞLEM</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -141,11 +141,11 @@ export default async function ProformaListesiPage({
                 return (
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-mono font-medium text-[#C8102E]">{p.proforma_no}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatTRDate(p.tarih)}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{p.musteri_unvan || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">{fmtTutar(p.ara_toplam ?? 0, p.para_birimi)}</td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">{fmtTutar(p.kdv_tutari ?? 0, p.para_birimi)}</td>
-                    <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">{fmtTutar(p.toplam_tutar ?? 0, p.para_birimi)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatTRDate(p.tarih)}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{p.musteri_unvan || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{fmtTutar(p.ara_toplam ?? 0, p.para_birimi)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-300">{fmtTutar(p.kdv_tutari ?? 0, p.para_birimi)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{fmtTutar(p.toplam_tutar ?? 0, p.para_birimi)}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${conf.className}`}>
                         {conf.label}
@@ -158,7 +158,7 @@ export default async function ProformaListesiPage({
                           Düzenle
                         </Link>
                         <Link href={`/fiyat-teklifleri/proforma/${p.id}/pdf`} target="_blank"
-                          className="text-gray-600 text-sm font-medium hover:underline">
+                          className="text-gray-600 dark:text-gray-300 text-sm font-medium hover:underline">
                           PDF
                         </Link>
                         <ProformaSilButton id={p.id} proformaNo={p.proforma_no} />
@@ -168,7 +168,7 @@ export default async function ProformaListesiPage({
                 )
               }) : (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">
                     Henüz proforma fatura oluşturulmamış.{' '}
                     <Link href="/fiyat-teklifleri/proforma/yeni" className="text-[#C8102E] hover:underline">
                       İlk proformayı oluştur →

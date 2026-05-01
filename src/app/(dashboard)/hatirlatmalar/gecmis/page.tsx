@@ -68,7 +68,7 @@ export default async function GecmisPage({
     <div className="p-6 space-y-5">
 
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Gönderim Geçmişi</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Gönderim Geçmişi</h2>
         <div className="flex items-center gap-2 text-xs">
           <span className="bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
             {toplamGonderilen ?? 0} başarılı
@@ -85,7 +85,7 @@ export default async function GecmisPage({
       <div className="flex flex-wrap gap-3 items-center">
 
         {/* Kanal filtresi */}
-        <div className="flex gap-1 bg-white border rounded-lg p-1 text-xs">
+        <div className="flex gap-1 bg-white dark:bg-gray-800 border rounded-lg p-1 text-xs">
           {[
             { label: 'Tüm Kanallar', value: undefined },
             { label: 'E-posta',      value: 'email'   },
@@ -97,7 +97,7 @@ export default async function GecmisPage({
               className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
                 (kanal ?? '') === (f.value ?? '')
                   ? 'bg-[#C8102E] text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100'
               }`}
             >
               {f.label}
@@ -106,7 +106,7 @@ export default async function GecmisPage({
         </div>
 
         {/* Durum filtresi */}
-        <div className="flex gap-1 bg-white border rounded-lg p-1 text-xs">
+        <div className="flex gap-1 bg-white dark:bg-gray-800 border rounded-lg p-1 text-xs">
           {[
             { label: 'Tüm Durumlar', value: undefined     },
             { label: 'Gönderildi',   value: 'gonderildi'  },
@@ -118,7 +118,7 @@ export default async function GecmisPage({
               className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
                 (durum ?? '') === (f.value ?? '')
                   ? 'bg-[#C8102E] text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100'
               }`}
             >
               {f.label}
@@ -127,8 +127,8 @@ export default async function GecmisPage({
         </div>
 
         {/* Tarih filtresi */}
-        <div className="flex items-center gap-2 bg-white border rounded-lg px-3 py-1.5 text-xs">
-          <span className="text-gray-500">Tarih:</span>
+        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border rounded-lg px-3 py-1.5 text-xs">
+          <span className="text-gray-500 dark:text-gray-400">Tarih:</span>
           <form method="GET" action="/hatirlatmalar/gecmis" className="flex items-center gap-2">
             {kanal     && <input type="hidden" name="kanal"    value={kanal} />}
             {durum     && <input type="hidden" name="durum"    value={durum} />}
@@ -138,7 +138,7 @@ export default async function GecmisPage({
               defaultValue={baslangic ?? ''}
               className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
             />
-            <span className="text-gray-400">—</span>
+            <span className="text-gray-400 dark:text-gray-500">—</span>
             <input
               type="date"
               name="bitis"
@@ -147,7 +147,7 @@ export default async function GecmisPage({
             />
             <button
               type="submit"
-              className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded text-xs font-medium hover:bg-gray-200 transition-colors"
+              className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded text-xs font-medium hover:bg-gray-200 transition-colors"
             >
               Uygula
             </button>
@@ -165,22 +165,22 @@ export default async function GecmisPage({
       </div>
 
       {/* Sonuç tablosu */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         {(kayitlar ?? []).length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-400">
+          <div className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
             Gönderim kaydı bulunamadı.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-gray-50">
+              <thead className="border-b bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Tarih / Saat</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Müşteri</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Cihaz</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Kanal</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Alıcı</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Durum</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Tarih / Saat</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Müşteri</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Cihaz</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kanal</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Alıcı</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -196,29 +196,29 @@ export default async function GecmisPage({
                     ?? ([cihaz?.brand, cihaz?.capacity].filter(Boolean).join(' ') || '—')
                   return (
                     <tr key={k.id} className={`hover:bg-gray-50 ${k.durum === 'hata' ? 'bg-red-50/30' : ''}`}>
-                      <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                      <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {formatDateTime(k.created_at)}
                       </td>
                       <td className="px-4 py-2.5">
                         {musteri ? (
                           <Link href={`/customers/${musteri.id}`}
-                            className="text-sm font-medium text-gray-900 hover:text-[#C8102E] hover:underline">
+                            className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-[#C8102E] hover:underline">
                             {musteri.full_name}
                           </Link>
-                        ) : <span className="text-gray-400 text-sm">—</span>}
+                        ) : <span className="text-gray-400 dark:text-gray-500 text-sm">—</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-sm text-gray-600">{cihazAdi}</td>
+                      <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300">{cihazAdi}</td>
                       <td className="px-4 py-2.5">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${KANAL_BADGE[k.kanal] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${KANAL_BADGE[k.kanal] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>
                           {k.kanal}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-gray-500">
+                      <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
                         {k.alici_email ?? k.alici_telefon ?? '—'}
                       </td>
                       <td className="px-4 py-2.5">
                         <div>
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${DURUM_BADGE[k.durum] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${DURUM_BADGE[k.durum] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>
                             {k.durum === 'gonderildi' ? 'Gönderildi' : k.durum === 'hata' ? 'Hata' : 'Bekliyor'}
                           </span>
                           {k.hata_mesaji && (

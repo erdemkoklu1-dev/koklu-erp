@@ -77,15 +77,15 @@ export default function EditOnKayitPage() {
     router.push('/cari-hesap/on-kayitlar')
   }
 
-  if (fetching) return <div className="p-6 text-gray-400 text-sm">Yükleniyor...</div>
+  if (fetching) return <div className="p-6 text-gray-400 dark:text-gray-500 text-sm">Yükleniyor...</div>
 
   return (
     <div className="p-6 max-w-xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/cari-hesap/on-kayitlar" className="text-sm text-gray-500 hover:text-gray-700">← Ön Kayıtlar</Link>
+          <Link href="/cari-hesap/on-kayitlar" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Ön Kayıtlar</Link>
           <span className="text-gray-300">/</span>
-          <h2 className="text-base font-semibold text-gray-900">Ön Kayıt Düzenle</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Ön Kayıt Düzenle</h2>
         </div>
         <button onClick={handleDelete}
           className="text-sm text-red-500 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">
@@ -99,17 +99,17 @@ export default function EditOnKayitPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white border rounded-xl p-5 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 border rounded-xl p-5 space-y-4">
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Tarih <span className="text-red-500">*</span></label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tarih <span className="text-red-500">*</span></label>
           <input type="date" value={form.kayit_tarihi}
             onChange={e => setForm(p => ({ ...p, kayit_tarihi: e.target.value }))}
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Açıklama <span className="text-red-500">*</span></label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Açıklama <span className="text-red-500">*</span></label>
           <input value={form.aciklama}
             onChange={e => setForm(p => ({ ...p, aciklama: e.target.value }))}
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
@@ -118,20 +118,20 @@ export default function EditOnKayitPage() {
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="text-sm font-medium text-gray-700">Miktar</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Miktar</label>
             <input type="number" min="0" step="any" value={form.miktar}
               onChange={e => setForm(p => ({ ...p, miktar: e.target.value }))}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Birim</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Birim</label>
             <select value={form.birim} onChange={e => setForm(p => ({ ...p, birim: e.target.value }))}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
               {BIRIMLER.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Birim Fiyat (₺)</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Birim Fiyat (₺)</label>
             <input type="number" min="0" step="0.01" value={form.birim_fiyat}
               onChange={e => setForm(p => ({ ...p, birim_fiyat: e.target.value }))}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
@@ -139,13 +139,13 @@ export default function EditOnKayitPage() {
           </div>
         </div>
 
-        <div className="bg-gray-50 rounded-lg px-4 py-2.5 flex justify-between items-center">
-          <span className="text-sm text-gray-600">Toplam Tutar</span>
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg px-4 py-2.5 flex justify-between items-center">
+          <span className="text-sm text-gray-600 dark:text-gray-300">Toplam Tutar</span>
           <span className="text-base font-bold text-[#C8102E]">{formatCurrency(toplam)}</span>
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Notlar</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notlar</label>
           <textarea value={form.notlar} onChange={e => setForm(p => ({ ...p, notlar: e.target.value }))} rows={2}
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
             placeholder="Opsiyonel not..." />
@@ -159,7 +159,7 @@ export default function EditOnKayitPage() {
             {loading ? 'Kaydediliyor...' : 'Güncelle'}
           </button>
           <Link href="/cari-hesap/on-kayitlar"
-            className="px-6 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 text-center">
+            className="px-6 py-2.5 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 text-center">
             İptal
           </Link>
         </div>

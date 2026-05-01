@@ -92,12 +92,12 @@ export default async function ProformaPdfPage({ params }: { params: Promise<{ id
   }, {})
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-700">
       <PrintActions backHref={`/fiyat-teklifleri/proforma/${id}`} />
 
       {/* A4 kağıt */}
       <div
-        className="bg-white mx-auto my-6 shadow-lg print:shadow-none print:my-0"
+        className="bg-white dark:bg-gray-800 mx-auto my-6 shadow-lg print:shadow-none print:my-0"
         style={{
           width: '210mm', minHeight: '297mm', padding: '12mm 15mm',
           fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px',

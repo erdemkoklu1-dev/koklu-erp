@@ -28,7 +28,7 @@ type Hareket = {
 }
 
 const DURUM_BADGE: Record<string, string> = {
-  'planlandı':  'bg-gray-100 text-gray-700',
+  'planlandı':  'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
   'üretimde':   'bg-blue-100 text-blue-700',
   'tamamlandı': 'bg-green-100 text-green-700',
   'iptal':      'bg-red-100 text-red-700',
@@ -83,7 +83,7 @@ export default function UretimEmriDetayPage({
     }
   }
 
-  if (loading) return <div className="p-6 text-sm text-gray-400">Yükleniyor...</div>
+  if (loading) return <div className="p-6 text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
   if (error || !emir) return (
     <div className="p-6">
       <div className="text-red-600 mb-4">{error || 'Kayıt bulunamadı.'}</div>
@@ -91,28 +91,28 @@ export default function UretimEmriDetayPage({
     </div>
   )
 
-  const durumClass = DURUM_BADGE[emir.durum] ?? 'bg-gray-100 text-gray-600'
+  const durumClass = DURUM_BADGE[emir.durum] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
 
   return (
     <div className="p-6 max-w-4xl space-y-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         <Link href="/fabrika" className="hover:text-[#C8102E]">Fabrika</Link>
         <span>/</span>
-        <span className="text-gray-400">Üretim Emirleri</span>
+        <span className="text-gray-400 dark:text-gray-500">Üretim Emirleri</span>
         <span>/</span>
-        <span className="font-medium text-gray-900">{emir.emir_no}</span>
+        <span className="font-medium text-gray-900 dark:text-gray-100">{emir.emir_no}</span>
       </div>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{emir.emir_no}</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{emir.emir_no}</h1>
           <div className="flex items-center gap-3 mt-1">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${durumClass}`}>
               {emir.durum.charAt(0).toUpperCase() + emir.durum.slice(1)}
             </span>
-            <span className="text-sm text-gray-500">{emir.urunler?.ad ?? '—'}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{emir.urunler?.ad ?? '—'}</span>
           </div>
         </div>
 
@@ -159,74 +159,74 @@ export default function UretimEmriDetayPage({
 
       {/* Bilgi kartları */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-1">Ürün</div>
-          <div className="font-semibold text-sm text-gray-900">{emir.urunler?.ad ?? '—'}</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Ürün</div>
+          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{emir.urunler?.ad ?? '—'}</div>
         </div>
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-1">Miktar</div>
-          <div className="font-semibold text-sm text-gray-900">{Number(emir.miktar).toLocaleString('tr-TR')} adet</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Miktar</div>
+          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{Number(emir.miktar).toLocaleString('tr-TR')} adet</div>
         </div>
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-1">Sorumlu</div>
-          <div className="font-semibold text-sm text-gray-900">{emir.sorumlu || '—'}</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Sorumlu</div>
+          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{emir.sorumlu || '—'}</div>
         </div>
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-1">Oluşturulma</div>
-          <div className="font-semibold text-sm text-gray-900">{fmt(emir.created_at)}</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Oluşturulma</div>
+          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{fmt(emir.created_at)}</div>
         </div>
       </div>
 
       {/* Planlama & Gerçekleşen */}
-      <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 font-semibold text-sm text-gray-900">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-900 dark:text-gray-100">
           Zamanlama
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0">
           <div className="px-5 py-4">
-            <div className="text-xs text-gray-500 mb-1">Planlanan Başlangıç</div>
-            <div className="text-sm font-medium text-gray-900">{fmt(emir.planlanan_baslangic)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Planlanan Başlangıç</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{fmt(emir.planlanan_baslangic)}</div>
           </div>
           <div className="px-5 py-4">
-            <div className="text-xs text-gray-500 mb-1">Planlanan Bitiş</div>
-            <div className="text-sm font-medium text-gray-900">{fmt(emir.planlanan_bitis)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Planlanan Bitiş</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{fmt(emir.planlanan_bitis)}</div>
           </div>
           <div className="px-5 py-4">
-            <div className="text-xs text-gray-500 mb-1">Gerçek Başlangıç</div>
-            <div className="text-sm font-medium text-gray-900">{fmtTs(emir.gercek_baslangic)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Gerçek Başlangıç</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{fmtTs(emir.gercek_baslangic)}</div>
           </div>
           <div className="px-5 py-4">
-            <div className="text-xs text-gray-500 mb-1">Gerçek Bitiş</div>
-            <div className="text-sm font-medium text-gray-900">{fmtTs(emir.gercek_bitis)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Gerçek Bitiş</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{fmtTs(emir.gercek_bitis)}</div>
           </div>
         </div>
       </div>
 
       {/* Notlar */}
       {emir.notlar && (
-        <div className="bg-white border rounded-xl p-5">
-          <div className="text-xs text-gray-500 mb-1 font-medium">Notlar</div>
-          <div className="text-sm text-gray-700">{emir.notlar}</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Notlar</div>
+          <div className="text-sm text-gray-700 dark:text-gray-300">{emir.notlar}</div>
         </div>
       )}
 
       {/* Kullanılan hammaddeler */}
-      <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 font-semibold text-sm text-gray-900">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 font-semibold text-sm text-gray-900 dark:text-gray-100">
           Kullanılan Hammaddeler
           {hareketler.length > 0 && (
-            <span className="ml-2 text-xs text-gray-400 font-normal">({hareketler.length} kalem)</span>
+            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 font-normal">({hareketler.length} kalem)</span>
           )}
         </div>
         {hareketler.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">
+          <div className="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
             {emir.durum === 'tamamlandı'
               ? 'Bu emir için hareket kaydı yok.'
               : 'Hammadde hareketleri üretim tamamlanınca kaydedilir.'}
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase border-b">
               <tr>
                 <th className="px-4 py-2 text-left">Hammadde</th>
                 <th className="px-4 py-2 text-right">Kullanılan Miktar</th>
@@ -238,13 +238,13 @@ export default function UretimEmriDetayPage({
             <tbody className="divide-y">
               {hareketler.map(h => (
                 <tr key={h.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{h.hammaddeler?.ad ?? '—'}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{h.hammaddeler?.ad ?? '—'}</td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {Number(h.kullanilan_miktar).toLocaleString('tr-TR')}
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{h.hammaddeler?.birim ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500">{fmt(h.tarih)}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{h.notlar ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{h.hammaddeler?.birim ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{fmt(h.tarih)}</td>
+                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs">{h.notlar ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

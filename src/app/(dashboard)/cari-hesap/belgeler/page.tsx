@@ -34,7 +34,7 @@ export default async function BelgelerPage({
     <div className="p-6 space-y-4">
 
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Belgeler</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Belgeler</h2>
         <Link href="/cari-hesap/belgeler/new"
           className="bg-[#C8102E] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#a50d26]">
           + Belge Yükle
@@ -55,7 +55,7 @@ export default async function BelgelerPage({
               className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
                 active
                   ? 'bg-[#C8102E] text-white border-[#C8102E]'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#C8102E] hover:text-[#C8102E]'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-[#C8102E] hover:text-[#C8102E]'
               }`}>
               {f.label}
             </Link>
@@ -64,10 +64,10 @@ export default async function BelgelerPage({
       </div>
 
       {/* Liste */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         {(documents ?? []).length === 0 ? (
           <div className="px-4 py-12 text-center space-y-2">
-            <div className="text-sm text-gray-400">Henüz belge yüklenmemiş.</div>
+            <div className="text-sm text-gray-400 dark:text-gray-500">Henüz belge yüklenmemiş.</div>
             <Link href="/cari-hesap/belgeler/new"
               className="inline-block text-sm text-[#C8102E] font-medium hover:underline">
               İlk belgeyi yükle →
@@ -86,7 +86,7 @@ export default async function BelgelerPage({
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                     doc.document_type === 'dekont' ? 'bg-blue-100 text-blue-700' :
                     doc.document_type === 'fatura_pdf' ? 'bg-purple-100 text-purple-700' :
-                    'bg-gray-100 text-gray-600'
+                    'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                   }`}>
                     {doc.document_type === 'dekont' ? 'DK' : doc.document_type === 'fatura_pdf' ? 'FT' : 'BL'}
                   </div>
@@ -94,12 +94,12 @@ export default async function BelgelerPage({
                   {/* Bilgi */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</span>
-                      <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{doc.file_name}</span>
+                      <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded flex-shrink-0">
                         {DOC_LABELS[doc.document_type] ?? doc.document_type}
                       </span>
                     </div>
-                    <div className="text-xs text-gray-400 flex gap-2 mt-0.5 flex-wrap">
+                    <div className="text-xs text-gray-400 dark:text-gray-500 flex gap-2 mt-0.5 flex-wrap">
                       <span>{formatTRDate(doc.uploaded_at)}</span>
                       {sizeKb && <span>{sizeKb} KB</span>}
                       {customer && (
@@ -110,11 +110,11 @@ export default async function BelgelerPage({
                       )}
                       {invoice && (
                         <Link href={`/cari-hesap/faturalar/${doc.invoice_id}`}
-                          className="text-gray-600 hover:underline">
+                          className="text-gray-600 dark:text-gray-300 hover:underline">
                           {invoice.invoice_number}
                         </Link>
                       )}
-                      {doc.amount && <span className="font-medium text-gray-600">{formatCurrency(doc.amount)}</span>}
+                      {doc.amount && <span className="font-medium text-gray-600 dark:text-gray-300">{formatCurrency(doc.amount)}</span>}
                       {doc.notes && <span className="italic">{doc.notes}</span>}
                     </div>
                   </div>

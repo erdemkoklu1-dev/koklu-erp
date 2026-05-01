@@ -223,30 +223,30 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   }
 
   if (fetching) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-gray-400 text-sm">Yükleniyor...</div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
+      <div className="text-gray-400 dark:text-gray-500 text-sm">Yükleniyor...</div>
     </div>
   )
 
   const activeDevices = devices.filter(d => !d._deleted)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
         <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-        <Link href={`/customers/${id}`} className="text-gray-500 hover:text-gray-700 text-sm">← Müşteri Detayı</Link>
+        <Link href={`/customers/${id}`} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 text-sm">← Müşteri Detayı</Link>
         <span className="text-gray-300">/</span>
-        <h1 className="text-lg font-bold text-gray-900">Müşteri Düzenle</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Müşteri Düzenle</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 max-w-4xl mx-auto space-y-5">
 
         {/* Müşteri bilgileri */}
-        <div className="bg-white border rounded-lg p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-900">Müşteri Bilgileri</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Müşteri Bilgileri</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Müşteri Türü</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Müşteri Türü</label>
               <select name="type" value={form.type} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
                 <option value="company">Firma</option>
@@ -254,43 +254,43 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {form.type === 'company' ? 'Firma Adı' : 'Ad Soyad'} <span className="text-red-500">*</span>
               </label>
               <input name="full_name" value={form.full_name} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {form.type === 'company' ? 'Vergi Numarası' : 'TC Kimlik No'}
               </label>
               <input name="tax_number" value={form.tax_number} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Telefon</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Telefon</label>
               <input name="phone" value={form.phone} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Yetkili</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Yetkili</label>
               <input name="authorized_person" value={form.authorized_person} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Yetkili Telefonu</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Yetkili Telefonu</label>
               <input name="authorized_phone" value={form.authorized_phone} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">E-posta</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">E-posta</label>
               <input name="email" type="email" value={form.email} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">İl</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">İl</label>
               <select name="il" value={form.il} onChange={handleChange}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                 <option value="">— Seçiniz</option>
                 {TURKEY_PROVINCES.map(p => (
                   <option key={p} value={p}>{p}</option>
@@ -298,19 +298,19 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Adres</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Adres</label>
               <input name="address" value={form.address} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="Mahalle, cadde, bina no..." />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Banka Adı</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Banka Adı</label>
               <input name="bank_name" value={form.bank_name} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="Ziraat Bankası" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">IBAN</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">IBAN</label>
               <input name="iban" value={form.iban} onChange={handleChange}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="TR00 0000 0000 0000 0000 0000 00" />
@@ -319,7 +319,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               <SubeSelect value={subeId} onChange={setSubeId} label="Şube" />
             </div>
             <div className="col-span-2">
-              <label className="text-sm font-medium text-gray-700">Notlar</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notlar</label>
               <textarea name="notes" value={form.notes} onChange={handleChange} rows={2}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
@@ -327,9 +327,9 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Cihazlar */}
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="px-5 py-3 border-b flex items-center justify-between bg-gray-50">
-            <h2 className="text-sm font-semibold text-gray-900">Cihazlar ({activeDevices.length})</h2>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
+          <div className="px-5 py-3 border-b flex items-center justify-between bg-gray-50 dark:bg-gray-700">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Cihazlar ({activeDevices.length})</h2>
             <button type="button"
               onClick={() => setDevices(p => [...p, emptyDevice()])}
               className="text-sm bg-[#C8102E] text-white px-3 py-1.5 rounded-lg hover:bg-[#a50d26]">
@@ -350,13 +350,13 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               return (
                 <div key={actualIdx} className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-500">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                       Cihaz {visIdx + 1}{!d.id && <span className="ml-1 text-green-600">(Yeni)</span>}
                     </span>
                     <div className="flex gap-2">
                       {d.invoice_date && (
                         <button type="button" onClick={() => setWarranty4(actualIdx)}
-                          className="text-xs border border-gray-300 text-gray-600 px-2 py-1 rounded hover:bg-gray-50">
+                          className="text-xs border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded hover:bg-gray-50">
                           4 Yıl Garanti
                         </button>
                       )}
@@ -370,39 +370,39 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
 
                   <div className="grid grid-cols-4 gap-3">
                     <div className="col-span-2">
-                      <label className="text-xs font-medium text-gray-600">Cihaz Adı</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Cihaz Adı</label>
                       <input value={d.custom_device_name}
                         onChange={e => updateDevice(actualIdx, 'custom_device_name', e.target.value)}
                         placeholder="örn: Kuru Kimyevi Tozlu Yangın Söndürücü"
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Marka</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Marka</label>
                       <input value={d.brand}
                         onChange={e => updateDevice(actualIdx, 'brand', e.target.value)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Kapasite</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Kapasite</label>
                       <input value={d.capacity}
                         onChange={e => updateDevice(actualIdx, 'capacity', e.target.value)}
                         placeholder="örn: 6"
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Adet</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Adet</label>
                       <input type="number" min="1" value={d.quantity}
                         onChange={e => updateDevice(actualIdx, 'quantity', parseInt(e.target.value) || 1)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Seri No</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Seri No</label>
                       <input value={d.serial_number}
                         onChange={e => updateDevice(actualIdx, 'serial_number', e.target.value)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Konum</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Konum</label>
                       <input value={d.location_detail}
                         onChange={e => updateDevice(actualIdx, 'location_detail', e.target.value)}
                         placeholder="örn: Bodrum Kat"
@@ -412,31 +412,31 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
 
                   <div className="grid grid-cols-3 gap-3 pt-1 border-t">
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Fatura / Dolum Tarihi</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Fatura / Dolum Tarihi</label>
                       <input type="date" value={d.invoice_date}
                         onChange={e => updateDevice(actualIdx, 'invoice_date', e.target.value)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">SKT</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">SKT</label>
                       <input type="date" value={d.expiry_date}
                         onChange={e => updateDevice(actualIdx, 'expiry_date', e.target.value)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">1. Kontrol</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">1. Kontrol</label>
                       <input type="date" value={d.control1_date}
                         onChange={e => updateDevice(actualIdx, 'control1_date', e.target.value)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">2. Kontrol</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">2. Kontrol</label>
                       <input type="date" value={d.control2_date}
                         onChange={e => updateDevice(actualIdx, 'control2_date', e.target.value)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">3. Kontrol</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">3. Kontrol</label>
                       <input type="date" value={d.control3_date}
                         onChange={e => updateDevice(actualIdx, 'control3_date', e.target.value)}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
@@ -446,7 +446,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               )
             })}
             {activeDevices.length === 0 && (
-              <div className="px-5 py-8 text-center text-gray-400 text-sm">
+              <div className="px-5 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
                 Henüz cihaz yok. + Cihaz Ekle butonuna basın.
               </div>
             )}
@@ -461,7 +461,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
             {loading ? 'Kaydediliyor...' : '💾 Güncelle'}
           </button>
           <Link href={`/customers/${id}`}
-            className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors text-center">
+            className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors text-center">
             İptal
           </Link>
         </div>

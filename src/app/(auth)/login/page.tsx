@@ -25,25 +25,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-xl shadow-sm border w-full max-w-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-sm border w-full max-w-sm">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-lg">K</div>
           <div>
-            <p className="font-bold text-gray-900">KÖKLÜ ERP</p>
-            <p className="text-xs text-gray-500">Yangın Yönetim Sistemi</p>
+            <p className="font-bold text-gray-900 dark:text-gray-100">KÖKLÜ ERP</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Yangın Yönetim Sistemi</p>
           </div>
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">E-posta</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">E-posta</label>
             <input type="email" value={email}
               onChange={e => setEmail(e.target.value)}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
               placeholder="ornek@firma.com" required />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Şifre</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Şifre</label>
             <input type="password" value={password}
               onChange={e => setPassword(e.target.value)}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"

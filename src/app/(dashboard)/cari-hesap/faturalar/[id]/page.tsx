@@ -81,9 +81,9 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
       {/* Üst bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/cari-hesap/faturalar" className="text-sm text-gray-500 hover:text-gray-700">← Faturalar</Link>
+          <Link href="/cari-hesap/faturalar" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Faturalar</Link>
           <span className="text-gray-300">/</span>
-          <h2 className="text-base font-semibold text-gray-900">{invoice.invoice_number}</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{invoice.invoice_number}</h2>
           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${statusConf.className}`}>
             {statusConf.label}
           </span>
@@ -120,73 +120,73 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
 
       {/* İki kolon: Fatura Bilgisi + Müşteri */}
       <div className="grid grid-cols-2 gap-5">
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Fatura Bilgileri</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 pb-2 border-b">Fatura Bilgileri</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Fatura No</span>
-              <span className="font-semibold text-gray-900">{invoice.invoice_number}</span>
+              <span className="text-gray-500 dark:text-gray-400">Fatura No</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{invoice.invoice_number}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Tip</span>
-              <span className="text-gray-700">{TYPE_LABELS[invoice.invoice_type] ?? invoice.invoice_type}</span>
+              <span className="text-gray-500 dark:text-gray-400">Tip</span>
+              <span className="text-gray-700 dark:text-gray-300">{TYPE_LABELS[invoice.invoice_type] ?? invoice.invoice_type}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Tarih</span>
-              <span className="text-gray-700">{formatTRDate(invoice.invoice_date)}</span>
+              <span className="text-gray-500 dark:text-gray-400">Tarih</span>
+              <span className="text-gray-700 dark:text-gray-300">{formatTRDate(invoice.invoice_date)}</span>
             </div>
             {invoice.due_date && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Vade</span>
-                <span className={`font-medium ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
+                <span className="text-gray-500 dark:text-gray-400">Vade</span>
+                <span className={`font-medium ${isOverdue ? 'text-red-600' : 'text-gray-700 dark:text-gray-300'}`}>
                   {formatTRDate(invoice.due_date)}
                 </span>
               </div>
             )}
             {invoice.description && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Açıklama</span>
-                <span className="text-gray-700 text-right max-w-48">{invoice.description}</span>
+                <span className="text-gray-500 dark:text-gray-400">Açıklama</span>
+                <span className="text-gray-700 dark:text-gray-300 text-right max-w-48">{invoice.description}</span>
               </div>
             )}
           </div>
         </div>
 
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 pb-2 border-b">
             {customer ? 'Müşteri Bilgileri' : 'Tedarikçi Bilgileri'}
           </h3>
           {customer ? (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Müşteri</span>
+                <span className="text-gray-500 dark:text-gray-400">Müşteri</span>
                 <Link href={`/customers/${invoice.customer_id}`} className="font-semibold text-[#C8102E] hover:underline">
                   {customer.full_name}
                 </Link>
               </div>
               {customer.tax_number && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Vergi / TC</span>
-                  <span className="text-gray-700">{customer.tax_number}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Vergi / TC</span>
+                  <span className="text-gray-700 dark:text-gray-300">{customer.tax_number}</span>
                 </div>
               )}
               {customer.phone && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Telefon</span>
-                  <span className="text-gray-700">{customer.phone}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Telefon</span>
+                  <span className="text-gray-700 dark:text-gray-300">{customer.phone}</span>
                 </div>
               )}
               {customer.address && (
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-500 flex-shrink-0">Adres</span>
-                  <span className="text-gray-700 text-right">{customer.address}</span>
+                  <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Adres</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-right">{customer.address}</span>
                 </div>
               )}
             </div>
           ) : (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between gap-4">
-                <span className="text-gray-500 flex-shrink-0">Firma Adı</span>
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Firma Adı</span>
                 <Link
                   href={`/cari-hesap/tedarikciler/${encodeURIComponent(invoice.supplier_name ?? '')}`}
                   className="font-semibold text-[#C8102E] hover:underline text-right"
@@ -196,14 +196,14 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
               </div>
               {invoice.supplier_tax_no && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Vergi No</span>
-                  <span className="text-gray-700">{invoice.supplier_tax_no}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Vergi No</span>
+                  <span className="text-gray-700 dark:text-gray-300">{invoice.supplier_tax_no}</span>
                 </div>
               )}
               {supplierParsed.adres && (
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-500 flex-shrink-0">Adres</span>
-                  <span className="text-gray-700 text-right text-xs leading-relaxed">{supplierParsed.adres}</span>
+                  <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Adres</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-right text-xs leading-relaxed">{supplierParsed.adres}</span>
                 </div>
               )}
             </div>
@@ -212,23 +212,23 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Kalemler */}
-      <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50">
-          <h3 className="text-sm font-semibold text-gray-900">Fatura Kalemleri</h3>
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Fatura Kalemleri</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 w-8">#</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Açıklama</th>
-                <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500">Miktar</th>
-                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Birim</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Birim Fiyat</th>
-                <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500">İskonto</th>
-                <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500">KDV %</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">KDV Tutarı</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Satır Toplam</th>
+                <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 w-8">#</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Açıklama</th>
+                <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Miktar</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Birim</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Birim Fiyat</th>
+                <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">İskonto</th>
+                <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">KDV %</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">KDV Tutarı</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Satır Toplam</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -240,19 +240,19 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
                 const satirToplam  = Math.round((netLine + kdvTutari) * 100) / 100
                 return (
                   <tr key={item.id}>
-                    <td className="px-3 py-2.5 text-xs text-gray-400 text-center">{idx + 1}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-900">{item.description}</td>
-                    <td className="px-3 py-2.5 text-sm text-gray-700 text-right">{item.quantity}</td>
-                    <td className="px-3 py-2.5 text-sm text-gray-500">{item.unit}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-700 text-right">{formatCurrency(item.unit_price)}</td>
-                    <td className="px-3 py-2.5 text-sm text-gray-500 text-right">
+                    <td className="px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500 text-center">{idx + 1}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100">{item.description}</td>
+                    <td className="px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 text-right">{item.quantity}</td>
+                    <td className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400">{item.unit}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 text-right">{formatCurrency(item.unit_price)}</td>
+                    <td className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 text-right">
                       {discountAmt > 0
                         ? <span className="text-orange-600">{discountRate > 0 ? `%${discountRate} ` : ''}{formatCurrency(discountAmt)}</span>
                         : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-sm text-gray-500 text-right">%{item.kdv_rate}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-600 text-right">{formatCurrency(kdvTutari)}</td>
-                    <td className="px-4 py-2.5 text-sm font-medium text-gray-900 text-right">
+                    <td className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 text-right">%{item.kdv_rate}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 text-right">{formatCurrency(kdvTutari)}</td>
+                    <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100 text-right">
                       {formatCurrency(satirToplam)}
                     </td>
                   </tr>
@@ -262,19 +262,19 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
           </table>
         </div>
         {/* Toplam */}
-        <div className="border-t bg-gray-50 px-5 py-4 flex justify-end">
+        <div className="border-t bg-gray-50 dark:bg-gray-700 px-5 py-4 flex justify-end">
           <div className="w-72 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Ara Toplam</span>
+              <span className="text-gray-600 dark:text-gray-300">Ara Toplam</span>
               <span className="font-medium">{formatCurrency(araToplam)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">KDV</span>
+              <span className="text-gray-600 dark:text-gray-300">KDV</span>
               <span className="font-medium">{formatCurrency(kdvToplam)}</span>
             </div>
             {invoice.stopaj_amount > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Stopaj (%{invoice.stopaj_rate})</span>
+                <span className="text-gray-600 dark:text-gray-300">Stopaj (%{invoice.stopaj_rate})</span>
                 <span className="font-medium text-red-600">-{formatCurrency(invoice.stopaj_amount)}</span>
               </div>
             )}
@@ -297,21 +297,21 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Ödeme Geçmişi */}
-      <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Ödeme Geçmişi</h3>
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Ödeme Geçmişi</h3>
         </div>
         {(payments ?? []).length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-gray-400">Henüz ödeme kaydı yok.</div>
+          <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Henüz ödeme kaydı yok.</div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Tarih</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Yöntem</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Referans</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Tutar</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Not</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tarih</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Yöntem</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Referans</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tutar</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Not</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -319,21 +319,21 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
                 const pIsMahsup = p.method === 'vergi_mahsup'
                 return (
                   <tr key={p.id} className={`hover:bg-gray-50 ${pIsMahsup ? 'bg-violet-50/40' : ''}`}>
-                    <td className="px-4 py-3 text-sm text-gray-700">{formatTRDate(p.payment_date)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{formatTRDate(p.payment_date)}</td>
                     <td className="px-4 py-3 text-sm">
                       {pIsMahsup ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200">
                           Vergi Borcuna Mahsup
                         </span>
                       ) : (
-                        <span className="text-gray-600">{PAYMENT_METHOD_LABELS[p.method] ?? p.method}</span>
+                        <span className="text-gray-600 dark:text-gray-300">{PAYMENT_METHOD_LABELS[p.method] ?? p.method}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{p.reference_no ?? '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{p.reference_no ?? '-'}</td>
                     <td className={`px-4 py-3 text-sm font-semibold text-right ${pIsMahsup ? 'text-violet-700' : 'text-green-700'}`}>
                       {formatCurrency(p.amount)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{p.notes ?? '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{p.notes ?? '-'}</td>
                   </tr>
                 )
               })}
@@ -344,18 +344,18 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
 
       {/* Aracılar */}
       {(invoiceBrokers ?? []).length > 0 && (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50">
-            <h3 className="text-sm font-semibold text-gray-900">Aracılar</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Aracılar</h3>
           </div>
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Aracı</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Komisyon Oranı</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Komisyon Tutarı</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500">Ödeme Durumu</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Ödeme Tarihi</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Aracı</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Komisyon Oranı</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Komisyon Tutarı</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Ödeme Durumu</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Ödeme Tarihi</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -366,13 +366,13 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
                   : (broker?.full_name ?? '-')
                 return (
                   <tr key={b.id}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                       <Link href={`/araclar/${b.broker_id}`} className="hover:text-[#C8102E] hover:underline">
                         {brokerName}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 text-right">%{b.commission_rate}</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right">%{b.commission_rate}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
                       {formatCurrency(b.commission_amount)}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -384,7 +384,7 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
                         {b.is_paid ? 'Ödendi' : 'Bekliyor'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       {b.paid_date ? formatTRDate(b.paid_date) : '-'}
                     </td>
                   </tr>
@@ -396,9 +396,9 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
       )}
 
       {invoice.notes && (
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Notlar</h3>
-          <p className="text-sm text-gray-600">{invoice.notes}</p>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Notlar</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300">{invoice.notes}</p>
         </div>
       )}
     </div>

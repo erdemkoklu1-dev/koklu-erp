@@ -19,7 +19,7 @@ export default function BrokerActions({ brokerId }: { brokerId: string }) {
   if (confirming) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600">Emin misiniz?</span>
+        <span className="text-sm text-gray-600 dark:text-gray-300">Emin misiniz?</span>
         <button
           onClick={handleDelete}
           disabled={deleting}
@@ -29,7 +29,7 @@ export default function BrokerActions({ brokerId }: { brokerId: string }) {
         </button>
         <button
           onClick={() => setConfirming(false)}
-          className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+          className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors"
         >
           İptal
         </button>
@@ -41,7 +41,7 @@ export default function BrokerActions({ brokerId }: { brokerId: string }) {
     <div className="flex items-center gap-2">
       <Link
         href={`/araclar/${brokerId}/edit`}
-        className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+        className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors"
       >
         Düzenle
       </Link>

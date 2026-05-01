@@ -296,11 +296,11 @@ export default function InvoiceImportPage() {
 
   if (step === 'processing') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-700 font-medium">Fatura analiz ediliyor...</p>
-          <p className="text-sm text-gray-400">Claude AI faturanızı okuyor, lütfen bekleyin</p>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">Fatura analiz ediliyor...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Claude AI faturanızı okuyor, lütfen bekleyin</p>
         </div>
       </div>
     )
@@ -308,10 +308,10 @@ export default function InvoiceImportPage() {
 
   if (step === 'saving') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-700 font-medium">Kaydediliyor...</p>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">Kaydediliyor...</p>
         </div>
       </div>
     )
@@ -319,15 +319,15 @@ export default function InvoiceImportPage() {
 
   if (step === 'done') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white border rounded-xl p-10 text-center space-y-4 max-w-md w-full mx-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-10 text-center space-y-4 max-w-md w-full mx-4">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
             <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Başarıyla Kaydedildi!</h2>
-          <p className="text-sm text-gray-500">Müşteri ve cihazlar sisteme eklendi.</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Başarıyla Kaydedildi!</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Müşteri ve cihazlar sisteme eklendi.</p>
           <div className="flex gap-3 pt-2">
             {savedCustomerId && (
               <Link
@@ -345,7 +345,7 @@ export default function InvoiceImportPage() {
                 setParsed(null)
                 setError('')
               }}
-              className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50"
+              className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50"
             >
               Yeni Fatura
             </button>
@@ -357,13 +357,13 @@ export default function InvoiceImportPage() {
 
   if (step === 'review') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
-          <button onClick={() => setStep('upload')} className="text-gray-500 text-sm hover:text-gray-700">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+        <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
+          <button onClick={() => setStep('upload')} className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700">
             ← Geri
           </button>
           <span className="text-gray-300">/</span>
-          <h1 className="text-lg font-bold text-gray-900">Fatura Verilerini Gözden Geçir</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Fatura Verilerini Gözden Geçir</h1>
         </div>
 
         <div className="p-4 max-w-4xl mx-auto space-y-4">
@@ -372,11 +372,11 @@ export default function InvoiceImportPage() {
           )}
 
           {/* Customer */}
-          <div className="bg-white border rounded-lg p-4 space-y-3">
-            <div className="text-sm font-semibold text-gray-700">Müşteri Bilgileri</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 space-y-3">
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">Müşteri Bilgileri</div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-gray-600">Ad Soyad / Firma Adı *</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Ad Soyad / Firma Adı *</label>
                 <input
                   value={customer.full_name}
                   onChange={e => setCustomer(p => ({ ...p, full_name: e.target.value }))}
@@ -384,7 +384,7 @@ export default function InvoiceImportPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Tür</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Tür</label>
                 <select
                   value={customer.type}
                   onChange={e => setCustomer(p => ({ ...p, type: e.target.value as any }))}
@@ -395,7 +395,7 @@ export default function InvoiceImportPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Vergi / TC No</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Vergi / TC No</label>
                 <input
                   value={customer.tax_number}
                   onChange={e => setCustomer(p => ({ ...p, tax_number: e.target.value }))}
@@ -403,7 +403,7 @@ export default function InvoiceImportPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Telefon</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Telefon</label>
                 <input
                   value={customer.phone}
                   onChange={e => setCustomer(p => ({ ...p, phone: e.target.value }))}
@@ -411,7 +411,7 @@ export default function InvoiceImportPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">E-posta</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">E-posta</label>
                 <input
                   value={customer.email}
                   onChange={e => setCustomer(p => ({ ...p, email: e.target.value }))}
@@ -419,7 +419,7 @@ export default function InvoiceImportPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600">Adres</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Adres</label>
                 <input
                   value={customer.address}
                   onChange={e => setCustomer(p => ({ ...p, address: e.target.value }))}
@@ -430,9 +430,9 @@ export default function InvoiceImportPage() {
           </div>
 
           {/* Devices */}
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-700">Cihazlar</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cihazlar</div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setDevices(p => p.map(d => {
@@ -440,7 +440,7 @@ export default function InvoiceImportPage() {
                     const [c1, c2, c3] = calcControlDates(d.invoice_date, expiry)
                     return { ...d, expiry_date: expiry, control1_date: c1, control2_date: c2, control3_date: c3 }
                   }))}
-                  className="text-sm border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                  className="text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50"
                 >
                   4 Yıl Garanti
                 </button>
@@ -457,7 +457,7 @@ export default function InvoiceImportPage() {
               {devices.map((d, idx) => (
                 <div key={idx} className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-500">Cihaz {idx + 1}</span>
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Cihaz {idx + 1}</span>
                     {devices.length > 1 && (
                       <button
                         onClick={() => setDevices(p => p.filter((_, i) => i !== idx))}
@@ -469,7 +469,7 @@ export default function InvoiceImportPage() {
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="col-span-2">
-                      <label className="text-xs font-medium text-gray-600">Cihaz Adı</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Cihaz Adı</label>
                       <input
                         value={d.device_name}
                         onChange={e => updateDevice(idx, 'device_name', e.target.value)}
@@ -478,7 +478,7 @@ export default function InvoiceImportPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Adet</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Adet</label>
                       <input
                         type="number"
                         min="1"
@@ -488,7 +488,7 @@ export default function InvoiceImportPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Marka</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Marka</label>
                       <input
                         value={d.brand}
                         onChange={e => updateDevice(idx, 'brand', e.target.value)}
@@ -496,7 +496,7 @@ export default function InvoiceImportPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Kapasite</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Kapasite</label>
                       <input
                         value={d.capacity}
                         onChange={e => updateDevice(idx, 'capacity', e.target.value)}
@@ -505,7 +505,7 @@ export default function InvoiceImportPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Seri No</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Seri No</label>
                       <input
                         value={d.serial_number}
                         onChange={e => updateDevice(idx, 'serial_number', e.target.value)}
@@ -513,7 +513,7 @@ export default function InvoiceImportPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Fatura Tarihi</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Fatura Tarihi</label>
                       <input
                         type="date"
                         value={d.invoice_date}
@@ -522,7 +522,7 @@ export default function InvoiceImportPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">SKT (2 yıl sonra)</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-300">SKT (2 yıl sonra)</label>
                       <input
                         type="date"
                         value={d.expiry_date}
@@ -545,7 +545,7 @@ export default function InvoiceImportPage() {
             </button>
             <button
               onClick={() => setStep('upload')}
-              className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+              className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50"
             >
               İptal
             </button>
@@ -557,13 +557,13 @@ export default function InvoiceImportPage() {
 
   // Upload step
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3">
-        <Link href="/dashboard" className="text-gray-500 text-sm hover:text-gray-700">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3">
+        <Link href="/dashboard" className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700">
           ← Dashboard
         </Link>
         <span className="text-gray-300">/</span>
-        <h1 className="text-lg font-bold text-gray-900">Müşteri İçe Aktar</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Müşteri İçe Aktar</h1>
       </div>
 
       <div className="p-6 max-w-2xl mx-auto space-y-4">
@@ -576,7 +576,7 @@ export default function InvoiceImportPage() {
           onDrop={handleDrop}
           onDragOver={e => e.preventDefault()}
           onClick={() => fileRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-[#C8102E] hover:bg-red-50 transition-colors"
+          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-12 text-center cursor-pointer hover:border-[#C8102E] hover:bg-red-50 transition-colors"
         >
           <input
             ref={fileRef}
@@ -590,19 +590,19 @@ export default function InvoiceImportPage() {
               {preview && (
                 <img src={preview} alt="Fatura önizleme" className="max-h-48 mx-auto rounded-lg object-contain" />
               )}
-              <p className="text-sm font-medium text-gray-700">{file.name}</p>
-              <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{file.name}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{(file.size / 1024).toFixed(0)} KB</p>
               <p className="text-xs text-[#C8102E]">Değiştirmek için tıklayın</p>
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-gray-700">Fatura yüklemek için tıklayın veya sürükleyin</p>
-              <p className="text-xs text-gray-400">JPG, PNG, WebP veya PDF — maks. 10 MB</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Fatura yüklemek için tıklayın veya sürükleyin</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">JPG, PNG, WebP veya PDF — maks. 10 MB</p>
             </div>
           )}
         </div>

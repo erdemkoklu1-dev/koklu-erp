@@ -44,7 +44,7 @@ type Props = {
 }
 
 const MUTABAKAT_DURUM_LABELS: Record<string, { label: string; cls: string }> = {
-  taslak:     { label: 'Taslak',     cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+  taslak:     { label: 'Taslak',     cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
   gonderildi: { label: 'Gönderildi', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
   onaylandi:  { label: 'Onaylandı',  cls: 'bg-green-50 text-green-700 border-green-200' },
   itiraz:     { label: 'İtiraz',     cls: 'bg-orange-50 text-orange-700 border-orange-200' },
@@ -369,10 +369,10 @@ export default function MusteriCariClient({ customers, invoices, payments, today
       )}
 
       {/* ── Sol Panel ── */}
-      <div className="no-print w-72 flex-shrink-0 border-r bg-white flex flex-col h-full">
+      <div className="no-print w-72 flex-shrink-0 border-r bg-white dark:bg-gray-800 flex flex-col h-full">
         <div className="px-4 py-3 border-b space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Müşteri Cari</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Müşteri Cari</h2>
             <Link href="/cari-hesap/faturalar/new"
               className="text-xs bg-[#C8102E] text-white px-2 py-1 rounded-lg hover:bg-[#a50d26]">
               + Fatura
@@ -384,7 +384,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
             placeholder="Müşteri ara..."
             className="w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
           />
-          <div className="flex gap-3 text-xs text-gray-500">
+          <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
             <span>{filtered.length} / {rows.length} müşteri</span>
             {gecikmisSayi > 0 && <span className="text-orange-600">{gecikmisSayi} gecikmiş</span>}
           </div>
@@ -398,7 +398,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
               className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedId === r.id ? 'bg-red-50 border-l-2 border-[#C8102E]' : ''}`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-sm font-medium truncate ${r.gecikmisTutar > 0 ? 'text-red-700' : 'text-gray-900'}`}>
+                <span className={`text-sm font-medium truncate ${r.gecikmisTutar > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>
                   {r.full_name}
                 </span>
                 {r.kalan > 0 && (
@@ -421,54 +421,54 @@ export default function MusteriCariClient({ customers, invoices, payments, today
             </button>
           ))}
           {filtered.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">
+            <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
               {search ? `"${search}" için sonuç bulunamadı` : 'Müşteri yok'}
             </div>
           )}
         </div>
 
-        <div className="border-t px-4 py-3 bg-gray-50">
-          <div className="text-xs text-gray-500">Toplam Alacak</div>
+        <div className="border-t px-4 py-3 bg-gray-50 dark:bg-gray-700">
+          <div className="text-xs text-gray-500 dark:text-gray-400">Toplam Alacak</div>
           <div className="text-base font-bold text-orange-600">{formatCurrency(toplamAlacak)}</div>
         </div>
       </div>
 
       {/* ── Sağ Panel ── */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 no-print">
+      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-700 no-print">
         {!selected ? (
           <div className="flex items-center justify-center h-full min-h-64">
             <div className="text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
                 <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <p className="text-sm text-gray-400">Listeden bir müşteri seçin</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">Listeden bir müşteri seçin</p>
             </div>
           </div>
         ) : (
           <div className="p-5 space-y-4">
 
             {/* Müşteri başlık */}
-            <div className="bg-white border rounded-xl p-4">
+            <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">{selected.full_name}</h3>
-                  <div className="flex gap-4 mt-1 text-xs text-gray-400">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{selected.full_name}</h3>
+                  <div className="flex gap-4 mt-1 text-xs text-gray-400 dark:text-gray-500">
                     {selected.phone && <span>{selected.phone}</span>}
                     {selected.email && <span>{selected.email}</span>}
                     {selected.tax_number && <span>VKN: {selected.tax_number}</span>}
                   </div>
-                  {selected.address && <div className="text-xs text-gray-400 mt-0.5">{selected.address}</div>}
+                  {selected.address && <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{selected.address}</div>}
                   {(selected.bank_name || selected.iban) && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
                       {selected.bank_name && (
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-medium">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-medium">
                           {selected.bank_name}
                         </span>
                       )}
                       {selected.iban && (
-                        <span className="text-xs text-gray-700 font-mono tracking-wide">
+                        <span className="text-xs text-gray-700 dark:text-gray-300 font-mono tracking-wide">
                           {selected.iban}
                         </span>
                       )}
@@ -478,7 +478,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handlePrint}
-                    className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 flex items-center gap-1"
+                    className="text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 flex items-center gap-1"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="6 9 6 2 18 2 18 9"/>
@@ -503,35 +503,35 @@ export default function MusteriCariClient({ customers, invoices, payments, today
 
             {/* KPI */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-white border rounded-xl p-3">
-                <div className="text-xs text-gray-500">Toplam Fatura</div>
-                <div className="text-lg font-bold text-gray-900 mt-0.5">{formatCurrency(selected.totalInvoice)}</div>
-                <div className="text-xs text-gray-400">{selInvoices.length} fatura</div>
+              <div className="bg-white dark:bg-gray-800 border rounded-xl p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Toplam Fatura</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(selected.totalInvoice)}</div>
+                <div className="text-xs text-gray-400 dark:text-gray-500">{selInvoices.length} fatura</div>
               </div>
-              <div className="bg-white border rounded-xl p-3">
-                <div className="text-xs text-gray-500">Tahsilat</div>
+              <div className="bg-white dark:bg-gray-800 border rounded-xl p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Tahsilat</div>
                 <div className="text-lg font-bold text-green-700 mt-0.5">{formatCurrency(selected.totalPaid)}</div>
-                <div className="text-xs text-gray-400">{selPayments.length} ödeme</div>
+                <div className="text-xs text-gray-400 dark:text-gray-500">{selPayments.length} ödeme</div>
               </div>
-              <div className={`rounded-xl p-3 border ${selected.kalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-                <div className={`text-xs ${selected.kalan > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Kalan Alacak</div>
-                <div className={`text-lg font-bold mt-0.5 ${selected.kalan > 0 ? 'text-orange-700' : 'text-gray-400'}`}>
+              <div className={`rounded-xl p-3 border ${selected.kalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+                <div className={`text-xs ${selected.kalan > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Kalan Alacak</div>
+                <div className={`text-lg font-bold mt-0.5 ${selected.kalan > 0 ? 'text-orange-700' : 'text-gray-400 dark:text-gray-500'}`}>
                   {selected.kalan > 0 ? formatCurrency(selected.kalan) : '—'}
                 </div>
               </div>
-              <div className={`rounded-xl p-3 border ${selected.gecikmisTutar > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-                <div className={`text-xs ${selected.gecikmisTutar > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gecikmiş</div>
-                <div className={`text-lg font-bold mt-0.5 ${selected.gecikmisTutar > 0 ? 'text-red-700' : 'text-gray-400'}`}>
+              <div className={`rounded-xl p-3 border ${selected.gecikmisTutar > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+                <div className={`text-xs ${selected.gecikmisTutar > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş</div>
+                <div className={`text-lg font-bold mt-0.5 ${selected.gecikmisTutar > 0 ? 'text-red-700' : 'text-gray-400 dark:text-gray-500'}`}>
                   {selected.gecikmisTutar > 0 ? formatCurrency(selected.gecikmisTutar) : '—'}
                 </div>
                 {selected.lastDate && (
-                  <div className="text-xs text-gray-400">Son: {formatTRDate(selected.lastDate)}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">Son: {formatTRDate(selected.lastDate)}</div>
                 )}
               </div>
             </div>
 
             {/* Sekmeler */}
-            <div className="bg-white border rounded-xl overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
               <div className="border-b px-4 flex gap-0 overflow-x-auto">
                 {(['faturalar', 'odemeler', 'ekstre', 'mutabakat', 'notlar'] as const).map(tab => {
                   const labels: Record<string, string> = {
@@ -540,7 +540,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                   }
                   return (
                     <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
+                      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800'}`}>
                       {labels[tab]}
                     </button>
                   )
@@ -550,26 +550,26 @@ export default function MusteriCariClient({ customers, invoices, payments, today
               {/* Sekme 1: Faturalar */}
               {activeTab === 'faturalar' && (
                 <div>
-                  <div className="px-4 py-2 border-b bg-gray-50 flex justify-end">
+                  <div className="px-4 py-2 border-b bg-gray-50 dark:bg-gray-700 flex justify-end">
                     <Link href={`/cari-hesap/faturalar/new?customer_id=${selected.id}`}
                       className="text-xs bg-[#C8102E] text-white px-3 py-1.5 rounded-lg hover:bg-[#a50d26]">
                       + Yeni Fatura
                     </Link>
                   </div>
                   {selInvoices.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-400">Henüz fatura yok.</div>
+                    <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Henüz fatura yok.</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b">
+                        <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                           <tr>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Fatura No</th>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Tarih</th>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Vade</th>
-                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Tutar</th>
-                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Ödenen</th>
-                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Kalan</th>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Durum</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Fatura No</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tarih</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Vade</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tutar</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Ödenen</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Kalan</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Durum</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -585,11 +585,11 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                                     {inv.invoice_number}
                                   </Link>
                                 </td>
-                                <td className="px-4 py-2.5 text-xs text-gray-600">{formatTRDate(inv.invoice_date)}</td>
-                                <td className={`px-4 py-2.5 text-xs ${late ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                                <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">{formatTRDate(inv.invoice_date)}</td>
+                                <td className={`px-4 py-2.5 text-xs ${late ? 'text-red-600 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>
                                   {formatTRDate(effDue)}
                                 </td>
-                                <td className="px-4 py-2.5 text-right text-sm font-medium text-gray-800">{formatCurrency(inv.total_amount)}</td>
+                                <td className="px-4 py-2.5 text-right text-sm font-medium text-gray-800 dark:text-gray-200">{formatCurrency(inv.total_amount)}</td>
                                 <td className="px-4 py-2.5 text-right text-xs text-green-700">{formatCurrency(inv.paid_amount)}</td>
                                 <td className={`px-4 py-2.5 text-right text-sm font-semibold ${k > 0 ? (late ? 'text-red-600' : 'text-orange-600') : 'text-gray-300'}`}>
                                   {k > 0 ? formatCurrency(k) : '—'}
@@ -611,18 +611,18 @@ export default function MusteriCariClient({ customers, invoices, payments, today
               {activeTab === 'odemeler' && (
                 <div>
                   {selPayments.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-400">Henüz ödeme kaydı yok.</div>
+                    <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Henüz ödeme kaydı yok.</div>
                   ) : (
                     <>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50 border-b">
+                          <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                             <tr>
-                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Tarih</th>
-                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Tutar</th>
-                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Yöntem</th>
-                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Referans</th>
-                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Fatura</th>
+                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tarih</th>
+                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tutar</th>
+                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Yöntem</th>
+                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Referans</th>
+                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Fatura</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y">
@@ -630,10 +630,10 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                               const inv = selInvoices.find(i => i.id === p.invoice_id)
                               return (
                                 <tr key={p.id} className="hover:bg-gray-50">
-                                  <td className="px-4 py-2.5 text-xs text-gray-600">{formatTRDate(p.payment_date)}</td>
+                                  <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">{formatTRDate(p.payment_date)}</td>
                                   <td className="px-4 py-2.5 text-right font-semibold text-green-700">{formatCurrency(p.amount)}</td>
-                                  <td className="px-4 py-2.5 text-xs text-gray-600">{PAYMENT_METHOD_LABELS[p.method ?? ''] ?? p.method}</td>
-                                  <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{p.reference_no ?? '—'}</td>
+                                  <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">{PAYMENT_METHOD_LABELS[p.method ?? ''] ?? p.method}</td>
+                                  <td className="px-4 py-2.5 text-xs text-gray-400 dark:text-gray-500 font-mono">{p.reference_no ?? '—'}</td>
                                   <td className="px-4 py-2.5 text-xs">
                                     {inv && <Link href={`/cari-hesap/faturalar/${inv.id}`} className="text-[#C8102E] hover:underline font-mono">{inv.invoice_number}</Link>}
                                   </td>
@@ -643,8 +643,8 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                           </tbody>
                         </table>
                       </div>
-                      <div className="border-t px-4 py-3 bg-gray-50 flex justify-between text-sm">
-                        <span className="text-gray-500">Toplam Ödenen</span>
+                      <div className="border-t px-4 py-3 bg-gray-50 dark:bg-gray-700 flex justify-between text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">Toplam Ödenen</span>
                         <span className="font-bold text-green-700">{formatCurrency(selPayments.reduce((s, p) => s + (p.amount ?? 0), 0))}</span>
                       </div>
                     </>
@@ -656,38 +656,38 @@ export default function MusteriCariClient({ customers, invoices, payments, today
               {activeTab === 'ekstre' && (
                 <div>
                   {ekstre.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-400">İşlem kaydı yok.</div>
+                    <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">İşlem kaydı yok.</div>
                   ) : (
                     <>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50 border-b">
+                          <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                             <tr>
-                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Tarih</th>
-                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">İşlem</th>
-                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Açıklama</th>
-                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Borç</th>
-                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Alacak</th>
-                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Bakiye</th>
+                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tarih</th>
+                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">İşlem</th>
+                              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Açıklama</th>
+                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Borç</th>
+                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Alacak</th>
+                              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Bakiye</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y">
                             {ekstre.map((row, i) => (
                               <tr key={i} className="hover:bg-gray-50">
-                                <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{formatTRDate(row.date)}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatTRDate(row.date)}</td>
                                 <td className="px-4 py-2.5">
                                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${row.tip === 'Fatura' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>
                                     {row.tip}
                                   </span>
                                 </td>
-                                <td className="px-4 py-2.5 text-xs text-gray-700 font-mono">{row.aciklama}</td>
-                                <td className="px-4 py-2.5 text-right text-sm text-gray-800">
+                                <td className="px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 font-mono">{row.aciklama}</td>
+                                <td className="px-4 py-2.5 text-right text-sm text-gray-800 dark:text-gray-200">
                                   {row.borc > 0 ? formatCurrency(row.borc) : '—'}
                                 </td>
                                 <td className="px-4 py-2.5 text-right text-sm text-green-700">
                                   {row.alacak > 0 ? formatCurrency(row.alacak) : '—'}
                                 </td>
-                                <td className={`px-4 py-2.5 text-right text-sm font-bold ${row.bakiye > 0 ? 'text-orange-600' : row.bakiye < 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                <td className={`px-4 py-2.5 text-right text-sm font-bold ${row.bakiye > 0 ? 'text-orange-600' : row.bakiye < 0 ? 'text-green-600' : 'text-gray-400 dark:text-gray-500'}`}>
                                   {row.bakiye === 0 ? '—' : formatCurrency(Math.abs(row.bakiye))}
                                   {row.bakiye < 0 && <span className="text-xs font-normal ml-1">(alacak)</span>}
                                 </td>
@@ -696,8 +696,8 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                           </tbody>
                         </table>
                       </div>
-                      <div className="border-t px-4 py-3 bg-gray-50 flex justify-between items-center">
-                        <span className="text-sm font-semibold text-gray-700">Güncel Bakiye</span>
+                      <div className="border-t px-4 py-3 bg-gray-50 dark:bg-gray-700 flex justify-between items-center">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Güncel Bakiye</span>
                         <span className={`text-base font-bold ${(ekstre[ekstre.length - 1]?.bakiye ?? 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
                           {formatCurrency(Math.abs(ekstre[ekstre.length - 1]?.bakiye ?? 0))}
                           {(ekstre[ekstre.length - 1]?.bakiye ?? 0) < 0 && <span className="text-xs font-normal ml-1">(müşteri alacaklı)</span>}
@@ -711,8 +711,8 @@ export default function MusteriCariClient({ customers, invoices, payments, today
               {/* Sekme 4: Mutabakat Formları */}
               {activeTab === 'mutabakat' && (
                 <div>
-                  <div className="px-4 py-2 border-b bg-gray-50 flex justify-between items-center">
-                    <span className="text-xs text-gray-500">Mutabakat Mektupları</span>
+                  <div className="px-4 py-2 border-b bg-gray-50 dark:bg-gray-700 flex justify-between items-center">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Mutabakat Mektupları</span>
                     <button
                       onClick={openMutabakatModal}
                       className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700"
@@ -722,29 +722,29 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                   </div>
 
                   {mutabakatLoading ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-400">Yükleniyor...</div>
+                    <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
                   ) : mutabakatList.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-400">Henüz mutabakat formu yok.</div>
+                    <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Henüz mutabakat formu yok.</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b">
+                        <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                           <tr>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Mutabakat Tarihi</th>
-                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Bizim Bakiye</th>
-                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500">Müşteri Bakiyesi</th>
-                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">Durum</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Mutabakat Tarihi</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Bizim Bakiye</th>
+                            <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Müşteri Bakiyesi</th>
+                            <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Durum</th>
                             <th className="px-4 py-2.5" />
                           </tr>
                         </thead>
                         <tbody className="divide-y">
                           {mutabakatList.map(m => {
-                            const durumCfg = MUTABAKAT_DURUM_LABELS[m.durum] ?? { label: m.durum, cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+                            const durumCfg = MUTABAKAT_DURUM_LABELS[m.durum] ?? { label: m.durum, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' }
                             const isEditing = mutabakatDurumEdit === m.id
                             return (
                               <tr key={m.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-2.5 text-xs text-gray-600">{formatTRDate(m.mutabakat_tarihi)}</td>
-                                <td className="px-4 py-2.5 text-right font-semibold text-gray-800">{formatCurrency(m.bizim_bakiye)}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">{formatTRDate(m.mutabakat_tarihi)}</td>
+                                <td className="px-4 py-2.5 text-right font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(m.bizim_bakiye)}</td>
                                 <td className="px-4 py-2.5 text-right">
                                   {m.musteri_bakiyesi != null ? (
                                     <span className={`text-sm font-medium ${m.musteri_bakiyesi !== m.bizim_bakiye ? 'text-red-600' : 'text-green-600'}`}>
@@ -843,12 +843,12 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                     </button>
                   </div>
                   {notes.length === 0 ? (
-                    <div className="text-center text-sm text-gray-400 py-6">Henüz not yok.</div>
+                    <div className="text-center text-sm text-gray-400 dark:text-gray-500 py-6">Henüz not yok.</div>
                   ) : (
                     <div className="space-y-2">
                       {notes.map((n, i) => (
                         <div key={i} className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex items-start justify-between gap-2">
-                          <p className="text-sm text-gray-800">{n}</p>
+                          <p className="text-sm text-gray-800 dark:text-gray-200">{n}</p>
                           <button onClick={() => setNotes(p => p.filter((_, j) => j !== i))}
                             className="text-gray-300 hover:text-red-400 text-lg leading-none flex-shrink-0">×</button>
                         </div>
@@ -865,18 +865,18 @@ export default function MusteriCariClient({ customers, invoices, payments, today
       {/* ── Mutabakat Oluşturma Modal ── */}
       {showMutabakatModal && selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Mutabakat Formu Oluştur</h3>
-              <button onClick={() => setShowMutabakatModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Mutabakat Formu Oluştur</h3>
+              <button onClick={() => setShowMutabakatModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl">×</button>
             </div>
             <div className="px-6 py-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Müşteri</label>
-                <div className="border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700">{selected.full_name}</div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Müşteri</label>
+                <div className="border rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{selected.full_name}</div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Mutabakat Tarihi</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Mutabakat Tarihi</label>
                 <input
                   type="date"
                   value={mutabakatTarih}
@@ -885,7 +885,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Bizim Bakiyemiz (TL)</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Bizim Bakiyemiz (TL)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -894,14 +894,14 @@ export default function MusteriCariClient({ customers, invoices, payments, today
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {selected.kalan > 0 && (
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     Güncel kalan alacak: {formatCurrency(selected.kalan)}
                     {' '}<button onClick={() => setMutabakatBakiye(String(selected.kalan.toFixed(2)))} className="text-blue-600 hover:underline">Kullan</button>
                   </div>
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Notlar</label>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notlar</label>
                 <textarea
                   value={mutabakatNotlar}
                   onChange={e => setMutabakatNotlar(e.target.value)}
@@ -913,7 +913,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
             </div>
             <div className="px-6 py-4 border-t flex gap-3 justify-end">
               <button onClick={() => setShowMutabakatModal(false)}
-                className="border px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                className="border px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                 İptal
               </button>
               <button
@@ -933,7 +933,7 @@ export default function MusteriCariClient({ customers, invoices, payments, today
 
 function StatusBadge({ status }: { status: string | null }) {
   const cfg: Record<string, { label: string; cls: string }> = {
-    taslak:       { label: 'Taslak',       cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+    taslak:       { label: 'Taslak',       cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
     kesildi:      { label: 'Kesildi',      cls: 'bg-blue-50 text-blue-700 border-blue-200' },
     gonderildi:   { label: 'Gönderildi',   cls: 'bg-purple-50 text-purple-700 border-purple-200' },
     kismi_odendi: { label: 'Kısmi Ödendi', cls: 'bg-orange-50 text-orange-700 border-orange-200' },

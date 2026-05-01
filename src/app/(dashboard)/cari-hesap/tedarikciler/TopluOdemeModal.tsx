@@ -118,7 +118,7 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
           onClick={() => !submitting && setOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             {/* Başlık */}
@@ -131,7 +131,7 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
               {/* Fatura listesi */}
               <div className="overflow-y-auto flex-1 border-b">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b sticky top-0">
+                  <thead className="bg-gray-50 dark:bg-gray-700 border-b sticky top-0">
                     <tr>
                       <th className="px-4 py-2.5 w-10">
                         <input
@@ -141,11 +141,11 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
                           className="rounded"
                         />
                       </th>
-                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Fatura No</th>
-                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Tarih</th>
-                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500">Toplam</th>
-                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500">Kalan</th>
-                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500">Ödenecek</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Fatura No</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Tarih</th>
+                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Toplam</th>
+                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Kalan</th>
+                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Ödenecek</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -164,9 +164,9 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
                               className="rounded"
                             />
                           </td>
-                          <td className="px-3 py-2 font-mono text-xs text-gray-800">{inv.invoice_number}</td>
-                          <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
-                          <td className="px-3 py-2 text-xs text-right text-gray-700">{formatCurrency(inv.total_amount)}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-gray-800 dark:text-gray-200">{inv.invoice_number}</td>
+                          <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
+                          <td className="px-3 py-2 text-xs text-right text-gray-700 dark:text-gray-300">{formatCurrency(inv.total_amount)}</td>
                           <td className="px-3 py-2 text-xs text-right text-orange-600 font-medium">{formatCurrency(kalan)}</td>
                           <td className="px-3 py-2 text-right">
                             <div className="flex flex-col items-end gap-0.5">
@@ -206,7 +206,7 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
                 {/* Ödeme bilgileri */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Ödeme Tarihi</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Ödeme Tarihi</label>
                     <input
                       type="date"
                       value={form.payment_date}
@@ -215,11 +215,11 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Ödeme Yöntemi</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Ödeme Yöntemi</label>
                     <select
                       value={form.method}
                       onChange={e => setForm(p => ({ ...p, method: e.target.value }))}
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-800"
                     >
                       <option value="nakit">Nakit</option>
                       <option value="havale_eft">Havale / EFT</option>
@@ -229,7 +229,7 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Referans / Dekont No</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Referans / Dekont No</label>
                     <input
                       value={form.reference_no}
                       onChange={e => setForm(p => ({ ...p, reference_no: e.target.value }))}
@@ -238,7 +238,7 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600">Notlar</label>
+                    <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Notlar</label>
                     <input
                       value={form.notes}
                       onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
@@ -263,7 +263,7 @@ export default function TopluOdemeModal({ supplierName, invoices }: Props) {
                     type="button"
                     onClick={() => setOpen(false)}
                     disabled={submitting}
-                    className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                    className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 disabled:opacity-50"
                   >
                     İptal
                   </button>

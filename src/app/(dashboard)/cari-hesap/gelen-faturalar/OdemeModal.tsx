@@ -49,7 +49,7 @@ export default function OdemeModal({ invoiceId, invoiceNumber, supplierName, kal
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -63,7 +63,7 @@ export default function OdemeModal({ invoiceId, invoiceNumber, supplierName, kal
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-gray-600">Ödeme Tarihi</label>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Ödeme Tarihi</label>
             <input
               type="date"
               value={form.payment_date}
@@ -72,7 +72,7 @@ export default function OdemeModal({ invoiceId, invoiceNumber, supplierName, kal
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Tutar (₺) <span className="text-red-500">*</span></label>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Tutar (₺) <span className="text-red-500">*</span></label>
             <input
               type="number"
               step="0.01"
@@ -86,11 +86,11 @@ export default function OdemeModal({ invoiceId, invoiceNumber, supplierName, kal
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Ödeme Yöntemi</label>
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Ödeme Yöntemi</label>
             <select
               value={form.method}
               onChange={e => setForm(p => ({ ...p, method: e.target.value }))}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-800"
             >
               <option value="nakit">Nakit</option>
               <option value="havale_eft">Havale / EFT</option>
@@ -113,7 +113,7 @@ export default function OdemeModal({ invoiceId, invoiceNumber, supplierName, kal
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+              className="px-4 py-2.5 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50"
             >
               İptal
             </button>

@@ -90,7 +90,7 @@ export default function VergiClient(props: Props) {
     <>
       {isEdit ? (
         <button onClick={() => setOpen(true)}
-          className="text-xs text-gray-400 hover:text-[#C8102E] px-2 py-1 border border-transparent hover:border-gray-200 rounded">
+          className="text-xs text-gray-400 dark:text-gray-500 hover:text-[#C8102E] px-2 py-1 border border-transparent hover:border-gray-200 rounded">
           Düzenle
         </button>
       ) : (
@@ -102,26 +102,26 @@ export default function VergiClient(props: Props) {
 
       {open && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
             <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {isEdit ? 'Beyanname Düzenle' : 'Yeni Beyanname'}
               </h3>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
+              <button onClick={() => setOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-lg">×</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Vergi Türü</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Vergi Türü</label>
                   <select value={form.tax_type} onChange={e => setForm(p => ({ ...p, tax_type: e.target.value }))}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                     {TAX_TYPES.map(t => <option key={t} value={t}>{TAX_TYPE_LABELS[t] ?? t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Dönem Ayı</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Dönem Ayı</label>
                   <select value={form.period_month} onChange={e => setForm(p => ({ ...p, period_month: e.target.value }))}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                     <option value="">— (Yıllık)</option>
                     {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'].map((m, i) => (
                       <option key={i + 1} value={i + 1}>{m}</option>
@@ -129,34 +129,34 @@ export default function VergiClient(props: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Vade Tarihi <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Vade Tarihi <span className="text-red-500">*</span></label>
                   <input type="date" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Beyan Tarihi</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Beyan Tarihi</label>
                   <input type="date" value={form.declaration_date} onChange={e => setForm(p => ({ ...p, declaration_date: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Matrah (₺)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Matrah (₺)</label>
                   <input type="number" step="0.01" value={form.base_amount} onChange={e => setForm(p => ({ ...p, base_amount: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Vergi Tutarı (₺)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Vergi Tutarı (₺)</label>
                   <input type="number" step="0.01" value={form.tax_amount} onChange={e => setForm(p => ({ ...p, tax_amount: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Ödenen (₺)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ödenen (₺)</label>
                   <input type="number" step="0.01" value={form.paid_amount} onChange={e => setForm(p => ({ ...p, paid_amount: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Durum</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Durum</label>
                   <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                     {Object.entries(DECLARATION_STATUS_CONFIG).map(([k, v]) => (
                       <option key={k} value={k}>{v.label}</option>
                     ))}
@@ -164,7 +164,7 @@ export default function VergiClient(props: Props) {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Notlar</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notlar</label>
                 <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>
@@ -180,7 +180,7 @@ export default function VergiClient(props: Props) {
                   </button>
                 )}
                 <button type="button" onClick={() => setOpen(false)}
-                  className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                  className="px-4 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                   İptal
                 </button>
               </div>

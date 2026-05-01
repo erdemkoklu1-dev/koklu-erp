@@ -69,7 +69,7 @@ export default async function OnKayitlarPage({
 
       {/* Üst bar */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Ön Kayıtlar</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Ön Kayıtlar</h2>
         <div className="flex items-center gap-2">
           <PrintButton />
           <Link href="/cari-hesap/on-kayitlar/yeni"
@@ -81,22 +81,22 @@ export default async function OnKayitlarPage({
 
       {/* Özet kartlar */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-xs text-gray-500">Listelenen Toplam</div>
-          <div className="text-xl font-bold text-gray-900 mt-0.5">{formatCurrency(toplamTutar)}</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400">Listelenen Toplam</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(toplamTutar)}</div>
         </div>
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
           <div className="text-xs text-orange-600">Faturalanmamış</div>
           <div className="text-xl font-bold text-orange-700 mt-0.5">{formatCurrency(bekleyenTutar)}</div>
         </div>
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-xs text-gray-500">Kayıt Sayısı</div>
-          <div className="text-xl font-bold text-gray-900 mt-0.5">{kayitlar?.length ?? 0}</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400">Kayıt Sayısı</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{kayitlar?.length ?? 0}</div>
         </div>
       </div>
 
       {/* Filtreler */}
-      <div className="bg-white border rounded-xl p-4 space-y-3">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl p-4 space-y-3">
         {/* Durum filtreleri */}
         <div className="flex flex-wrap gap-2">
           {[
@@ -108,7 +108,7 @@ export default async function OnKayitlarPage({
               className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
                 durumFilter === f.key
                   ? 'bg-[#C8102E] text-white border-[#C8102E]'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#C8102E] hover:text-[#C8102E]'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-[#C8102E] hover:text-[#C8102E]'
               }`}>
               {f.label}
             </Link>
@@ -119,7 +119,7 @@ export default async function OnKayitlarPage({
         <form method="GET" action="/cari-hesap/on-kayitlar" className="flex flex-wrap gap-3">
           <input type="hidden" name="durum" value={durumFilter} />
           <select name="customer_id" defaultValue={customer_id ?? ''}
-            className="border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
+            className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#C8102E]">
             <option value="">Tüm Müşteriler</option>
             {(customers ?? []).map(c => (
               <option key={c.id} value={c.id}>{c.full_name}</option>
@@ -130,20 +130,20 @@ export default async function OnKayitlarPage({
           <input type="date" name="to" defaultValue={to ?? ''}
             className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
           <button type="submit"
-            className="border rounded-lg px-3 py-1.5 text-sm bg-white hover:bg-gray-50">
+            className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:bg-gray-50">
             Filtrele
           </button>
           <Link href="/cari-hesap/on-kayitlar"
-            className="border rounded-lg px-3 py-1.5 text-sm bg-white hover:bg-gray-50 text-gray-500">
+            className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 text-gray-500 dark:text-gray-400">
             Temizle
           </Link>
         </form>
       </div>
 
       {/* Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         {(kayitlar ?? []).length === 0 ? (
-          <div className="px-4 py-12 text-center text-gray-400 text-sm">
+          <div className="px-4 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">
             Kayıt bulunamadı.{' '}
             <Link href="/cari-hesap/on-kayitlar/yeni" className="text-[#C8102E] hover:underline">
               Yeni ön kayıt ekle →
@@ -152,15 +152,15 @@ export default async function OnKayitlarPage({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Müşteri</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Açıklama</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Miktar</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Durum</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Açıklama</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Miktar</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -171,23 +171,23 @@ export default async function OnKayitlarPage({
                   const durumConf = DURUM_CONFIG[k.durum] ?? DURUM_CONFIG['beklemede']
                   return (
                     <tr key={k.id} className={`hover:bg-gray-50 transition-colors ${k.durum === 'beklemede' ? '' : 'opacity-70'}`}>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                         <Link href={`/customers/${customer?.id}`}
                           className="hover:text-[#C8102E] hover:underline">
                           {customer?.full_name ?? '—'}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {formatTRDate(k.kayit_tarihi)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 max-w-xs">
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 max-w-xs">
                         <div className="truncate">{k.aciklama}</div>
-                        {k.notlar && <div className="text-xs text-gray-400 truncate">{k.notlar}</div>}
+                        {k.notlar && <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{k.notlar}</div>}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 text-right whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 text-right whitespace-nowrap">
                         {k.miktar} {BIRIM_LABELS[k.birim] ?? k.birim}
                       </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right whitespace-nowrap">
                         {formatCurrency(k.toplam_tutar)}
                       </td>
                       <td className="px-4 py-3">
@@ -202,12 +202,12 @@ export default async function OnKayitlarPage({
                             {invoice.invoice_number}
                           </Link>
                         ) : (
-                          <span className="text-gray-400 text-xs">—</span>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link href={`/cari-hesap/on-kayitlar/${k.id}/edit`}
-                          className="text-xs text-gray-400 hover:text-[#C8102E] font-medium">
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-[#C8102E] font-medium">
                           Düzenle
                         </Link>
                       </td>

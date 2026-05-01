@@ -84,12 +84,12 @@ function NewIslemForm() {
   return (
     <div className="p-6 max-w-xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/cari-hesap/gelir-gider" className="text-sm text-gray-500 hover:text-gray-700">← Gelir / Gider</Link>
+        <Link href="/cari-hesap/gelir-gider" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Gelir / Gider</Link>
         <span className="text-gray-300">/</span>
-        <h2 className="text-base font-semibold text-gray-900">Yeni İşlem</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Yeni İşlem</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white border rounded-xl p-5 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 border rounded-xl p-5 space-y-4">
 
         {/* Tip seçimi */}
         <div className="flex gap-2">
@@ -99,7 +99,7 @@ function NewIslemForm() {
               className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-colors ${
                 form.direction === d
                   ? d === 'gelir' ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50'
               }`}>
               {d === 'gelir' ? '+ Gelir' : '− Gider'}
             </button>
@@ -107,16 +107,16 @@ function NewIslemForm() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Kategori <span className="text-red-500">*</span></label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Kategori <span className="text-red-500">*</span></label>
           <select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))}
-            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
             <option value="">— Kategori seçin</option>
             {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Açıklama <span className="text-red-500">*</span></label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Açıklama <span className="text-red-500">*</span></label>
           <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
             placeholder="İşlem açıklaması..." />
@@ -124,15 +124,15 @@ function NewIslemForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">Tarih</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tarih</label>
             <input type="date" value={form.transaction_date}
               onChange={e => setForm(p => ({ ...p, transaction_date: e.target.value }))}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Ödeme Yöntemi</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ödeme Yöntemi</label>
             <select value={form.payment_method} onChange={e => setForm(p => ({ ...p, payment_method: e.target.value }))}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
               <option value="nakit">Nakit</option>
               <option value="havale_eft">Havale / EFT</option>
               <option value="kredi_karti">Kredi Kartı</option>
@@ -145,16 +145,16 @@ function NewIslemForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">Tutar (₺) <span className="text-red-500">*</span></label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tutar (₺) <span className="text-red-500">*</span></label>
             <input type="number" step="0.01" min="0.01" value={form.amount}
               onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
               placeholder="0,00" />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">KDV Oranı (%)</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">KDV Oranı (%)</label>
             <select value={form.kdv_rate} onChange={e => setForm(p => ({ ...p, kdv_rate: e.target.value }))}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
               <option value="0">KDV Yok</option>
               <option value="10">%10</option>
               <option value="20">%20</option>
@@ -166,10 +166,10 @@ function NewIslemForm() {
           <div className="flex items-center gap-2">
             <input type="checkbox" id="kdv_inc" checked={form.kdv_included}
               onChange={e => setForm(p => ({ ...p, kdv_included: e.target.checked }))}
-              className="rounded border-gray-300 text-[#C8102E]" />
-            <label htmlFor="kdv_inc" className="text-sm text-gray-700">Girilen tutar KDV dahil</label>
+              className="rounded border-gray-300 dark:border-gray-600 text-[#C8102E]" />
+            <label htmlFor="kdv_inc" className="text-sm text-gray-700 dark:text-gray-300">Girilen tutar KDV dahil</label>
             {form.amount && parseFloat(form.amount) > 0 && (
-              <span className="ml-auto text-xs text-gray-400">
+              <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
                 KDV: {formatCurrency(kdv_amount)} · Net: {formatCurrency(Math.round((parseFloat(form.amount) / (1 + (parseFloat(form.kdv_rate) / 100))) * 100) / 100)}
               </span>
             )}
@@ -177,14 +177,14 @@ function NewIslemForm() {
         )}
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Referans No</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Referans No</label>
           <input value={form.reference_no} onChange={e => setForm(p => ({ ...p, reference_no: e.target.value }))}
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
             placeholder="Makbuz, fatura veya banka ref no..." />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Notlar</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notlar</label>
           <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2}
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
         </div>
@@ -197,7 +197,7 @@ function NewIslemForm() {
             {loading ? 'Kaydediliyor...' : 'Kaydet'}
           </button>
           <Link href="/cari-hesap/gelir-gider"
-            className="px-6 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 text-center">
+            className="px-6 py-2.5 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 text-center">
             İptal
           </Link>
         </div>
@@ -208,7 +208,7 @@ function NewIslemForm() {
 
 export default function NewIslemPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-gray-400 text-sm">Yükleniyor...</div>}>
+    <Suspense fallback={<div className="p-6 text-gray-400 dark:text-gray-500 text-sm">Yükleniyor...</div>}>
       <NewIslemForm />
     </Suspense>
   )

@@ -75,10 +75,10 @@ function GelenFiltrePaneli() {
 
   const hasFilters = !!(q || period || (sort !== 'date_desc') || (odeme !== 'tumu') || (vade !== 'tumu') || (kategori !== 'tumu') || sehir)
 
-  const inputCls = 'border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] bg-white'
+  const inputCls = 'border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] bg-white dark:bg-gray-800'
 
   return (
-    <div className="bg-white border rounded-xl p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-800 border rounded-xl p-4 space-y-3">
       {/* Satır 1: arama + ödeme + vade + kategori */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="relative col-span-1">
@@ -91,7 +91,7 @@ function GelenFiltrePaneli() {
           {q && (
             <button
               onClick={() => setQ('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 text-lg leading-none"
               type="button"
             >
               ×
@@ -119,7 +119,7 @@ function GelenFiltrePaneli() {
       {/* Satır 2: il filtresi + dönem + sıralama + butonlar */}
       <div className="flex flex-wrap gap-3 items-end">
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">İl</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">İl</label>
           <select value={sehir} onChange={e => setSehir(e.target.value)} className={`${inputCls} min-w-36`}>
             <option value="">Tümü</option>
             <option disabled>─────────</option>
@@ -132,7 +132,7 @@ function GelenFiltrePaneli() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Dönem</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Dönem</label>
           <select value={period} onChange={e => { setPeriod(e.target.value); if (e.target.value !== 'ozel') { setFrom(''); setTo('') } }}
             className={`${inputCls} min-w-36`}>
             {PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -141,17 +141,17 @@ function GelenFiltrePaneli() {
         {period === 'ozel' && (
           <>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Başlangıç</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Başlangıç</label>
               <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Bitiş</label>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Bitiş</label>
               <input type="date" value={to} onChange={e => setTo(e.target.value)} className={inputCls} />
             </div>
           </>
         )}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Sıralama</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Sıralama</label>
           <select value={sort} onChange={e => setSort(e.target.value)} className={`${inputCls} min-w-52`}>
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -163,7 +163,7 @@ function GelenFiltrePaneli() {
           </button>
           {hasFilters && (
             <button onClick={() => router.push('/cari-hesap/gelen-faturalar')}
-              className="border px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+              className="border px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
               Temizle
             </button>
           )}
@@ -175,7 +175,7 @@ function GelenFiltrePaneli() {
 
 export default function GelenFiltresi() {
   return (
-    <Suspense fallback={<div className="bg-white border rounded-xl p-4 h-24" />}>
+    <Suspense fallback={<div className="bg-white dark:bg-gray-800 border rounded-xl p-4 h-24" />}>
       <GelenFiltrePaneli />
     </Suspense>
   )

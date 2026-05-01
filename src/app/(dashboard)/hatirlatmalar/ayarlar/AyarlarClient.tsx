@@ -189,7 +189,7 @@ export default function AyarlarClient() {
   }
 
   if (loading) {
-    return <div className="p-6 text-sm text-gray-400">Yükleniyor...</div>
+    return <div className="p-6 text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
   }
 
   const groups = [
@@ -250,7 +250,7 @@ export default function AyarlarClient() {
         <button
           onClick={fetchWpStatus}
           disabled={wpLoading}
-          className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+          className="text-xs border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
         >
           {wpLoading ? 'Yükleniyor...' : '↺ Yenile'}
         </button>
@@ -262,18 +262,18 @@ export default function AyarlarClient() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">Entegrasyon Ayarları</h2>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Entegrasyon Ayarları</h2>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
           Ayarlar şifreli olarak veritabanında saklanır. Ortam değişkenleri (.env.local) varsa önceliklidir.
         </p>
       </div>
 
       {groups.map(group => (
-        <div key={group.id} className="bg-white border rounded-xl overflow-hidden">
+        <div key={group.id} className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
           {/* Grup başlığı */}
-          <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-gray-900">{group.title}</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{group.title}</h3>
               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${group.badgeClass}`}>
                 {group.badge}
               </span>
@@ -284,7 +284,7 @@ export default function AyarlarClient() {
           </div>
 
           <div className="p-5 space-y-4">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {group.desc}
               {group.link && (
                 <> Hesap oluşturmak için: <a href={group.link} target="_blank" rel="noopener noreferrer"
@@ -305,7 +305,7 @@ export default function AyarlarClient() {
 
             {/* WhatsApp gateway durum paneli */}
             {group.id === 'whatsapp' && (
-              <div className="rounded-lg border bg-gray-50 p-4 space-y-3">
+              <div className="rounded-lg border bg-gray-50 dark:bg-gray-700 p-4 space-y-3">
                 {wpStatus === 'connected' && (
                   <div className="flex items-center gap-2 text-sm text-green-700 font-medium">
                     <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
@@ -313,8 +313,8 @@ export default function AyarlarClient() {
                   </div>
                 )}
                 {wpStatus === 'disconnected' && (
-                  <div className="text-sm text-gray-500">
-                    <p className="font-medium text-gray-700 mb-1">Gateway çalışmıyor</p>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">Gateway çalışmıyor</p>
                     <p className="text-xs">
                       Servisi başlatmak için terminalde:{' '}
                       <code className="bg-gray-200 px-1.5 py-0.5 rounded font-mono text-xs">
@@ -340,7 +340,7 @@ export default function AyarlarClient() {
                         />
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
                       WhatsApp → Bağlı cihazlar → Cihaz bağla
                     </p>
                   </div>
@@ -362,8 +362,8 @@ export default function AyarlarClient() {
                 return (
                   <div key={satir.key} className="grid grid-cols-3 gap-4 items-start">
                     <div>
-                      <div className="text-sm font-medium text-gray-700">{satir.label}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{satir.aciklama}</div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{satir.label}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{satir.aciklama}</div>
                     </div>
                     <div className="col-span-2">
                       <div className="flex gap-2">
@@ -373,7 +373,7 @@ export default function AyarlarClient() {
                           onChange={e => setEdits(prev => ({ ...prev, [satir.key]: e.target.value }))}
                           placeholder={has && !isEditing ? '(kayıtlı)' : satir.placeholder}
                           className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] ${
-                            has && !isEditing ? 'text-gray-400 bg-gray-50' : ''
+                            has && !isEditing ? 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700' : ''
                           }`}
                         />
                         <button
@@ -385,7 +385,7 @@ export default function AyarlarClient() {
                           className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                             isEditing
                               ? 'bg-[#C8102E] text-white hover:bg-[#a50d26] disabled:opacity-50'
-                              : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                              : 'border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50'
                           }`}
                         >
                           {isSaving ? '...' : isSaved ? '✓ Kaydedildi' : isEditing ? 'Kaydet' : 'Değiştir'}
@@ -393,7 +393,7 @@ export default function AyarlarClient() {
                         {isEditing && (
                           <button
                             onClick={() => setEdits(prev => { const n = { ...prev }; delete n[satir.key]; return n })}
-                            className="px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-700 border"
+                            className="px-3 py-2 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 border"
                           >
                             İptal
                           </button>

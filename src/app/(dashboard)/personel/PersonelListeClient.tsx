@@ -19,7 +19,7 @@ const DURUM_CFG: Record<string, { label: string; cls: string }> = {
   izinli:  { label: 'İzinli',  cls: 'bg-blue-100 text-blue-700 border border-blue-200' },
   deneme:  { label: 'Deneme',  cls: 'bg-yellow-100 text-yellow-700 border border-yellow-200' },
   istifa:  { label: 'İstifa',  cls: 'bg-red-100 text-red-700 border border-red-200' },
-  cikis:   { label: 'Çıkış',   cls: 'bg-gray-100 text-gray-600 border border-gray-200' },
+  cikis:   { label: 'Çıkış',   cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600' },
 }
 
 const ISTIHDAM_LABEL: Record<string, string> = {
@@ -56,16 +56,16 @@ export default function PersonelListeClient({ personeller, subeler, ozet }: {
     })
   }, [personeller, ara, subeFiltre, durumFiltre, istihdamFiltre, departmanFiltre])
 
-  const thCls = 'px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide'
-  const tdCls = 'px-4 py-3 text-sm text-gray-700'
+  const thCls = 'px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide'
+  const tdCls = 'px-4 py-3 text-sm text-gray-700 dark:text-gray-300'
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl mx-auto">
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Personel</h1>
-          <p className="text-sm text-gray-500 mt-1">İnsan Kaynakları Yönetimi</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Personel</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">İnsan Kaynakları Yönetimi</p>
         </div>
         <Link href="/personel/new" className="flex items-center gap-2 bg-[#C8102E] text-white px-4 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors text-sm">
           <Plus size={16} /> Yeni Personel
@@ -81,10 +81,10 @@ export default function PersonelListeClient({ personeller, subeler, ozet }: {
       </div>
 
       {/* Filtreler */}
-      <div className="bg-white rounded-xl border p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative lg:col-span-2">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
               value={ara} onChange={e => setAra(e.target.value)}
               placeholder="Ad soyad veya sicil no..."
@@ -106,10 +106,10 @@ export default function PersonelListeClient({ personeller, subeler, ozet }: {
         </div>
         {departmanlar.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={() => setDepartmanFiltre('')} className={`text-xs px-3 py-1 rounded-full border transition-colors ${!departmanFiltre ? 'bg-[#C8102E] text-white border-red-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Tümü</button>
+            <button onClick={() => setDepartmanFiltre('')} className={`text-xs px-3 py-1 rounded-full border transition-colors ${!departmanFiltre ? 'bg-[#C8102E] text-white border-red-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50'}`}>Tümü</button>
             {departmanlar.map(d => (
               <button key={d} onClick={() => setDepartmanFiltre(d === departmanFiltre ? '' : d)}
-                className={`text-xs px-3 py-1 rounded-full border transition-colors ${departmanFiltre === d ? 'bg-[#C8102E] text-white border-red-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                className={`text-xs px-3 py-1 rounded-full border transition-colors ${departmanFiltre === d ? 'bg-[#C8102E] text-white border-red-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50'}`}>
                 {d}
               </button>
             ))}
@@ -118,9 +118,9 @@ export default function PersonelListeClient({ personeller, subeler, ozet }: {
       </div>
 
       {/* Tablo */}
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-          <p className="text-sm text-gray-500">{filtrelenmis.length} personel</p>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border overflow-hidden">
+        <div className="px-4 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{filtrelenmis.length} personel</p>
           <Link href="/personel/maas-bordro" className="text-xs text-[#C8102E] hover:underline font-medium">Maaş Bordrosu →</Link>
         </div>
         <div className="overflow-x-auto">
@@ -139,18 +139,18 @@ export default function PersonelListeClient({ personeller, subeler, ozet }: {
             </thead>
             <tbody className="divide-y">
               {filtrelenmis.map(p => {
-                const durum = DURUM_CFG[p.durum] ?? { label: p.durum, cls: 'bg-gray-100 text-gray-600' }
+                const durum = DURUM_CFG[p.durum] ?? { label: p.durum, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }
                 return (
                   <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                    <td className={`${tdCls} font-mono text-xs text-gray-500`}>{p.sicil_no ?? '-'}</td>
+                    <td className={`${tdCls} font-mono text-xs text-gray-500 dark:text-gray-400`}>{p.sicil_no ?? '-'}</td>
                     <td className={tdCls}>
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-[#C8102E] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {p.ad[0]}{p.soyad[0]}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{p.ad} {p.soyad}</p>
-                          {p.departman && <p className="text-xs text-gray-400">{p.departman}</p>}
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{p.ad} {p.soyad}</p>
+                          {p.departman && <p className="text-xs text-gray-400 dark:text-gray-500">{p.departman}</p>}
                         </div>
                       </div>
                     </td>
@@ -168,7 +168,7 @@ export default function PersonelListeClient({ personeller, subeler, ozet }: {
                 )
               })}
               {filtrelenmis.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">Personel bulunamadı.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">Personel bulunamadı.</td></tr>
               )}
             </tbody>
           </table>
@@ -181,8 +181,8 @@ export default function PersonelListeClient({ personeller, subeler, ozet }: {
 function SummaryCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: string; bg: string }) {
   return (
     <div className={`${bg} rounded-xl p-4 border border-white`}>
-      <div className="flex items-center gap-2 mb-1">{icon}<p className="text-xs text-gray-500 font-medium">{label}</p></div>
-      <p className="text-xl font-bold text-gray-900">{value}</p>
+      <div className="flex items-center gap-2 mb-1">{icon}<p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{label}</p></div>
+      <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
     </div>
   )
 }

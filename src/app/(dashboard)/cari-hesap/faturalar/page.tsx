@@ -189,11 +189,11 @@ export default async function FaturalarPage({
 
       {/* Üst bar */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Faturalar</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Faturalar</h2>
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
             <Link href="/cari-hesap/faturalar"
-              className="no-print text-sm text-gray-400 hover:text-gray-600 border rounded-lg px-3 py-1.5 hover:bg-gray-50">
+              className="no-print text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 border rounded-lg px-3 py-1.5 hover:bg-gray-50">
               Filtreleri Temizle
             </Link>
           )}
@@ -217,12 +217,12 @@ export default async function FaturalarPage({
                 active
                   ? isMahsupBtn ? 'bg-violet-600 text-white border-violet-600'
                     : 'bg-[#C8102E] text-white border-[#C8102E]'
-                  : isMahsupBtn ? 'bg-white text-violet-600 border-violet-200 hover:border-violet-400'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-[#C8102E] hover:text-[#C8102E]'
+                  : isMahsupBtn ? 'bg-white dark:bg-gray-800 text-violet-600 border-violet-200 hover:border-violet-400'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-[#C8102E] hover:text-[#C8102E]'
               }`}>
               {f.label}
               <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-                active ? 'bg-white/20 text-white' : isMahsupBtn ? 'bg-violet-50 text-violet-600' : 'bg-gray-100 text-gray-600'
+                active ? 'bg-white dark:bg-gray-800/20 text-white' : isMahsupBtn ? 'bg-violet-50 text-violet-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
               }`}>{cnt}</span>
             </Link>
           )
@@ -233,14 +233,14 @@ export default async function FaturalarPage({
       <div className="flex gap-3">
         <Link href={buildTypeUrl('satis')}
           className={`px-3 py-1.5 rounded-lg text-sm border font-medium transition-colors ${
-            (type ?? '') === 'satis' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            (type ?? '') === 'satis' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50'
           }`}>Satış Faturaları</Link>
         <Link href={buildTypeUrl('alis')}
           className={`px-3 py-1.5 rounded-lg text-sm border font-medium transition-colors ${
-            (type ?? '') === 'alis' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            (type ?? '') === 'alis' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50'
           }`}>Alış Faturaları</Link>
         <Link href={buildTypeUrl('')}
-          className="px-3 py-1.5 rounded-lg text-sm border font-medium bg-white text-gray-600 border-gray-200 hover:bg-gray-50">
+          className="px-3 py-1.5 rounded-lg text-sm border font-medium bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50">
           Tümü
         </Link>
         <form method="GET" action="/cari-hesap/faturalar" className="flex-1 flex gap-2">
@@ -252,7 +252,7 @@ export default async function FaturalarPage({
           {sort && sort !== 'date_desc' && <input type="hidden" name="sort" value={sort} />}
           <input name="q" defaultValue={q ?? ''} placeholder="Fatura no, müşteri ara..."
             className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]" />
-          <button type="submit" className="border rounded-lg px-3 py-1.5 text-sm bg-white hover:bg-gray-50">Ara</button>
+          <button type="submit" className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:bg-gray-50">Ara</button>
         </form>
       </div>
 
@@ -273,33 +273,33 @@ export default async function FaturalarPage({
             <div className="text-xs text-violet-600">Toplam Mahsup Edilen</div>
             <div className="text-xl font-bold text-violet-700 mt-0.5">{formatCurrency(mahsupToplam)}</div>
           </div>
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-gray-500">Mahsup Fatura Sayısı</div>
-            <div className="text-xl font-bold text-gray-900 mt-0.5">{filtered.length} fatura</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Mahsup Fatura Sayısı</div>
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{filtered.length} fatura</div>
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-xs text-gray-500">Toplam Tutar</div>
-            <div className="text-xl font-bold text-gray-900 mt-0.5">{formatCurrency(toplamFatura)}</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Toplam Tutar</div>
+            <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(toplamFatura)}</div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="text-xs text-green-600">Tahsil Edilen</div>
             <div className="text-xl font-bold text-green-700 mt-0.5">{formatCurrency(toplamOdenen)}</div>
           </div>
-          <div className={`rounded-lg p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
-            <div className={`text-xs ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Kalan</div>
-            <div className={`text-xl font-bold mt-0.5 ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{formatCurrency(toplamKalan)}</div>
+          <div className={`rounded-lg p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}>
+            <div className={`text-xs ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Kalan</div>
+            <div className={`text-xl font-bold mt-0.5 ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(toplamKalan)}</div>
           </div>
         </div>
       )}
 
       {/* Sonuç sayısı */}
-      <div className="text-sm text-gray-500 px-1">
-        <span className="font-semibold text-gray-700">{filtered.length}</span> sonuç bulundu
+      <div className="text-sm text-gray-500 dark:text-gray-400 px-1">
+        <span className="font-semibold text-gray-700 dark:text-gray-300">{filtered.length}</span> sonuç bulundu
         {(period || dateFrom || dateTo) && (
-          <span className="ml-1 text-xs text-gray-400">
+          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
             {period && period !== 'ozel' && `· ${period === 'bu_ay' ? 'Bu Ay' : period === 'gecen_ay' ? 'Geçen Ay' : period === 'son_3_ay' ? 'Son 3 Ay' : 'Bu Yıl'}`}
             {dateFrom && ` · ${dateFrom}`}
             {dateTo   && ` — ${dateTo}`}
@@ -308,22 +308,22 @@ export default async function FaturalarPage({
       </div>
 
       {/* Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="px-4 py-12 text-center text-gray-400 text-sm">Fatura bulunamadı.</div>
+          <div className="px-4 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">Fatura bulunamadı.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Müşteri / Tedarikçi</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tip</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Vade</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kalan</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Durum</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri / Tedarikçi</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Vade</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kalan</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -359,19 +359,19 @@ export default async function FaturalarPage({
                           {inv.invoice_number}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                         {customer?.full_name ?? inv.supplier_name ?? '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{TYPE_LABELS[inv.invoice_type] ?? inv.invoice_type}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatTRDate(inv.invoice_date)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{TYPE_LABELS[inv.invoice_type] ?? inv.invoice_type}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatTRDate(inv.invoice_date)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                         <span className={inv.due_date && unpaid && !isMahsup && inv.due_date < today ? 'text-red-600 font-medium' : ''}>
                           {inv.due_date ? formatTRDate(inv.due_date) : '—'}
                         </span>
                         {vadeBadge}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">{formatCurrency(inv.total_amount)}</td>
-                      <td className={`px-4 py-3 text-sm font-semibold text-right ${kalan > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 text-right">{formatCurrency(inv.total_amount)}</td>
+                      <td className={`px-4 py-3 text-sm font-semibold text-right ${kalan > 0 ? 'text-orange-600' : 'text-gray-400 dark:text-gray-500'}`}>
                         {kalan > 0 ? formatCurrency(kalan) : '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -397,23 +397,23 @@ export default async function FaturalarPage({
       {/* Mahsup özet kartları */}
       {isMahsupFilter && filtered.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Kuruma Göre Mahsup</h3>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Kuruma Göre Mahsup</h3>
             <div className="space-y-2">
               {Object.entries(mahsupKurum).sort((a, b) => b[1] - a[1]).map(([kurum, tutar]) => (
                 <div key={kurum} className="flex justify-between text-sm">
-                  <span className="text-gray-600 truncate max-w-48">{kurum}</span>
+                  <span className="text-gray-600 dark:text-gray-300 truncate max-w-48">{kurum}</span>
                   <span className="font-semibold text-violet-700 ml-2">{formatCurrency(tutar)}</span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-white border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Döneme Göre Mahsup</h3>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Döneme Göre Mahsup</h3>
             <div className="space-y-2">
               {Object.entries(mahsupDonem).sort((a, b) => b[0].localeCompare(a[0])).map(([donem, tutar]) => (
                 <div key={donem} className="flex justify-between text-sm">
-                  <span className="text-gray-600">{donem}</span>
+                  <span className="text-gray-600 dark:text-gray-300">{donem}</span>
                   <span className="font-semibold text-violet-700">{formatCurrency(tutar)}</span>
                 </div>
               ))}

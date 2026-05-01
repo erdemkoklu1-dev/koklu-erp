@@ -202,10 +202,10 @@ export default async function GelirGiderPage({
 
       {/* Üst bar */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Gelir / Gider İşlemleri</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Gelir / Gider İşlemleri</h2>
         <div className="flex gap-2">
           <Link href="/cari-hesap/sabit-giderler"
-            className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+            className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
             Sabit Giderler
           </Link>
           <Link href="/cari-hesap/faturalar/new"
@@ -220,33 +220,33 @@ export default async function GelirGiderPage({
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
           <div className="text-xs text-green-600">Bu Ay Gelir</div>
           <div className="text-xl font-bold text-green-700 mt-0.5">{formatCurrency(aylikGelir)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">satış faturaları</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">satış faturaları</div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <div className="text-xs text-red-600">Bu Ay Gider</div>
           <div className="text-xl font-bold text-red-700 mt-0.5">{formatCurrency(aylikGider)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             fatura {formatCurrency(aylikFaturaGider)} + sabit {formatCurrency(aylikSabitGider)}
           </div>
         </div>
         <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
           <div className="text-xs text-violet-600">Vergi Mahsup Toplamı</div>
           <div className="text-xl font-bold text-violet-700 mt-0.5">{formatCurrency(aylikMahsup)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             {aylikMahsupSayisi} fatura mahsup edildi
           </div>
         </div>
-        <div className={`rounded-xl p-4 border ${aylikGelir - aylikGider >= 0 ? 'bg-gray-50 border-gray-200' : 'bg-orange-50 border-orange-200'}`}>
-          <div className="text-xs text-gray-500">Bu Ay Net</div>
-          <div className={`text-xl font-bold mt-0.5 ${aylikGelir - aylikGider >= 0 ? 'text-gray-900' : 'text-orange-700'}`}>
+        <div className={`rounded-xl p-4 border ${aylikGelir - aylikGider >= 0 ? 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600' : 'bg-orange-50 border-orange-200'}`}>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Bu Ay Net</div>
+          <div className={`text-xl font-bold mt-0.5 ${aylikGelir - aylikGider >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-orange-700'}`}>
             {formatCurrency(aylikGelir - aylikGider)}
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">gelir − gider</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">gelir − gider</div>
         </div>
       </div>
 
       {/* Filtreler */}
-      <div className="bg-white border rounded-xl p-4 space-y-3">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl p-4 space-y-3">
         <div className="flex flex-wrap gap-2">
           {[
             { value: 'all', label: 'Tümü' },
@@ -259,7 +259,7 @@ export default async function GelirGiderPage({
                   ? 'bg-[#C8102E] text-white border-[#C8102E]'
                   : direction === opt.value && opt.value !== 'all'
                   ? opt.value === 'gelir' ? 'bg-green-600 text-white border-green-600' : 'bg-red-600 text-white border-red-600'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
               }`}>
               {opt.label}
             </Link>
@@ -273,10 +273,10 @@ export default async function GelirGiderPage({
             className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]" />
           <input name="q" defaultValue={q ?? ''} placeholder="Fatura no, müşteri, tedarikçi veya gider adı..."
             className="flex-1 min-w-48 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]" />
-          <button type="submit" className="border rounded-lg px-3 py-1.5 text-sm bg-white hover:bg-gray-50">Ara</button>
+          <button type="submit" className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:bg-gray-50">Ara</button>
           {(from || to || q) && (
             <Link href={buildUrl({ q: undefined, from: undefined, to: undefined })}
-              className="border rounded-lg px-3 py-1.5 text-sm bg-white hover:bg-gray-50 text-gray-400">
+              className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 text-gray-400 dark:text-gray-500">
               Temizle
             </Link>
           )}
@@ -285,28 +285,28 @@ export default async function GelirGiderPage({
 
       {/* Özet satır */}
       <div className="flex gap-4 text-sm px-1">
-        <span className="text-gray-500">{filtered.length} kayıt</span>
+        <span className="text-gray-500 dark:text-gray-400">{filtered.length} kayıt</span>
         <span className="text-green-600 font-medium">Gelir: {formatCurrency(toplamGelir)}</span>
         <span className="text-red-600 font-medium">Gider: {formatCurrency(toplamGider)}</span>
-        <span className={`font-semibold ${toplamGelir - toplamGider >= 0 ? 'text-gray-900' : 'text-orange-600'}`}>
+        <span className={`font-semibold ${toplamGelir - toplamGider >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-orange-600'}`}>
           Net: {formatCurrency(toplamGelir - toplamGider)}
         </span>
       </div>
 
       {/* Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="px-4 py-12 text-center text-gray-400 text-sm">Kayıt bulunamadı.</div>
+          <div className="px-4 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">Kayıt bulunamadı.</div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tür</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Açıklama</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Durum / Periyot</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Ödenen</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tür</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Açıklama</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum / Periyot</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Ödenen</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -322,7 +322,7 @@ export default async function GelirGiderPage({
 
                 return (
                   <tr key={r.id} className={`hover:bg-gray-50 ${isFixed ? 'bg-purple-50/30' : isMahsupRow ? 'bg-violet-50/40' : ''}`}>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                       {formatTRDate(r.tarih)}
                     </td>
                     <td className="px-4 py-3">
@@ -342,11 +342,11 @@ export default async function GelirGiderPage({
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs">
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 max-w-xs">
                       {isFixed ? (
                         <div>
                           <span className="font-medium">{rAny._name}</span>
-                          {r.taraf && <span className="text-xs text-gray-400 ml-1">· {r.taraf}</span>}
+                          {r.taraf && <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">· {r.taraf}</span>}
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -357,12 +357,12 @@ export default async function GelirGiderPage({
                             </Link>
                           )}
                           <div>
-                            <span className="truncate text-gray-700">{r.taraf ?? '—'}</span>
+                            <span className="truncate text-gray-700 dark:text-gray-300">{r.taraf ?? '—'}</span>
                             {isMahsupRow && rAny._aciklama && (
                               <div className="text-xs text-violet-500 mt-0.5">{rAny._aciklama}</div>
                             )}
                             {isMahsupRow && !rAny._aciklama && (
-                              <div className="text-xs text-gray-400 mt-0.5">Vergi Ödemesi / Mahsup</div>
+                              <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Vergi Ödemesi / Mahsup</div>
                             )}
                           </div>
                         </div>
@@ -393,10 +393,10 @@ export default async function GelirGiderPage({
                     <td className="px-4 py-3 text-right">
                       {isFixed ? (
                         <Link href="/cari-hesap/sabit-giderler"
-                          className="text-xs text-gray-400 hover:text-purple-600">Düzenle →</Link>
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-purple-600">Düzenle →</Link>
                       ) : (
                         <Link href={`/cari-hesap/faturalar/${r.id}`}
-                          className="text-xs text-gray-400 hover:text-[#C8102E]">Detay →</Link>
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-[#C8102E]">Detay →</Link>
                       )}
                     </td>
                   </tr>

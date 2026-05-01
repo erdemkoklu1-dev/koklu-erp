@@ -276,15 +276,15 @@ export default function NewServiceFormPage() {
     .slice(0, 10)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
         <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-        <Link href="/service-forms" className="text-gray-500 text-sm hover:text-gray-700">← Servis Formları</Link>
+        <Link href="/service-forms" className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700">← Servis Formları</Link>
         <span className="text-gray-300">/</span>
-        <h1 className="text-lg font-bold text-gray-900">Yeni Servis Formu</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Yeni Servis Formu</h1>
         {totalDevices > 0 && (
-          <span className="ml-auto text-sm text-gray-500">
-            Toplam: <span className="font-bold text-gray-900">{totalDevices} cihaz</span>
+          <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+            Toplam: <span className="font-bold text-gray-900 dark:text-gray-100">{totalDevices} cihaz</span>
           </span>
         )}
       </div>
@@ -292,10 +292,10 @@ export default function NewServiceFormPage() {
       <form onSubmit={handleSubmit} className="p-4 max-w-4xl mx-auto space-y-4">
 
         {/* Müşteri + Teknisyen + Tarih */}
-        <div className="bg-white border rounded-lg p-4">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Müşteri <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Müşteri <span className="text-red-500">*</span></label>
               <div className="relative mt-1" ref={searchRef}>
                 <input type="text" value={customerSearch}
                   onChange={e => { setCustomerSearch(e.target.value); setShowDropdown(true); setSelectedCustomer(null) }}
@@ -303,14 +303,14 @@ export default function NewServiceFormPage() {
                   placeholder="🔍 Müşteri ara..."
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 {showDropdown && customerSearch.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border rounded-lg shadow-xl max-h-48 overflow-y-auto">
                     {filteredCustomers.length === 0
-                      ? <div className="px-3 py-2 text-sm text-gray-400">Bulunamadı</div>
+                      ? <div className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500">Bulunamadı</div>
                       : filteredCustomers.map(c => (
                         <div key={c.id} onClick={() => selectCustomer(c)}
                           className="px-3 py-2 hover:bg-red-50 cursor-pointer border-b last:border-0">
                           <div className="text-sm font-medium">{c.full_name}</div>
-                          {c.phone && <div className="text-xs text-gray-400">{c.phone}</div>}
+                          {c.phone && <div className="text-xs text-gray-400 dark:text-gray-500">{c.phone}</div>}
                         </div>
                       ))}
                   </div>
@@ -323,13 +323,13 @@ export default function NewServiceFormPage() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Teknisyen</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Teknisyen</label>
               <input value={technicianName} onChange={e => setTechnicianName(e.target.value)}
                 placeholder="Ad Soyad"
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Servis Tarihi</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Servis Tarihi</label>
               <input type="date" value={serviceDate} onChange={e => setServiceDate(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
@@ -351,7 +351,7 @@ export default function NewServiceFormPage() {
           {/* Bakım periyot analizi */}
           {deviceGroups.length > 0 && (
             <div className="mt-4 pt-4 border-t space-y-3">
-              <div className="text-xs font-semibold text-gray-500 uppercase">Bakım Periyot Durumu</div>
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Bakım Periyot Durumu</div>
 
               <div className="space-y-2">
                 {deviceGroups.map(g => {
@@ -361,8 +361,8 @@ export default function NewServiceFormPage() {
                       {/* Başlık satırı */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 text-sm">{g.device_name}</span>
-                          <span className="text-xs bg-white border rounded-full px-2 py-0.5 text-gray-600 font-medium">
+                          <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">{g.device_name}</span>
+                          <span className="text-xs bg-white dark:bg-gray-800 border rounded-full px-2 py-0.5 text-gray-600 dark:text-gray-300 font-medium">
                             {g.quantity} adet
                           </span>
                         </div>
@@ -374,7 +374,7 @@ export default function NewServiceFormPage() {
                                 : `${g.days_until_next} gün kaldı`}
                             </span>
                           )}
-                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium bg-white ${cfg.color}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-medium bg-white dark:bg-gray-800 ${cfg.color}`}>
                             {cfg.label}
                           </span>
                         </div>
@@ -382,18 +382,18 @@ export default function NewServiceFormPage() {
 
                       {/* Kontrol zinciri */}
                       <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                        <span className="text-gray-500 bg-white rounded px-1.5 py-0.5 border">
+                        <span className="text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded px-1.5 py-0.5 border">
                           📅 Dolum: {g.last_fill_date ?? '-'}
                         </span>
-                        <span className="text-gray-400">→</span>
+                        <span className="text-gray-400 dark:text-gray-500">→</span>
 
                         {g.controlStatuses.map(c => (
                           <span key={c.num} className={`flex items-center gap-1 px-2 py-0.5 rounded-full border font-medium ${
                             c.done
                               ? 'bg-green-100 border-green-300 text-green-800'
                               : c.pending
-                              ? 'bg-white border-blue-300 text-blue-700'
-                              : 'bg-gray-100 border-gray-200 text-gray-400'
+                              ? 'bg-white dark:bg-gray-800 border-blue-300 text-blue-700'
+                              : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500'
                           }`}>
                             {c.done ? '✅' : c.pending ? '⏳' : '⬜'}
                             {' '}{c.num}.Kontrol
@@ -403,11 +403,11 @@ export default function NewServiceFormPage() {
                           </span>
                         ))}
 
-                        <span className="text-gray-400">→</span>
+                        <span className="text-gray-400 dark:text-gray-500">→</span>
                         <span className={`px-2 py-0.5 rounded-full border font-medium ${
                           g.expiry_date && new Date(g.expiry_date) < new Date()
                             ? 'bg-red-100 border-red-300 text-red-800'
-                            : 'bg-white border-gray-200 text-gray-500'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400'
                         }`}>
                           🏁 SKT: {g.expiry_date ?? '-'}
                         </span>
@@ -419,14 +419,14 @@ export default function NewServiceFormPage() {
 
               {/* Bu servis hangi kontrol */}
               <div className="flex items-center gap-3 pt-1">
-                <div className="text-xs font-semibold text-gray-500">BU SERVİS:</div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">BU SERVİS:</div>
                 <div className="flex gap-2">
                   {[1, 2, 3].map(n => (
                     <button key={n} type="button" onClick={() => setControlNumber(n)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                         controlNumber === n
                           ? 'bg-[#C8102E] text-white border-[#C8102E]'
-                          : 'bg-white text-gray-600 border-gray-300 hover:border-[#C8102E]'
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-[#C8102E]'
                       }`}>
                       {n}. Kontrol
                     </button>
@@ -435,7 +435,7 @@ export default function NewServiceFormPage() {
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                       controlNumber === null
                         ? 'bg-gray-800 text-white border-gray-800'
-                        : 'bg-white text-gray-600 border-gray-300'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'
                     }`}>
                     Dolum / Genel
                   </button>
@@ -445,7 +445,7 @@ export default function NewServiceFormPage() {
               {/* Forma ekle butonları */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs font-semibold text-gray-500">FORMA EKLE</div>
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">FORMA EKLE</div>
                   <button type="button" onClick={addAllToForm}
                     className="text-xs bg-gray-800 text-white px-3 py-1 rounded-lg hover:bg-gray-700">
                     Tümünü Ekle
@@ -457,10 +457,10 @@ export default function NewServiceFormPage() {
                       className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-1.5 transition-colors ${
                         items.find(i => i.device_name === g.device_name)
                           ? 'bg-red-50 border-[#C8102E] text-[#C8102E]'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-[#C8102E]'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-[#C8102E]'
                       }`}>
                       {items.find(i => i.device_name === g.device_name) ? '✓' : '+'} {g.device_name}
-                      <span className="bg-gray-100 text-gray-600 rounded-full px-1.5 text-xs font-bold">{g.quantity}</span>
+                      <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-1.5 text-xs font-bold">{g.quantity}</span>
                     </button>
                   ))}
                 </div>
@@ -470,22 +470,22 @@ export default function NewServiceFormPage() {
         </div>
 
         {/* Bakım kontrol tablosu */}
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-            <div className="text-sm font-semibold text-gray-700">Bakım / Kontrol Sonuçları</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
+          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b flex items-center justify-between">
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">Bakım / Kontrol Sonuçları</div>
             <button type="button" onClick={() => setItems(prev => [...prev, newItem()])}
-              className="text-sm border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">
+              className="text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50">
               + Manuel Ekle
             </button>
           </div>
 
           {items.length === 0 ? (
-            <div className="px-4 py-10 text-center text-gray-400 text-sm">
+            <div className="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">
               Yukarıdan cihaz seçin veya manuel satır ekleyin.
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b text-xs font-semibold text-gray-500 dark:text-gray-400">
                 <div className="col-span-3">CİHAZ</div>
                 <div className="col-span-1 text-center">ADET</div>
                 <div className="col-span-1 text-center">GÖVDE</div>
@@ -532,8 +532,8 @@ export default function NewServiceFormPage() {
                   </div>
                 ))}
               </div>
-              <div className="px-4 py-3 bg-gray-50 border-t flex items-center gap-4 text-sm">
-                <span className="text-gray-500">Toplam: <span className="font-bold text-gray-800">{totalDevices} cihaz</span></span>
+              <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t flex items-center gap-4 text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Toplam: <span className="font-bold text-gray-800 dark:text-gray-200">{totalDevices} cihaz</span></span>
                 <span className="text-green-600">✅ Sağlam: <span className="font-bold">{saglam}</span></span>
                 {hasarli > 0 && <span className="text-red-600">⚠️ Hasarlı: <span className="font-bold">{hasarli}</span></span>}
                 {degistirilen > 0 && <span className="text-yellow-600">🔄 Değiştirilen: <span className="font-bold">{degistirilen}</span></span>}
@@ -543,23 +543,23 @@ export default function NewServiceFormPage() {
         </div>
 
         {/* Notlar + Sonraki servis */}
-        <div className="bg-white border rounded-lg p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Genel Notlar</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Genel Notlar</label>
               <textarea value={generalNotes} onChange={e => setGeneralNotes(e.target.value)} rows={2}
                 placeholder="Teknisyen notu, gözlemler..."
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Müşteriye Not</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Müşteriye Not</label>
               <textarea value={customerNote} onChange={e => setCustomerNote(e.target.value)} rows={2}
                 placeholder="Müşteriye iletilecek bilgi..."
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Sonraki Servis Tarihi</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Sonraki Servis Tarihi</label>
             <input type="date" value={nextServiceDate} onChange={e => setNextServiceDate(e.target.value)}
               className="mt-1 w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
           </div>
@@ -573,7 +573,7 @@ export default function NewServiceFormPage() {
             {loading ? 'Kaydediliyor...' : '💾 Formu Kaydet'}
           </button>
           <Link href="/service-forms"
-            className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors text-center">
+            className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors text-center">
             İptal
           </Link>
         </div>

@@ -99,7 +99,7 @@ export default async function GiderRaporuPage({
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-base font-semibold text-gray-900">Gider Raporu</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Gider Raporu</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <Link href="/cari-hesap/gelen-faturalar"
             className="text-xs text-[#C8102E] hover:underline font-medium">
@@ -133,34 +133,34 @@ export default async function GiderRaporuPage({
 
       {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-0.5">Toplam Gider</div>
-          <div className="text-xl font-bold text-gray-900">{formatCurrency(toplamTutar)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">{rows.length} fatura</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Toplam Gider</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(toplamTutar)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{rows.length} fatura</div>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
           <div className="text-xs text-green-600 mb-0.5">Ödenen</div>
           <div className="text-xl font-bold text-green-700">{formatCurrency(toplamOdenen)}</div>
         </div>
-        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Kalan Borç</div>
-          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900'}`}>
+        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Kalan Borç</div>
+          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>
             {formatCurrency(toplamKalan)}
           </div>
         </div>
-        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gecikmiş</div>
-          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900'}`}>
+        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş</div>
+          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>
             {gecikmisSayi}
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">vadesi geçmiş</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">vadesi geçmiş</div>
         </div>
       </div>
 
       {/* Aylık Grafik (tüm yıl seçiliyse) */}
       {!selectedAy && aylikList.length > 0 && (
-        <div className="bg-white border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">{selectedYil} — Aylık Gider</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{selectedYil} — Aylık Gider</h3>
           <div className="flex items-end gap-2 h-36">
             {Array.from({ length: 12 }, (_, i) => {
               const key = `${selectedYil}-${String(i + 1).padStart(2, '0')}`
@@ -168,14 +168,14 @@ export default async function GiderRaporuPage({
               const h = val > 0 ? Math.max(4, Math.round((val / maxAylik) * 120)) : 0
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="text-xs text-gray-500 font-medium">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                     {val > 0 ? formatCurrency(val).replace('₺', '') : ''}
                   </div>
                   <div
                     className="w-full rounded-t bg-[#C8102E] transition-all"
                     style={{ height: `${h}px`, minHeight: val > 0 ? '4px' : '0' }}
                   />
-                  <div className="text-xs text-gray-400">{TR_AYLAR[i]}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{TR_AYLAR[i]}</div>
                 </div>
               )
             })}
@@ -185,12 +185,12 @@ export default async function GiderRaporuPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Kategoriye göre gider */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50">
-            <h3 className="text-sm font-semibold text-gray-900">Kategoriye Göre Gider</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Kategoriye Göre Gider</h3>
           </div>
           {kategoriList.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">Veri yok</div>
+            <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Veri yok</div>
           ) : (
             <div className="divide-y">
               {kategoriList.map(([kat, data]) => {
@@ -198,19 +198,19 @@ export default async function GiderRaporuPage({
                 return (
                   <div key={kat} className="px-4 py-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-700">{kat}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{kat}</span>
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(data.tutar)}</span>
-                        <span className="text-xs text-gray-400 ml-2">{data.sayi} fatura</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(data.tutar)}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">{data.sayi} fatura</span>
                       </div>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#C8102E] rounded-full"
                         style={{ width: `${pct.toFixed(1)}%` }}
                       />
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5">%{pct.toFixed(1)}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">%{pct.toFixed(1)}</div>
                   </div>
                 )
               })}
@@ -219,21 +219,21 @@ export default async function GiderRaporuPage({
         </div>
 
         {/* Tedarikçiye göre gider */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Tedarikçiye Göre Gider (Top 10)</h3>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tedarikçiye Göre Gider (Top 10)</h3>
           </div>
           {tedarikciList.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">Veri yok</div>
+            <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Veri yok</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                   <tr>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Tedarikçi</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500">Toplam</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500">Kalan Borç</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500">Fatura</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Tedarikçi</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Toplam</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kalan Borç</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Fatura</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -242,18 +242,18 @@ export default async function GiderRaporuPage({
                       <td className="px-4 py-2.5">
                         <Link
                           href={`/cari-hesap/tedarikciler/${encodeURIComponent(ad)}`}
-                          className="text-gray-900 hover:text-[#C8102E] hover:underline font-medium"
+                          className="text-gray-900 dark:text-gray-100 hover:text-[#C8102E] hover:underline font-medium"
                         >
                           {ad}
                         </Link>
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-gray-800">
+                      <td className="px-4 py-2.5 text-right font-medium text-gray-800 dark:text-gray-200">
                         {formatCurrency(data.tutar)}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-semibold ${data.kalan > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                      <td className={`px-4 py-2.5 text-right font-semibold ${data.kalan > 0 ? 'text-orange-600' : 'text-gray-400 dark:text-gray-500'}`}>
                         {data.kalan > 0 ? formatCurrency(data.kalan) : '—'}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-500">{data.sayi}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-400">{data.sayi}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -276,9 +276,9 @@ export default async function GiderRaporuPage({
         })
         if (odenmemis.length === 0) return null
         return (
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Ödenmemiş Borçlar
                 <span className="ml-2 bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">
                   {odenmemis.length}
@@ -291,13 +291,13 @@ export default async function GiderRaporuPage({
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                   <tr>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Tedarikçi</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Fatura No</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Kategori</th>
-                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Vade</th>
-                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500">Kalan</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Tedarikçi</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Fatura No</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kategori</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Vade</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kalan</th>
                     <th className="px-4 py-2.5" />
                   </tr>
                 </thead>
@@ -308,12 +308,12 @@ export default async function GiderRaporuPage({
                     const kat = parseKategori(inv.notes)
                     return (
                       <tr key={inv.id} className={isOverdue ? 'bg-red-50/50' : 'hover:bg-gray-50'}>
-                        <td className="px-4 py-2.5 font-medium text-gray-900">{inv.supplier_name ?? '—'}</td>
-                        <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{inv.invoice_number}</td>
-                        <td className="px-4 py-2.5 text-xs text-gray-500">{kat}</td>
+                        <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100">{inv.supplier_name ?? '—'}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-gray-400">{inv.invoice_number}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{kat}</td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           {inv.due_date ? (
-                            <span className={isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}>
+                            <span className={isOverdue ? 'text-red-600 font-medium' : 'text-gray-600 dark:text-gray-300'}>
                               {formatTRDate(inv.due_date)}
                               {isOverdue && <span className="ml-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">Gecikmiş</span>}
                             </span>

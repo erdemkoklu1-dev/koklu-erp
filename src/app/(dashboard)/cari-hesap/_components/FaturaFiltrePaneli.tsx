@@ -77,12 +77,12 @@ function FiltreForm({ basePath, preserveParams = {} }: Props) {
     router.push(`${basePath}?${p.toString()}`)
   }
 
-  const inputCls = 'border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] bg-white'
+  const inputCls = 'border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] bg-white dark:bg-gray-800'
 
   return (
-    <div className="bg-white border rounded-xl p-4 flex flex-wrap gap-3 items-end">
+    <div className="bg-white dark:bg-gray-800 border rounded-xl p-4 flex flex-wrap gap-3 items-end">
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Dönem</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Dönem</label>
         <select value={period} onChange={e => onPeriodChange(e.target.value)} className={`${inputCls} min-w-36`}>
           {PERIOD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -91,18 +91,18 @@ function FiltreForm({ basePath, preserveParams = {} }: Props) {
       {period === 'ozel' && (
         <>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Başlangıç</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Başlangıç</label>
             <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Bitiş</label>
+            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Bitiş</label>
             <input type="date" value={to} onChange={e => setTo(e.target.value)} className={inputCls} />
           </div>
         </>
       )}
 
       <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Sıralama</label>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Sıralama</label>
         <select value={sort} onChange={e => setSort(e.target.value)} className={`${inputCls} min-w-52`}>
           {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -115,7 +115,7 @@ function FiltreForm({ basePath, preserveParams = {} }: Props) {
         </button>
         {hasFilters && (
           <button onClick={clear}
-            className="border px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            className="border px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
             Temizle
           </button>
         )}
@@ -126,7 +126,7 @@ function FiltreForm({ basePath, preserveParams = {} }: Props) {
 
 export default function FaturaFiltrePaneli(props: Props) {
   return (
-    <Suspense fallback={<div className="bg-white border rounded-xl p-4 h-[60px]" />}>
+    <Suspense fallback={<div className="bg-white dark:bg-gray-800 border rounded-xl p-4 h-[60px]" />}>
       <FiltreForm {...props} />
     </Suspense>
   )

@@ -27,8 +27,8 @@ export default function FabrikaClient() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 pt-6 pb-0 border-b bg-white">
-        <h1 className="text-xl font-bold text-gray-900 mb-4">🏭 Fabrika Yönetimi</h1>
+      <div className="px-6 pt-6 pb-0 border-b bg-white dark:bg-gray-800">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">🏭 Fabrika Yönetimi</h1>
         <div className="flex gap-1 overflow-x-auto">
           {TABS.map(t => (
             <button
@@ -37,7 +37,7 @@ export default function FabrikaClient() {
               className={`px-4 py-2 text-sm font-medium rounded-t-lg whitespace-nowrap transition-colors ${
                 tab === t.id
                   ? 'bg-[#C8102E] text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
               {t.label}

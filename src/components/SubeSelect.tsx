@@ -23,7 +23,7 @@ export default function SubeSelect({ value, onChange, required, label = 'Şube',
   return (
     <div className={className}>
       {label && (
-        <label className="text-sm font-medium text-gray-700">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {label}{required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
@@ -31,7 +31,7 @@ export default function SubeSelect({ value, onChange, required, label = 'Şube',
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
         required={required}
-        className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white"
+        className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800"
       >
         <option value="">— Şube seçin</option>
         {subeler.map(s => (

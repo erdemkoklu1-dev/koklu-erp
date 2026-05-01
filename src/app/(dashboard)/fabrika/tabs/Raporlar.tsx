@@ -133,7 +133,7 @@ export default function Raporlar() {
       .sort((a, b) => b.karMarji - a.karMarji)
   }, [urunler, receteler])
 
-  if (loading) return <div className="p-6 text-sm text-gray-400">Yükleniyor...</div>
+  if (loading) return <div className="p-6 text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
 
   return (
     <div className="p-6 space-y-6">
@@ -144,21 +144,21 @@ export default function Raporlar() {
             className={`text-left p-4 rounded-xl border transition-colors ${
               aktif === r.id
                 ? 'border-[#C8102E] bg-red-50'
-                : 'bg-white hover:border-gray-300 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-800 hover:border-gray-300 hover:bg-gray-50'
             }`}>
             <div className="text-2xl mb-2">{r.emoji}</div>
-            <div className={`text-sm font-semibold ${aktif === r.id ? 'text-[#C8102E]' : 'text-gray-800'}`}>
+            <div className={`text-sm font-semibold ${aktif === r.id ? 'text-[#C8102E]' : 'text-gray-800 dark:text-gray-200'}`}>
               {r.baslik}
             </div>
-            <div className="text-xs text-gray-400 mt-0.5">{r.desc}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{r.desc}</div>
           </button>
         ))}
       </div>
 
       {/* Rapor içeriği */}
       {aktif === 'stok-deger' && (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 flex justify-between items-center">
             <span className="font-semibold text-sm">Hammadde Stok Değerleri</span>
             <span className="font-bold text-[#C8102E]">
               Toplam: ₺{toplamStokDeger.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
@@ -174,11 +174,11 @@ export default function Raporlar() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
                     <div className="bg-[#C8102E] h-2 rounded-full transition-all"
                       style={{ width: `${(h.toplam / maxDeger) * 100}%` }} />
                   </div>
-                  <span className="text-xs text-gray-400 w-40 text-right">
+                  <span className="text-xs text-gray-400 dark:text-gray-500 w-40 text-right">
                     {Number(h.mevcut_stok).toLocaleString('tr-TR')} {h.birim} × ₺{Number(h.birim_maliyet).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -200,13 +200,13 @@ export default function Raporlar() {
               ))}
             </div>
           )}
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50 font-semibold text-sm">Tamamlanan Emirler — Süre Karşılaştırması</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 font-semibold text-sm">Tamamlanan Emirler — Süre Karşılaştırması</div>
             {verimlilikData.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-gray-400">Tamamlanmış emir yok</div>
+              <div className="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Tamamlanmış emir yok</div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs text-gray-500 uppercase border-b">
+                <thead className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase border-b">
                   <tr>
                     <th className="px-4 py-2 text-left">Emir No</th>
                     <th className="px-4 py-2 text-left">Ürün</th>
@@ -223,7 +223,7 @@ export default function Raporlar() {
                       <td className="px-4 py-2 text-right">{e.planGun ?? '—'}</td>
                       <td className="px-4 py-2 text-right">{e.gercekGun ?? '—'}</td>
                       <td className={`px-4 py-2 text-right font-medium ${
-                        e.gecikme === null ? 'text-gray-400' :
+                        e.gecikme === null ? 'text-gray-400 dark:text-gray-500' :
                         e.gecikme > 0 ? 'text-red-600' : 'text-green-600'
                       }`}>
                         {e.gecikme === null ? '—' : e.gecikme > 0 ? `+${e.gecikme} gün` : e.gecikme === 0 ? 'Zamanında' : `${e.gecikme} gün`}
@@ -240,17 +240,17 @@ export default function Raporlar() {
       {aktif === 'tuketim' && (
         <div className="space-y-4">
           <div className="flex gap-3 items-center">
-            <label className="text-sm text-gray-600">Dönem:</label>
+            <label className="text-sm text-gray-600 dark:text-gray-300">Dönem:</label>
             <input type="date" value={tuketimBas} onChange={e => setTuketimBas(e.target.value)}
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
-            <span className="text-gray-400">—</span>
+            <span className="text-gray-400 dark:text-gray-500">—</span>
             <input type="date" value={tuketimBit} onChange={e => setTuketimBit(e.target.value)}
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
           </div>
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50 font-semibold text-sm">Hammadde Tüketimi</div>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 font-semibold text-sm">Hammadde Tüketimi</div>
             {tuketimData.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-gray-400">Bu dönemde tüketim kaydı yok</div>
+              <div className="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">Bu dönemde tüketim kaydı yok</div>
             ) : (
               <div className="divide-y">
                 {tuketimData.map(t => (
@@ -259,7 +259,7 @@ export default function Raporlar() {
                       <span className="text-sm font-medium">{t.adi}</span>
                       <span className="text-sm font-bold">{t.toplam.toLocaleString('tr-TR')} {t.birim}</span>
                     </div>
-                    <div className="bg-gray-100 rounded-full h-2">
+                    <div className="bg-gray-100 dark:bg-gray-700 rounded-full h-2">
                       <div className="bg-blue-500 h-2 rounded-full"
                         style={{ width: `${(t.toplam / maxTuketim) * 100}%` }} />
                     </div>
@@ -272,17 +272,17 @@ export default function Raporlar() {
       )}
 
       {aktif === 'maliyet' && (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50 font-semibold text-sm">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b bg-gray-50 dark:bg-gray-700 font-semibold text-sm">
             Ürün Bazında Maliyet vs Satış Fiyatı
           </div>
           {maliyetData.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-gray-400">
+            <div className="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
               Reçete tanımlanmış ürün yok
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-500 uppercase border-b">
+              <thead className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase border-b">
                 <tr>
                   <th className="px-4 py-2 text-left">Ürün</th>
                   <th className="px-4 py-2 text-right">Hammadde Maliyeti</th>

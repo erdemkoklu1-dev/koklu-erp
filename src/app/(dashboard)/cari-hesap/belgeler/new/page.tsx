@@ -22,12 +22,12 @@ export default async function BelgeYukleNewPage({
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/cari-hesap/belgeler" className="text-sm text-gray-500 hover:text-gray-700">← Belgeler</Link>
+        <Link href="/cari-hesap/belgeler" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Belgeler</Link>
         <span className="text-gray-300">/</span>
-        <h2 className="text-base font-semibold text-gray-900">Belge Yükle</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Belge Yükle</h2>
       </div>
 
-      <div className="bg-white border rounded-xl p-6">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl p-6">
         <BelgeYukleClient
           customers={customers ?? []}
           invoices={invoices ?? []}

@@ -134,26 +134,26 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
   const totalDevices = items.reduce((s, i) => s + i.quantity, 0)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
-        <Link href={`/service-forms/${id}`} className="text-gray-500 text-sm hover:text-gray-700">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
+        <Link href={`/service-forms/${id}`} className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700">
           ← Forma Dön
         </Link>
         <span className="text-gray-300">/</span>
-        <h1 className="text-lg font-bold text-gray-900">Servis Formu Düzenle</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Servis Formu Düzenle</h1>
         {customerName && (
-          <span className="text-sm text-gray-400 ml-1">— {customerName}</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500 ml-1">— {customerName}</span>
         )}
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 max-w-5xl mx-auto space-y-4">
 
         {/* Form bilgileri */}
-        <div className="bg-white border rounded-lg p-4">
-          <div className="text-sm font-semibold text-gray-700 mb-3">Form Bilgileri</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Form Bilgileri</div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Teknisyen</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Teknisyen</label>
               <input
                 name="technician_name"
                 value={form.technician_name}
@@ -163,7 +163,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Servis Tarihi</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Servis Tarihi</label>
               <input
                 type="date"
                 name="service_date"
@@ -173,7 +173,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Servis Türü</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Servis Türü</label>
               <select
                 name="control_number"
                 value={form.control_number}
@@ -190,12 +190,12 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
         </div>
 
         {/* Cihaz satırları */}
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-            <div className="text-sm font-semibold text-gray-700">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
+          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b flex items-center justify-between">
+            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               Bakım / Kontrol Sonuçları
               {items.length > 0 && (
-                <span className="ml-2 text-gray-400 font-normal text-xs">
+                <span className="ml-2 text-gray-400 dark:text-gray-500 font-normal text-xs">
                   {items.length} satır · {totalDevices} cihaz
                 </span>
               )}
@@ -211,7 +211,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
 
           {items.length === 0 ? (
             <div className="px-4 py-10 text-center space-y-3">
-              <p className="text-gray-400 text-sm">Bu formda henüz cihaz satırı yok.</p>
+              <p className="text-gray-400 dark:text-gray-500 text-sm">Bu formda henüz cihaz satırı yok.</p>
               <button
                 type="button"
                 onClick={() => setItems([newItem()])}
@@ -223,7 +223,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
           ) : (
             <>
               {/* Başlık satırı */}
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
                 <div className="col-span-3">Cihaz</div>
                 <div className="col-span-1 text-center">Adet</div>
                 <div className="col-span-2 text-center">Gövde</div>
@@ -278,7 +278,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
                                 ? 'bg-red-50 text-red-700 border-red-200'
                                 : item[field] === 'DEĞİŞTİRİLDİ'
                                 ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                                : 'bg-gray-50 text-gray-500 border-gray-200'
+                                : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600'
                             }`}
                           >
                             {STATUS_OPTIONS.map(s => (
@@ -306,15 +306,15 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
                       value={item.notes}
                       onChange={e => updateItem(item.id, 'notes', e.target.value)}
                       placeholder="Not (isteğe bağlı)..."
-                      className="w-full border rounded px-2 py-1.5 text-xs text-gray-600 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                      className="w-full border rounded px-2 py-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                     />
                   </div>
                 ))}
               </div>
 
-              <div className="px-4 py-2.5 bg-gray-50 border-t flex items-center justify-between text-sm">
-                <span className="text-gray-500">
-                  Toplam: <span className="font-bold text-gray-900">{totalDevices}</span> cihaz
+              <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-t flex items-center justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">
+                  Toplam: <span className="font-bold text-gray-900 dark:text-gray-100">{totalDevices}</span> cihaz
                 </span>
                 <button
                   type="button"
@@ -329,10 +329,10 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
         </div>
 
         {/* Notlar + sonraki servis */}
-        <div className="bg-white border rounded-lg p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4 space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Genel Notlar</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Genel Notlar</label>
               <textarea
                 name="general_notes"
                 value={form.general_notes}
@@ -342,7 +342,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Müşteriye Not</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Müşteriye Not</label>
               <textarea
                 name="customer_note"
                 value={form.customer_note}
@@ -353,7 +353,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Sonraki Servis Tarihi</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Sonraki Servis Tarihi</label>
             <input
               type="date"
               name="next_service_date"
@@ -380,7 +380,7 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
           </button>
           <Link
             href={`/service-forms/${id}`}
-            className="px-8 py-3 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors text-center"
+            className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors text-center"
           >
             İptal
           </Link>

@@ -105,7 +105,7 @@ export default function BomRecete() {
     !urunSearch || u.ad.toLowerCase().includes(urunSearch.toLowerCase())
   )
 
-  if (loading) return <div className="p-6 text-sm text-gray-400">Yükleniyor...</div>
+  if (loading) return <div className="p-6 text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
 
   return (
     <div className="p-6 flex gap-6 h-full min-h-0">
@@ -117,9 +117,9 @@ export default function BomRecete() {
           onChange={e => setUrunSearch(e.target.value)}
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
         />
-        <div className="bg-white border rounded-xl overflow-hidden flex-1 overflow-y-auto">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden flex-1 overflow-y-auto">
           {filteredUrunler.length === 0 && (
-            <div className="p-4 text-sm text-gray-400 text-center">
+            <div className="p-4 text-sm text-gray-400 dark:text-gray-500 text-center">
               {urunler.length === 0 ? 'Stok kaydı olan ürün yok.\nÜretim tamamlandığında buraya gelir.' : 'Ürün bulunamadı'}
             </div>
           )}
@@ -128,10 +128,10 @@ export default function BomRecete() {
               className={`w-full text-left px-4 py-3 border-b text-sm transition-colors ${
                 selectedUrun?.id === u.id
                   ? 'bg-[#C8102E] text-white'
-                  : 'hover:bg-gray-50 text-gray-800'
+                  : 'hover:bg-gray-50 text-gray-800 dark:text-gray-200'
               }`}>
               <div className="font-medium leading-snug">{u.ad}</div>
-              <div className={`text-xs mt-0.5 ${selectedUrun?.id === u.id ? 'text-red-100' : 'text-gray-400'}`}>
+              <div className={`text-xs mt-0.5 ${selectedUrun?.id === u.id ? 'text-red-100' : 'text-gray-400 dark:text-gray-500'}`}>
                 {u.kategori}
               </div>
             </button>
@@ -142,27 +142,27 @@ export default function BomRecete() {
       {/* Sağ panel — reçete */}
       <div className="flex-1 flex flex-col gap-4 min-w-0">
         {!selectedUrun ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-gray-400 bg-white border rounded-xl">
+          <div className="flex-1 flex items-center justify-center text-sm text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 border rounded-xl">
             Soldan bir ürün seçin
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">{selectedUrun.ad}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{selectedUrun.ad}</h3>
               <button onClick={() => setDuzMode(!duzMode)}
                 className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                  duzMode ? 'bg-gray-100 text-gray-700' : 'border-[#C8102E] text-[#C8102E] hover:bg-red-50'
+                  duzMode ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' : 'border-[#C8102E] text-[#C8102E] hover:bg-red-50'
                 }`}>
                 {duzMode ? '✓ Bitti' : recete.length === 0 ? '+ Reçete Tanımla' : '✎ Reçete Düzenle'}
               </button>
             </div>
 
             {receteLoading ? (
-              <div className="text-sm text-gray-400">Yükleniyor...</div>
+              <div className="text-sm text-gray-400 dark:text-gray-500">Yükleniyor...</div>
             ) : (
-              <div className="bg-white border rounded-xl overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-xs text-gray-500 uppercase border-b">
+                  <thead className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase border-b">
                     <tr>
                       <th className="px-4 py-2 text-left">Hammadde</th>
                       <th className="px-4 py-2 text-right">Miktar</th>
@@ -174,7 +174,7 @@ export default function BomRecete() {
                   </thead>
                   <tbody className="divide-y">
                     {recete.length === 0 && (
-                      <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400 text-xs">
+                      <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400 dark:text-gray-500 text-xs">
                         Reçete tanımlanmamış
                       </td></tr>
                     )}
@@ -195,8 +195,8 @@ export default function BomRecete() {
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-2 text-gray-500">{r.birim}</td>
-                          <td className="px-4 py-2 text-right text-gray-500">
+                          <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{r.birim}</td>
+                          <td className="px-4 py-2 text-right text-gray-500 dark:text-gray-400">
                             {bm > 0 ? `₺${bm.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : '—'}
                           </td>
                           <td className="px-4 py-2 text-right font-medium">
@@ -236,7 +236,7 @@ export default function BomRecete() {
                             placeholder="Miktar"
                             className="w-20 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
                         </td>
-                        <td className="px-4 py-2 text-gray-400 text-xs">{addForm.birim}</td>
+                        <td className="px-4 py-2 text-gray-400 dark:text-gray-500 text-xs">{addForm.birim}</td>
                         <td colSpan={duzMode ? 3 : 2} className="px-4 py-2">
                           <button onClick={handleAddItem} disabled={addSaving || !addForm.hammadde_id || !addForm.miktar}
                             className="text-xs bg-[#C8102E] text-white px-3 py-1 rounded hover:bg-[#a50d26] disabled:opacity-50">
@@ -252,15 +252,15 @@ export default function BomRecete() {
 
             {/* Maliyet özet */}
             {recete.length > 0 && (
-              <div className="bg-white border rounded-xl p-4 space-y-2 text-sm">
+              <div className="bg-white dark:bg-gray-800 border rounded-xl p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Toplam Hammadde Maliyeti</span>
+                  <span className="text-gray-500 dark:text-gray-400">Toplam Hammadde Maliyeti</span>
                   <span className="font-medium">₺{hammaddeMaliyeti.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500">+ İşçilik Maliyeti</span>
+                  <span className="text-gray-500 dark:text-gray-400">+ İşçilik Maliyeti</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400 text-xs">₺</span>
+                    <span className="text-gray-400 dark:text-gray-500 text-xs">₺</span>
                     <input type="number" min="0" step="1" value={iscilikMaliyeti || ''}
                       onChange={e => setIscilikMaliyeti(Number(e.target.value) || 0)}
                       className="w-24 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
@@ -270,7 +270,7 @@ export default function BomRecete() {
                   <span>= Toplam Üretim Maliyeti</span>
                   <span>₺{toplamMaliyet.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between text-gray-500">
+                <div className="flex justify-between text-gray-500 dark:text-gray-400">
                   <span>Satış Fiyatı (KDV Hariç)</span>
                   <span>₺{satisFiyati.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
                 </div>

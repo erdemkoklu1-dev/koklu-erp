@@ -34,8 +34,8 @@ export default async function KurallarPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Hatırlatma Kuralları</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Otomatik hatırlatma için tetikleyici kurallar tanımlayın</p>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Hatırlatma Kuralları</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Otomatik hatırlatma için tetikleyici kurallar tanımlayın</p>
         </div>
         <KuralModal sablonlar={sablonlar ?? []} />
       </div>
@@ -45,21 +45,21 @@ export default async function KurallarPage() {
         Otomatik gönderim için Supabase Edge Functions veya harici bir cron servisi gereklidir.
       </div>
 
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         {(kurallar ?? []).length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-gray-400">
+          <div className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
             Henüz kural tanımlanmamış.{' '}
             <span className="text-[#C8102E]">+ Yeni Kural ile başlayın.</span>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="border-b bg-gray-50">
+            <thead className="border-b bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Tetikleyici</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Zamanlama</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Şablon</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Kanal</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Durum</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Tetikleyici</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Zamanlama</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Şablon</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kanal</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
@@ -68,20 +68,20 @@ export default async function KurallarPage() {
                 const sablon = k.hatirlatma_sablonlari as { id: string; ad: string; kanal: string } | null
                 return (
                   <tr key={k.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-800 font-medium">
+                    <td className="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 font-medium">
                       {TETIKLEYICI_LABEL[k.tetikleyici_tip] ?? k.tetikleyici_tip}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {k.gun_oncesi === 0
                         ? 'Tarih geçince'
                         : `${k.gun_oncesi} gün önce`}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                       {sablon?.ad ?? <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {sablon?.kanal ? (
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${KANAL_BADGE[sablon.kanal] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${KANAL_BADGE[sablon.kanal] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>
                           {sablon.kanal}
                         </span>
                       ) : <span className="text-gray-300 text-xs">—</span>}
@@ -90,7 +90,7 @@ export default async function KurallarPage() {
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${
                         k.aktif
                           ? 'bg-green-50 text-green-700 border-green-200'
-                          : 'bg-gray-100 text-gray-500 border-gray-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600'
                       }`}>
                         {k.aktif ? 'Aktif' : 'Pasif'}
                       </span>
@@ -100,7 +100,7 @@ export default async function KurallarPage() {
                         kural={k}
                         sablonlar={sablonlar ?? []}
                         trigger={
-                          <button className="text-xs text-gray-500 hover:text-[#C8102E] underline">
+                          <button className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#C8102E] underline">
                             Düzenle
                           </button>
                         }

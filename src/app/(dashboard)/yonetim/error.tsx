@@ -16,7 +16,7 @@ export default function YonetimError({
 
   return (
     <div className="flex items-center justify-center h-full min-h-[60vh] p-6">
-      <div className="max-w-md w-full bg-white rounded-2xl border shadow-sm p-8 text-center space-y-4">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-8 text-center space-y-4">
         <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto">
           <svg className="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -24,8 +24,8 @@ export default function YonetimError({
           </svg>
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Yönetim paneli yüklenemedi</h2>
-          <p className="text-sm text-gray-500 mt-1">{error.message || 'Bir hata oluştu.'}</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yönetim paneli yüklenemedi</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{error.message || 'Bir hata oluştu.'}</p>
         </div>
         <div className="flex gap-3 justify-center">
           <button

@@ -136,7 +136,7 @@ export default async function GidenFaturalarPage({
 
       {/* Üst bar */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Giden Faturalar</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Giden Faturalar</h2>
         <div className="flex items-center gap-2">
           <PrintButton />
           <Link href="/cari-hesap/faturalar/new"
@@ -148,25 +148,25 @@ export default async function GidenFaturalarPage({
 
       {/* KPI */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-0.5">Toplam Giden Fatura</div>
-          <div className="text-xl font-bold text-gray-900">{formatCurrency(toplamTutar)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">{invoices.length} fatura</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Toplam Giden Fatura</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(toplamTutar)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{invoices.length} fatura</div>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
           <div className="text-xs text-green-600 mb-0.5">Tahsil Edilen</div>
           <div className="text-xl font-bold text-green-700">{formatCurrency(toplamOdenen)}</div>
         </div>
-        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Kalan Alacak</div>
-          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900'}`}>
+        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Kalan Alacak</div>
+          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>
             {formatCurrency(toplamKalan)}
           </div>
         </div>
-        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gecikmiş</div>
-          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900'}`}>{gecikmisSayi}</div>
-          <div className="text-xs text-gray-400 mt-0.5">vadesi geçmiş</div>
+        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş</div>
+          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>{gecikmisSayi}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">vadesi geçmiş</div>
         </div>
       </div>
 
@@ -174,30 +174,30 @@ export default async function GidenFaturalarPage({
       <GidenFiltresi />
 
       {/* Sonuç sayısı */}
-      <div className="text-sm text-gray-500 px-1">
-        <span className="font-semibold text-gray-700">{invoices.length}</span> sonuç bulundu
+      <div className="text-sm text-gray-500 dark:text-gray-400 px-1">
+        <span className="font-semibold text-gray-700 dark:text-gray-300">{invoices.length}</span> sonuç bulundu
       </div>
 
       {/* Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Müşteri</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tarih</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Vade</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kalan</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Durum</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Vade</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kalan</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y">
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">Fatura bulunamadı</td>
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">Fatura bulunamadı</td>
                 </tr>
               ) : invoices.map(inv => {
                 const customer = inv.customers as any
@@ -221,14 +221,14 @@ export default async function GidenFaturalarPage({
                         {inv.invoice_number}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                       {customer?.full_name ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {inv.due_date ? (
                         <div className="flex items-center gap-1.5">
-                          <span className={isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-600'}>
+                          <span className={isOverdue ? 'text-red-600 font-medium' : isToday ? 'text-orange-600 font-medium' : 'text-gray-600 dark:text-gray-300'}>
                             {formatTRDate(inv.due_date)}
                           </span>
                           {isOverdue && (
@@ -241,10 +241,10 @@ export default async function GidenFaturalarPage({
                             <span className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded-full">{daysLeft}g kaldı</span>
                           )}
                         </div>
-                      ) : <span className="text-gray-400">—</span>}
+                      ) : <span className="text-gray-400 dark:text-gray-500">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-800">{formatCurrency(inv.total_amount)}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${kalan > 0 ? (isOverdue ? 'text-red-600' : 'text-orange-600') : 'text-gray-400'}`}>
+                    <td className="px-4 py-3 text-right font-medium text-gray-800 dark:text-gray-200">{formatCurrency(inv.total_amount)}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${kalan > 0 ? (isOverdue ? 'text-red-600' : 'text-orange-600') : 'text-gray-400 dark:text-gray-500'}`}>
                       {kalan > 0 ? formatCurrency(kalan) : '—'}
                     </td>
                     <td className="px-4 py-3">

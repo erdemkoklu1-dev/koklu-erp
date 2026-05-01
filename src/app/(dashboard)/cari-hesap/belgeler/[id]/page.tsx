@@ -72,9 +72,9 @@ export default async function BelgeDetayPage({
 
       {/* Başlık */}
       <div className="flex items-center gap-3">
-        <Link href="/cari-hesap/belgeler" className="text-sm text-gray-500 hover:text-gray-700">← Belgeler</Link>
+        <Link href="/cari-hesap/belgeler" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Belgeler</Link>
         <span className="text-gray-300">/</span>
-        <h2 className="text-base font-semibold text-gray-900 truncate max-w-xs">{doc.file_name}</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate max-w-xs">{doc.file_name}</h2>
         {doc.processed ? (
           <span className="text-xs bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-full flex-shrink-0">İşlendi</span>
         ) : (
@@ -88,9 +88,9 @@ export default async function BelgeDetayPage({
         <div className="space-y-4">
 
           {/* Dosya önizleme */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">Dosya</h3>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Dosya</h3>
               {fileUrl && (
                 <a href={fileUrl} target="_blank" rel="noopener noreferrer"
                   className="text-xs text-[#C8102E] font-medium hover:underline">
@@ -107,7 +107,7 @@ export default async function BelgeDetayPage({
                   <img src={fileUrl} alt={doc.file_name} className="w-full rounded object-contain max-h-64" />
                 )
               ) : (
-                <div className="h-32 flex flex-col items-center justify-center text-gray-400 text-sm gap-1">
+                <div className="h-32 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 text-sm gap-1">
                   <span className="text-2xl">📄</span>
                   <span>Önizleme yüklenemedi</span>
                   <span className="text-xs">Storage bucket ayarlarını kontrol edin</span>
@@ -117,32 +117,32 @@ export default async function BelgeDetayPage({
           </div>
 
           {/* Belge bilgileri */}
-          <div className="bg-white border rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b">Belge Bilgileri</h3>
+          <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 pb-2 border-b">Belge Bilgileri</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Tür</span>
-                <span className="text-gray-800">{DOC_LABELS[doc.document_type] ?? doc.document_type}</span>
+                <span className="text-gray-500 dark:text-gray-400">Tür</span>
+                <span className="text-gray-800 dark:text-gray-200">{DOC_LABELS[doc.document_type] ?? doc.document_type}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Yüklendi</span>
-                <span className="text-gray-800">{formatTRDate(doc.uploaded_at)}</span>
+                <span className="text-gray-500 dark:text-gray-400">Yüklendi</span>
+                <span className="text-gray-800 dark:text-gray-200">{formatTRDate(doc.uploaded_at)}</span>
               </div>
               {sizeKb && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Boyut</span>
-                  <span className="text-gray-800">{sizeKb} KB</span>
+                  <span className="text-gray-500 dark:text-gray-400">Boyut</span>
+                  <span className="text-gray-800 dark:text-gray-200">{sizeKb} KB</span>
                 </div>
               )}
               {doc.amount && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Tutar</span>
-                  <span className="font-semibold text-gray-900">{formatCurrency(doc.amount)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Tutar</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(doc.amount)}</span>
                 </div>
               )}
               {customer && (
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Müşteri</span>
+                  <span className="text-gray-500 dark:text-gray-400">Müşteri</span>
                   <Link href={`/cari-hesap/musteri-cari/${customer.id}`}
                     className="text-[#C8102E] font-medium hover:underline">
                     {customer.full_name}
@@ -151,8 +151,8 @@ export default async function BelgeDetayPage({
               )}
               {doc.notes && (
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-500 flex-shrink-0">Not</span>
-                  <span className="text-gray-700 text-right">{doc.notes}</span>
+                  <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Not</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-right">{doc.notes}</span>
                 </div>
               )}
             </div>
@@ -190,12 +190,12 @@ export default async function BelgeDetayPage({
         </div>
 
         {/* Sağ: İşlem formu */}
-        <div className="bg-white border rounded-xl p-5">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
           {doc.processed ? (
             <div className="text-center py-8 space-y-2">
               <div className="text-3xl">✅</div>
               <div className="text-sm font-semibold text-green-700">Bu belge işlendi</div>
-              <div className="text-xs text-gray-400">Ödeme kaydı oluşturuldu</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">Ödeme kaydı oluşturuldu</div>
               {linkedInv && (
                 <Link href={`/cari-hesap/faturalar/${linkedInv.id}`}
                   className="mt-3 inline-block text-sm text-[#C8102E] font-medium hover:underline">
@@ -205,10 +205,10 @@ export default async function BelgeDetayPage({
             </div>
           ) : canProcess ? (
             <>
-              <h3 className="text-sm font-semibold text-gray-900 mb-2 pb-2 border-b">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 pb-2 border-b">
                 Ödeme Kaydı Oluştur
               </h3>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                 Bu belgeyi ilgili faturaya bağlayın. Onaylandığında otomatik ödeme kaydı oluşturulur ve fatura bakiyesi güncellenir.
               </p>
               <BelgeIsleClient
@@ -221,7 +221,7 @@ export default async function BelgeDetayPage({
           ) : (
             <div className="text-center py-8 space-y-2">
               <div className="text-2xl text-gray-300">📁</div>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
                 Bu belge arşiv olarak saklandı.
               </div>
               {customer && (

@@ -71,52 +71,52 @@ function EmployeeModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
         <div className="px-5 py-4 border-b flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Yeni Çalışan Ekle</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Yeni Çalışan Ekle</h3>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-lg">×</button>
         </div>
         <form onSubmit={handleSave} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="text-sm font-medium text-gray-700">Ad Soyad</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ad Soyad</label>
               <input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Ünvan</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ünvan</label>
               <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 placeholder="Teknisyen, Muhasebe..." />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Brüt Maaş (₺)</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brüt Maaş (₺)</label>
               <input type="number" step="0.01" value={form.gross_salary}
                 onChange={e => setForm(p => ({ ...p, gross_salary: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">TC Kimlik No</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">TC Kimlik No</label>
               <input value={form.tc_no} onChange={e => setForm(p => ({ ...p, tc_no: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">SGK No</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">SGK No</label>
               <input value={form.sgk_no} onChange={e => setForm(p => ({ ...p, sgk_no: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Telefon</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Telefon</label>
               <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">IBAN</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">IBAN</label>
               <input value={form.iban} onChange={e => setForm(p => ({ ...p, iban: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">İşe Başlama</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">İşe Başlama</label>
               <input type="date" value={form.start_date}
                 onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
@@ -129,7 +129,7 @@ function EmployeeModal({ onClose }: { onClose: () => void }) {
               {loading ? 'Kaydediliyor...' : 'Kaydet'}
             </button>
             <button type="button" onClick={onClose}
-              className="px-5 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">İptal</button>
+              className="px-5 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">İptal</button>
           </div>
         </form>
       </div>
@@ -230,17 +230,17 @@ function SalaryPayModal({
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">{employee.full_name}</h3>
-            <p className="text-xs text-gray-400">{MONTHS_TR[month - 1]} {year} Maaş Ödemesi</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{employee.full_name}</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{MONTHS_TR[month - 1]} {year} Maaş Ödemesi</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">×</button>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-lg">×</button>
         </div>
         <form onSubmit={handlePay} className="p-5 space-y-3">
           <div>
-            <label className="text-sm font-medium text-gray-700">Brüt Maaş (₺)</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brüt Maaş (₺)</label>
             <input type="number" step="0.01" value={form.gross_amount}
               onChange={e => {
                 setForm(p => ({ ...p, gross_amount: e.target.value }))
@@ -249,32 +249,32 @@ function SalaryPayModal({
               }}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
           </div>
-          <div className="bg-gray-50 border rounded-lg p-3 space-y-1.5 text-sm">
+          <div className="bg-gray-50 dark:bg-gray-700 border rounded-lg p-3 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">SGK İşçi (%15)</span>
+              <span className="text-gray-500 dark:text-gray-400">SGK İşçi (%15)</span>
               <input type="number" step="0.01" value={form.sgk_employee}
                 onChange={e => setForm(p => ({ ...p, sgk_employee: e.target.value }))}
                 className="w-28 border rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Gelir Vergisi</span>
+              <span className="text-gray-500 dark:text-gray-400">Gelir Vergisi</span>
               <input type="number" step="0.01" value={form.income_tax}
                 onChange={e => setForm(p => ({ ...p, income_tax: e.target.value }))}
                 className="w-28 border rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Damga Vergisi (%0.759)</span>
+              <span className="text-gray-500 dark:text-gray-400">Damga Vergisi (%0.759)</span>
               <input type="number" step="0.01" value={form.stamp_tax}
                 onChange={e => setForm(p => ({ ...p, stamp_tax: e.target.value }))}
                 className="w-28 border rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#C8102E]" />
             </div>
             <div className="flex justify-between font-semibold border-t pt-1.5">
-              <span className="text-gray-900">Net Ödenecek</span>
+              <span className="text-gray-900 dark:text-gray-100">Net Ödenecek</span>
               <input type="number" step="0.01" value={form.net_amount}
                 onChange={e => setForm(p => ({ ...p, net_amount: e.target.value }))}
                 className="w-28 border-2 border-[#C8102E] rounded px-2 py-0.5 text-sm text-right font-bold text-[#C8102E] focus:outline-none" />
             </div>
-            <div className="flex justify-between text-xs text-gray-500 border-t pt-1">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 border-t pt-1">
               <span>SGK İşveren (%22.5)</span>
               <input type="number" step="0.01" value={form.sgk_employer}
                 onChange={e => setForm(p => ({ ...p, sgk_employer: e.target.value }))}
@@ -287,15 +287,15 @@ function SalaryPayModal({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">Ödeme Tarihi</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ödeme Tarihi</label>
               <input type="date" value={form.payment_date}
                 onChange={e => setForm(p => ({ ...p, payment_date: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Yöntem</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Yöntem</label>
               <select value={form.payment_method} onChange={e => setForm(p => ({ ...p, payment_method: e.target.value }))}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                 <option value="havale_eft">Havale / EFT</option>
                 <option value="nakit">Nakit</option>
               </select>
@@ -308,7 +308,7 @@ function SalaryPayModal({
               {loading ? 'Ödeniyor...' : `${formatCurrency(parseFloat(form.net_amount) || 0)} Öde`}
             </button>
             <button type="button" onClick={onClose}
-              className="px-5 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">İptal</button>
+              className="px-5 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">İptal</button>
           </div>
         </form>
       </div>

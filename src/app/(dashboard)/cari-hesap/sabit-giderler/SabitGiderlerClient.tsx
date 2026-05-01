@@ -102,7 +102,7 @@ export default function SabitGiderlerClient({ mode, categories, expense }: Props
       ) : (
         <div className="flex gap-1">
           <button onClick={() => setOpen(true)}
-            className="text-xs text-gray-400 hover:text-[#C8102E] px-2 py-1 border rounded hover:border-[#C8102E]">
+            className="text-xs text-gray-400 dark:text-gray-500 hover:text-[#C8102E] px-2 py-1 border rounded hover:border-[#C8102E]">
             Düzenle
           </button>
           <button onClick={handleDelete}
@@ -114,39 +114,39 @@ export default function SabitGiderlerClient({ mode, categories, expense }: Props
 
       {open && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
             <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {mode === 'edit-button' ? 'Sabit Gider Düzenle' : 'Yeni Sabit Gider'}
               </h3>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+              <button onClick={() => setOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-lg leading-none">×</button>
             </div>
             <form onSubmit={handleSave} className="p-5 space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Kategori</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Kategori</label>
                 <select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                   <option value="">— Seçin</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Gider Adı</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Gider Adı</label>
                 <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                   placeholder="örn: Ofis Kirası" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Tutar (₺)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tutar (₺)</label>
                   <input type="number" step="0.01" min="0.01" value={form.amount}
                     onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">KDV Oranı (%)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">KDV Oranı (%)</label>
                   <select value={form.kdv_rate} onChange={e => setForm(p => ({ ...p, kdv_rate: e.target.value }))}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                     <option value="0">KDV Yok</option>
                     <option value="10">%10</option>
                     <option value="20">%20</option>
@@ -155,14 +155,14 @@ export default function SabitGiderlerClient({ mode, categories, expense }: Props
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Periyot</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Periyot</label>
                   <select value={form.period} onChange={e => setForm(p => ({ ...p, period: e.target.value }))}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white">
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
                     {PERIODS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Ayın Kaçında?</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ayın Kaçında?</label>
                   <input type="number" min="1" max="28" value={form.day_of_month}
                     onChange={e => setForm(p => ({ ...p, day_of_month: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
@@ -170,20 +170,20 @@ export default function SabitGiderlerClient({ mode, categories, expense }: Props
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Başlangıç</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Başlangıç</label>
                   <input type="date" value={form.start_date}
                     onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Bitiş (opsiyonel)</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bitiş (opsiyonel)</label>
                   <input type="date" value={form.end_date}
                     onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))}
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Not</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Not</label>
                 <input value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                   placeholder="Opsiyonel not..." />
@@ -195,7 +195,7 @@ export default function SabitGiderlerClient({ mode, categories, expense }: Props
                   {loading ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>
                 <button type="button" onClick={() => setOpen(false)}
-                  className="px-5 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                  className="px-5 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                   İptal
                 </button>
               </div>

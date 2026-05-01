@@ -82,7 +82,7 @@ export default function TedarikciModal({ initial, trigger }: Props) {
     label: string; field: keyof TedarikciForm; type?: string; placeholder?: string
   }) => (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{label}</label>
       <input
         type={type}
         value={form[field]}
@@ -105,18 +105,18 @@ export default function TedarikciModal({ initial, trigger }: Props) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
-              <h2 className="text-base font-bold text-gray-900">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
                 {initial?.id ? 'Tedarikçiyi Düzenle' : 'Yeni Tedarikçi Ekle'}
               </h2>
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+              <button onClick={() => setOpen(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
 
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Firma Adı <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Firma Adı <span className="text-red-500">*</span></label>
                   <input
                     value={form.firma_adi}
                     onChange={e => set('firma_adi', e.target.value)}
@@ -127,7 +127,7 @@ export default function TedarikciModal({ initial, trigger }: Props) {
                 <Field label="Vergi No / TC No" field="vergi_no" placeholder="1234567890" />
                 <Field label="Vergi Dairesi" field="vergi_dairesi" placeholder="Erzincan" />
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Adres</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Adres</label>
                   <input
                     value={form.adres}
                     onChange={e => set('adres', e.target.value)}
@@ -142,7 +142,7 @@ export default function TedarikciModal({ initial, trigger }: Props) {
                 <Field label="Yetkili Kişi Adı" field="yetkili_adi" placeholder="Ahmet Yılmaz" />
                 <Field label="Yetkili Telefonu" field="yetkili_telefon" placeholder="0532 000 00 00" />
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Sattığı Ürünler / Hizmetler</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Sattığı Ürünler / Hizmetler</label>
                   <textarea
                     value={form.urunler_hizmetler}
                     onChange={e => set('urunler_hizmetler', e.target.value)}
@@ -153,7 +153,7 @@ export default function TedarikciModal({ initial, trigger }: Props) {
                 </div>
                 <Field label="Ödeme Vadesi (gün)" field="odeme_vadesi" type="number" placeholder="30" />
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Notlar</label>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Notlar</label>
                   <input
                     value={form.notlar}
                     onChange={e => set('notlar', e.target.value)}
@@ -168,7 +168,7 @@ export default function TedarikciModal({ initial, trigger }: Props) {
 
             <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0">
               <button type="button" onClick={() => setOpen(false)}
-                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+                className="flex-1 border rounded-lg py-2.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50">
                 İptal
               </button>
               <button

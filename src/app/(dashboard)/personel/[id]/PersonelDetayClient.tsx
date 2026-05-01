@@ -39,7 +39,7 @@ const DURUM_CFG: Record<string, { label: string; cls: string }> = {
   izinli: { label: 'İzinli', cls: 'bg-blue-100 text-blue-700 border border-blue-200' },
   deneme: { label: 'Deneme', cls: 'bg-yellow-100 text-yellow-700 border border-yellow-200' },
   istifa: { label: 'İstifa', cls: 'bg-red-100 text-red-700 border border-red-200' },
-  cikis:  { label: 'Çıkış',  cls: 'bg-gray-100 text-gray-600 border border-gray-200' },
+  cikis:  { label: 'Çıkış',  cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600' },
 }
 
 const IZIN_TIPI_LABEL: Record<string, string> = {
@@ -52,7 +52,7 @@ const IZIN_DURUM_CFG: Record<string, { label: string; cls: string }> = {
   bekliyor:    { label: 'Bekliyor',    cls: 'bg-yellow-100 text-yellow-700' },
   onaylandi:   { label: 'Onaylandı',  cls: 'bg-green-100 text-green-700' },
   reddedildi:  { label: 'Reddedildi', cls: 'bg-red-100 text-red-700' },
-  iptal:       { label: 'İptal',       cls: 'bg-gray-100 text-gray-500' },
+  iptal:       { label: 'İptal',       cls: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' },
 }
 
 const KATEGORI_LABEL: Record<string, string> = {
@@ -65,11 +65,11 @@ const BELGE_TIPI_LABEL: Record<string, string> = {
   kimlik: 'Kimlik', sgk: 'SGK', vergi: 'Vergi', diger: 'Diğer'
 }
 
-const thCls = 'px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide'
-const tdCls = 'px-4 py-3 text-sm text-gray-700'
+const thCls = 'px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide'
+const tdCls = 'px-4 py-3 text-sm text-gray-700 dark:text-gray-300'
 const INPUT = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500'
-const SELECT = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white'
-const LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+const SELECT = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-800'
+const LABEL = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
 
 type Tab = 'genel' | 'izin' | 'maas' | 'mesai' | 'performans' | 'belgeler' | 'ozluk'
 
@@ -167,7 +167,7 @@ export default function PersonelDetayClient({
   const [localBelgeler, setLocalBelgeler] = useState<Belge[]>(belgeler)
 
   const kidem = kidimHesapla(personel.ise_baslama_tarihi)
-  const durumCfg = DURUM_CFG[durum] ?? { label: durum, cls: 'bg-gray-100 text-gray-600' }
+  const durumCfg = DURUM_CFG[durum] ?? { label: durum, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }
 
   /* --- İzin Kaydet --- */
   async function kaydetIzin() {
@@ -335,7 +335,7 @@ export default function PersonelDetayClient({
     <div className="p-6 max-w-screen-xl mx-auto space-y-6">
       {/* Üst Başlık */}
       <div className="flex items-start gap-4">
-        <Link href="/personel" className="text-gray-400 hover:text-gray-600 mt-1"><ChevronLeft size={20} /></Link>
+        <Link href="/personel" className="text-gray-400 dark:text-gray-500 hover:text-gray-600 mt-1"><ChevronLeft size={20} /></Link>
         <div className="flex-1">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -343,20 +343,20 @@ export default function PersonelDetayClient({
                 {personel.ad[0]}{personel.soyad[0]}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{personel.ad} {personel.soyad}</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{personel.ad} {personel.soyad}</h1>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {personel.pozisyon && <span className="text-sm text-gray-500">{personel.pozisyon}</span>}
+                  {personel.pozisyon && <span className="text-sm text-gray-500 dark:text-gray-400">{personel.pozisyon}</span>}
                   {personel.subeler && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">{personel.subeler.ad}</span>}
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${durumCfg.cls}`}>{durumCfg.label}</span>
-                  {personel.sicil_no && <span className="text-xs text-gray-400 font-mono">{personel.sicil_no}</span>}
+                  {personel.sicil_no && <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">{personel.sicil_no}</span>}
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href={`/personel/${personel.id}/edit`} className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              <Link href={`/personel/${personel.id}/edit`} className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors">
                 <Edit size={14} /> Düzenle
               </Link>
-              <button onClick={() => { setTab('izin'); setIzinModal(true) }} className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              <button onClick={() => { setTab('izin'); setIzinModal(true) }} className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors">
                 <Calendar size={14} /> İzin Ekle
               </button>
               <button onClick={() => { setTab('maas'); setMaasModal(true) }} className="flex items-center gap-2 bg-[#C8102E] text-white rounded-lg px-3 py-2 text-sm hover:bg-red-700 transition-colors">
@@ -374,7 +374,7 @@ export default function PersonelDetayClient({
             const Icon = t.icon
             return (
               <button key={t.key} onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${tab === t.key ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${tab === t.key ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>
                 <Icon size={15} /> {t.label}
               </button>
             )
@@ -402,7 +402,7 @@ export default function PersonelDetayClient({
             <InfoRow label="Şehir"           value={personel.sehir} />
             <InfoRow label="Posta Kodu"      value={personel.posta_kodu} />
             <div className="border-t pt-2 mt-2">
-              <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide">Acil İletişim</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide">Acil İletişim</p>
               <InfoRow label="Ad Soyad"      value={personel.acil_iletisim_adi} />
               <InfoRow label="Telefon"       value={personel.acil_iletisim_telefonu} />
               <InfoRow label="Yakınlık"      value={personel.acil_iletisim_yakinligi} />
@@ -443,17 +443,17 @@ export default function PersonelDetayClient({
               { label: 'Kalan', value: Math.max(0, kalan), color: 'text-green-600' },
               { label: 'Devreden', value: buYilHak?.devreden ?? 0, color: 'text-purple-600' },
             ].map(s => (
-              <div key={s.label} className="bg-white rounded-xl border p-4 text-center">
+              <div key={s.label} className="bg-white dark:bg-gray-800 rounded-xl border p-4 text-center">
                 <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Tablo */}
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border overflow-hidden">
             <div className="px-4 py-3 border-b flex items-center justify-between">
-              <p className="font-semibold text-gray-800 text-sm">İzin Talepleri</p>
+              <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">İzin Talepleri</p>
               <button onClick={() => setIzinModal(true)} className="flex items-center gap-1.5 text-sm text-[#C8102E] hover:underline font-medium">
                 <Plus size={14} /> İzin Talebi Ekle
               </button>
@@ -469,7 +469,7 @@ export default function PersonelDetayClient({
               </tr></thead>
               <tbody className="divide-y">
                 {localIzinler.map(i => {
-                  const dc = IZIN_DURUM_CFG[i.durum] ?? { label: i.durum, cls: 'bg-gray-100 text-gray-600' }
+                  const dc = IZIN_DURUM_CFG[i.durum] ?? { label: i.durum, cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }
                   return (
                     <tr key={i.id} className="hover:bg-gray-50">
                       <td className={tdCls}>{IZIN_TIPI_LABEL[i.izin_tipi] ?? i.izin_tipi}</td>
@@ -488,7 +488,7 @@ export default function PersonelDetayClient({
                     </tr>
                   )
                 })}
-                {localIzinler.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm">İzin kaydı yok.</td></tr>}
+                {localIzinler.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">İzin kaydı yok.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -499,7 +499,7 @@ export default function PersonelDetayClient({
       {tab === 'maas' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">Maaş Ödemeleri</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-200">Maaş Ödemeleri</p>
             <button onClick={() => setMaasModal(true)} className="flex items-center gap-1.5 text-sm text-[#C8102E] hover:underline font-medium">
               <Plus size={14} /> Maaş Ödemesi Ekle
             </button>
@@ -507,13 +507,13 @@ export default function PersonelDetayClient({
 
           {/* Bar chart */}
           {maasBarData.length > 0 && (
-            <div className="bg-white rounded-xl border p-4">
-              <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Yıllık Net Maaş</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border p-4">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Yıllık Net Maaş</p>
               <div className="flex items-end gap-1 h-24">
                 {maasBarData.map(([ay, val]) => (
                   <div key={ay} className="flex-1 flex flex-col items-center gap-1">
                     <div className="w-full bg-[#C8102E] rounded-sm" style={{ height: `${(val / maxMaas) * 80}px` }} title={formatCurrency(val)} />
-                    <span className="text-xs text-gray-400">{ay.slice(5)}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{ay.slice(5)}</span>
                   </div>
                 ))}
               </div>
@@ -523,9 +523,9 @@ export default function PersonelDetayClient({
           {/* Maaş kartları */}
           <div className="space-y-3">
             {localMaaslar.map(m => (
-              <div key={m.id} className="bg-white rounded-xl border p-4">
+              <div key={m.id} className="bg-white dark:bg-gray-800 rounded-xl border p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="font-semibold text-gray-900">{m.odeme_donemi.slice(0, 4)} / {m.odeme_donemi.slice(5, 7)}</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{m.odeme_donemi.slice(0, 4)} / {m.odeme_donemi.slice(5, 7)}</p>
                   <div className="flex items-center gap-2">
                     {m.odendi
                       ? <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 font-medium">Ödendi ✓</span>
@@ -535,27 +535,27 @@ export default function PersonelDetayClient({
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                  <div><p className="text-xs text-gray-400">Brüt</p><p className="font-medium">{formatCurrency(m.brut_maas)}</p></div>
-                  <div><p className="text-xs text-gray-400">SGK İşçi</p><p className="text-orange-600">-{formatCurrency(m.sgk_isci_payi)}</p></div>
-                  <div><p className="text-xs text-gray-400">Gelir Vergisi</p><p className="text-orange-600">-{formatCurrency(m.gelir_vergisi)}</p></div>
-                  <div><p className="text-xs text-gray-400">Damga Vergisi</p><p className="text-orange-600">-{formatCurrency(m.damga_vergisi)}</p></div>
-                  <div><p className="text-xs text-gray-400">Net Maaş</p><p className="font-bold text-green-600">{formatCurrency(m.net_maas)}</p></div>
-                  {m.mesai_ucreti > 0 && <div><p className="text-xs text-gray-400">Mesai</p><p className="text-blue-600">+{formatCurrency(m.mesai_ucreti)}</p></div>}
-                  {m.ikramiye > 0 && <div><p className="text-xs text-gray-400">İkramiye</p><p className="text-blue-600">+{formatCurrency(m.ikramiye)}</p></div>}
-                  <div><p className="text-xs text-gray-400">Toplam Ödenen</p><p className="font-bold">{formatCurrency(m.toplam_odenen)}</p></div>
+                  <div><p className="text-xs text-gray-400 dark:text-gray-500">Brüt</p><p className="font-medium">{formatCurrency(m.brut_maas)}</p></div>
+                  <div><p className="text-xs text-gray-400 dark:text-gray-500">SGK İşçi</p><p className="text-orange-600">-{formatCurrency(m.sgk_isci_payi)}</p></div>
+                  <div><p className="text-xs text-gray-400 dark:text-gray-500">Gelir Vergisi</p><p className="text-orange-600">-{formatCurrency(m.gelir_vergisi)}</p></div>
+                  <div><p className="text-xs text-gray-400 dark:text-gray-500">Damga Vergisi</p><p className="text-orange-600">-{formatCurrency(m.damga_vergisi)}</p></div>
+                  <div><p className="text-xs text-gray-400 dark:text-gray-500">Net Maaş</p><p className="font-bold text-green-600">{formatCurrency(m.net_maas)}</p></div>
+                  {m.mesai_ucreti > 0 && <div><p className="text-xs text-gray-400 dark:text-gray-500">Mesai</p><p className="text-blue-600">+{formatCurrency(m.mesai_ucreti)}</p></div>}
+                  {m.ikramiye > 0 && <div><p className="text-xs text-gray-400 dark:text-gray-500">İkramiye</p><p className="text-blue-600">+{formatCurrency(m.ikramiye)}</p></div>}
+                  <div><p className="text-xs text-gray-400 dark:text-gray-500">Toplam Ödenen</p><p className="font-bold">{formatCurrency(m.toplam_odenen)}</p></div>
                 </div>
-                {m.odeme_tarihi && <p className="text-xs text-gray-400 mt-2">Ödeme Tarihi: {formatTRDate(m.odeme_tarihi)} · {m.odeme_yontemi}</p>}
+                {m.odeme_tarihi && <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Ödeme Tarihi: {formatTRDate(m.odeme_tarihi)} · {m.odeme_yontemi}</p>}
               </div>
             ))}
-            {localMaaslar.length === 0 && <div className="bg-white rounded-xl border p-10 text-center text-gray-400 text-sm">Maaş ödemesi bulunamadı.</div>}
+            {localMaaslar.length === 0 && <div className="bg-white dark:bg-gray-800 rounded-xl border p-10 text-center text-gray-400 dark:text-gray-500 text-sm">Maaş ödemesi bulunamadı.</div>}
           </div>
 
           {/* İşveren maliyeti özeti */}
           {localMaaslar.length > 0 && (
-            <div className="bg-white rounded-xl border p-4">
-              <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Toplam İşveren Maliyeti</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border p-4">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Toplam İşveren Maliyeti</p>
               <p className="text-xl font-bold text-[#C8102E]">{formatCurrency(localMaaslar.reduce((s, m) => s + m.brut_maas + m.sgk_isveren_payi, 0))}</p>
-              <p className="text-xs text-gray-400 mt-1">Brüt maaş + SGK işveren payı toplamı</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Brüt maaş + SGK işveren payı toplamı</p>
             </div>
           )}
         </div>
@@ -565,12 +565,12 @@ export default function PersonelDetayClient({
       {tab === 'mesai' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">Mesai Kayıtları</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-200">Mesai Kayıtları</p>
             <button onClick={() => setMesaiModal(true)} className="flex items-center gap-1.5 text-sm text-[#C8102E] hover:underline font-medium">
               <Plus size={14} /> Mesai Kaydı Ekle
             </button>
           </div>
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border overflow-hidden">
             <table className="w-full">
               <thead className="border-b"><tr>
                 <th className={thCls}>Tarih</th>
@@ -594,13 +594,13 @@ export default function PersonelDetayClient({
                       }
                     </td>
                     <td className={tdCls}>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${m.mesai_tipi === 'resmi_tatil' ? 'bg-red-100 text-red-700' : m.mesai_tipi === 'hafta_sonu' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${m.mesai_tipi === 'resmi_tatil' ? 'bg-red-100 text-red-700' : m.mesai_tipi === 'hafta_sonu' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                         {m.mesai_tipi === 'normal' ? 'Normal' : m.mesai_tipi === 'hafta_sonu' ? 'H.Sonu' : 'Resmi'}
                       </span>
                     </td>
                   </tr>
                 ))}
-                {localMesailer.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm">Mesai kaydı yok.</td></tr>}
+                {localMesailer.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">Mesai kaydı yok.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -611,16 +611,16 @@ export default function PersonelDetayClient({
       {tab === 'performans' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">Performans Değerlendirmeleri</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-200">Performans Değerlendirmeleri</p>
             <button onClick={() => setPerfModal(true)} className="flex items-center gap-1.5 text-sm text-[#C8102E] hover:underline font-medium">
               <Plus size={14} /> Değerlendirme Ekle
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {localPerformans.map(p => (
-              <div key={p.id} className="bg-white rounded-xl border p-4 space-y-2">
+              <div key={p.id} className="bg-white dark:bg-gray-800 rounded-xl border p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-gray-900">{p.donem}</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{p.donem}</p>
                   <div className="flex items-center gap-0.5">
                     {[1,2,3,4,5].map(s => (
                       <Star key={s} size={16} className={s <= (p.puan ?? 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'} />
@@ -628,12 +628,12 @@ export default function PersonelDetayClient({
                   </div>
                 </div>
                 {p.kategori && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">{KATEGORI_LABEL[p.kategori] ?? p.kategori}</span>}
-                {p.aciklama && <p className="text-sm text-gray-600">{p.aciklama}</p>}
-                {p.hedefler && <p className="text-xs text-gray-400 border-t pt-2 mt-2"><span className="font-medium">Hedefler:</span> {p.hedefler}</p>}
-                {p.degerlendiren && <p className="text-xs text-gray-400">Değerlendiren: {p.degerlendiren.ad} {p.degerlendiren.soyad}</p>}
+                {p.aciklama && <p className="text-sm text-gray-600 dark:text-gray-300">{p.aciklama}</p>}
+                {p.hedefler && <p className="text-xs text-gray-400 dark:text-gray-500 border-t pt-2 mt-2"><span className="font-medium">Hedefler:</span> {p.hedefler}</p>}
+                {p.degerlendiren && <p className="text-xs text-gray-400 dark:text-gray-500">Değerlendiren: {p.degerlendiren.ad} {p.degerlendiren.soyad}</p>}
               </div>
             ))}
-            {localPerformans.length === 0 && <div className="col-span-2 bg-white rounded-xl border p-10 text-center text-gray-400 text-sm">Performans değerlendirmesi yok.</div>}
+            {localPerformans.length === 0 && <div className="col-span-2 bg-white dark:bg-gray-800 rounded-xl border p-10 text-center text-gray-400 dark:text-gray-500 text-sm">Performans değerlendirmesi yok.</div>}
           </div>
         </div>
       )}
@@ -642,12 +642,12 @@ export default function PersonelDetayClient({
       {tab === 'belgeler' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">Belgeler ve Sertifikalar</p>
+            <p className="font-semibold text-gray-800 dark:text-gray-200">Belgeler ve Sertifikalar</p>
             <button onClick={() => setBelgeModal(true)} className="flex items-center gap-1.5 text-sm text-[#C8102E] hover:underline font-medium">
               <Plus size={14} /> Belge Ekle
             </button>
           </div>
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border overflow-hidden">
             <table className="w-full">
               <thead className="border-b"><tr>
                 <th className={thCls}>Tip</th>
@@ -662,7 +662,7 @@ export default function PersonelDetayClient({
                   const cls = belgeRenk(b)
                   return (
                     <tr key={b.id} className={`hover:bg-gray-50 ${cls}`}>
-                      <td className={tdCls}><span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full">{BELGE_TIPI_LABEL[b.belge_tipi ?? ''] ?? b.belge_tipi}</span></td>
+                      <td className={tdCls}><span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full">{BELGE_TIPI_LABEL[b.belge_tipi ?? ''] ?? b.belge_tipi}</span></td>
                       <td className={`${tdCls} font-medium`}>{b.belge_adi}</td>
                       <td className={tdCls}>{b.belge_no ?? '-'}</td>
                       <td className={tdCls}>{formatTRDate(b.verilis_tarihi)}</td>
@@ -676,7 +676,7 @@ export default function PersonelDetayClient({
                     </tr>
                   )
                 })}
-                {localBelgeler.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm">Belge kaydı yok.</td></tr>}
+                {localBelgeler.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 dark:text-gray-500 text-sm">Belge kaydı yok.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -686,15 +686,15 @@ export default function PersonelDetayClient({
       {/* ═══════ TAB 7: ÖZLÜK ÖZETİ ═══════ */}
       {tab === 'ozluk' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl border p-4 space-y-4">
-            <p className="font-semibold text-gray-800">Kıdem Bilgisi</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border p-4 space-y-4">
+            <p className="font-semibold text-gray-800 dark:text-gray-200">Kıdem Bilgisi</p>
             {kidem ? (
               <div className="grid grid-cols-3 gap-4 text-center">
-                <div><p className="text-3xl font-bold text-[#C8102E]">{kidem.yil}</p><p className="text-xs text-gray-400">Yıl</p></div>
-                <div><p className="text-3xl font-bold text-[#C8102E]">{kidem.ay}</p><p className="text-xs text-gray-400">Ay</p></div>
-                <div><p className="text-3xl font-bold text-[#C8102E]">{kidem.gun}</p><p className="text-xs text-gray-400">Gün</p></div>
+                <div><p className="text-3xl font-bold text-[#C8102E]">{kidem.yil}</p><p className="text-xs text-gray-400 dark:text-gray-500">Yıl</p></div>
+                <div><p className="text-3xl font-bold text-[#C8102E]">{kidem.ay}</p><p className="text-xs text-gray-400 dark:text-gray-500">Ay</p></div>
+                <div><p className="text-3xl font-bold text-[#C8102E]">{kidem.gun}</p><p className="text-xs text-gray-400 dark:text-gray-500">Gün</p></div>
               </div>
-            ) : <p className="text-sm text-gray-400">İşe başlama tarihi girilmemiş.</p>}
+            ) : <p className="text-sm text-gray-400 dark:text-gray-500">İşe başlama tarihi girilmemiş.</p>}
             <div className="border-t pt-3 text-sm space-y-1">
               <InfoRow label="İşe Giriş"     value={formatTRDate(personel.ise_baslama_tarihi)} />
               {personel.isten_cikis_tarihi && <InfoRow label="İşten Çıkış" value={formatTRDate(personel.isten_cikis_tarihi)} />}
@@ -704,27 +704,27 @@ export default function PersonelDetayClient({
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border p-4 space-y-4">
-            <p className="font-semibold text-gray-800">Özet İstatistikler</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border p-4 space-y-4">
+            <p className="font-semibold text-gray-800 dark:text-gray-200">Özet İstatistikler</p>
             <div className="space-y-3">
               <div className="flex items-center justify-between py-2 border-b">
-                <span className="text-sm text-gray-500">Toplam İzin Kullanımı</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Toplam İzin Kullanımı</span>
                 <span className="font-semibold">{localIzinler.filter(i => i.durum === 'onaylandi').reduce((s, i) => s + i.gun_sayisi, 0)} gün</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b">
-                <span className="text-sm text-gray-500">Toplam Maaş Ödemesi</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Toplam Maaş Ödemesi</span>
                 <span className="font-semibold text-green-600">{formatCurrency(localMaaslar.filter(m => m.odendi).reduce((s, m) => s + m.toplam_odenen, 0))}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b">
-                <span className="text-sm text-gray-500">Toplam Mesai</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Toplam Mesai</span>
                 <span className="font-semibold">{localMesailer.reduce((s, m) => s + (m.mesai_suresi ?? 0), 0).toFixed(1)} sa</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b">
-                <span className="text-sm text-gray-500">Performans Değerlendirmesi</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Performans Değerlendirmesi</span>
                 <span className="font-semibold">{localPerformans.length} adet</span>
               </div>
               <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-500">Belge Sayısı</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Belge Sayısı</span>
                 <span className="font-semibold">{localBelgeler.length} adet</span>
               </div>
             </div>
@@ -764,11 +764,11 @@ export default function PersonelDetayClient({
               <div><label className={LABEL}>Brüt Maaş (₺)</label><input type="number" value={maasForm.brut_maas} onChange={e => setMaasForm(f => ({ ...f, brut_maas: e.target.value }))} className={INPUT} /></div>
             </div>
             {preview && (
-              <div className="bg-gray-50 rounded-lg p-3 text-sm grid grid-cols-2 gap-2">
-                <div className="text-gray-500">SGK İşçi (%14): <span className="text-orange-600 font-medium">{formatCurrency(preview.sgkIsci)}</span></div>
-                <div className="text-gray-500">SGK İşveren (%20.5): <span className="text-orange-600 font-medium">{formatCurrency(preview.sgkIsveren)}</span></div>
-                <div className="text-gray-500">Gelir Vergisi: <span className="text-orange-600 font-medium">{formatCurrency(preview.gv)}</span></div>
-                <div className="text-gray-500">Damga (%0.759): <span className="text-orange-600 font-medium">{formatCurrency(preview.damga)}</span></div>
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm grid grid-cols-2 gap-2">
+                <div className="text-gray-500 dark:text-gray-400">SGK İşçi (%14): <span className="text-orange-600 font-medium">{formatCurrency(preview.sgkIsci)}</span></div>
+                <div className="text-gray-500 dark:text-gray-400">SGK İşveren (%20.5): <span className="text-orange-600 font-medium">{formatCurrency(preview.sgkIsveren)}</span></div>
+                <div className="text-gray-500 dark:text-gray-400">Gelir Vergisi: <span className="text-orange-600 font-medium">{formatCurrency(preview.gv)}</span></div>
+                <div className="text-gray-500 dark:text-gray-400">Damga (%0.759): <span className="text-orange-600 font-medium">{formatCurrency(preview.damga)}</span></div>
                 <div className="col-span-2 border-t pt-2 font-bold">Net Maaş: <span className="text-green-600">{formatCurrency(preview.net)}</span></div>
               </div>
             )}
@@ -880,10 +880,10 @@ export default function PersonelDetayClient({
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0">
-          <h3 className="font-bold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          <h3 className="font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
         <div className="p-5 overflow-y-auto">{children}</div>
       </div>
@@ -893,8 +893,8 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border p-4">
-      <p className="font-semibold text-gray-800 mb-3 text-sm uppercase tracking-wide text-gray-400">{title}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-xl border p-4">
+      <p className="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-sm uppercase tracking-wide text-gray-400 dark:text-gray-500">{title}</p>
       <div className="space-y-1.5">{children}</div>
     </div>
   )
@@ -904,8 +904,8 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
   if (!value) return null
   return (
     <div className="flex items-start gap-2 text-sm">
-      <span className="text-gray-400 w-32 flex-shrink-0">{label}</span>
-      <span className="text-gray-800 font-medium">{value}</span>
+      <span className="text-gray-400 dark:text-gray-500 w-32 flex-shrink-0">{label}</span>
+      <span className="text-gray-800 dark:text-gray-200 font-medium">{value}</span>
     </div>
   )
 }

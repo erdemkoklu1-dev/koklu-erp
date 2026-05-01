@@ -32,11 +32,11 @@ export default async function AraclarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-          <h1 className="text-lg font-bold text-gray-900">Aracılar</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Aracılar</h1>
         </div>
         <Link href="/araclar/new"
           className="bg-[#C8102E] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#a50d26] transition-colors">
@@ -45,23 +45,23 @@ export default async function AraclarPage() {
       </div>
 
       <div className="p-6">
-        <div className="bg-white border rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
           {!brokers || brokers.length === 0 ? (
-            <div className="px-4 py-16 text-center text-gray-400 text-sm">
+            <div className="px-4 py-16 text-center text-gray-400 dark:text-gray-500 text-sm">
               Henüz aracı eklenmemiş.{' '}
               <Link href="/araclar/new" className="text-[#C8102E] hover:underline">Aracı ekle →</Link>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Ad / Firma</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Telefon</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">E-posta</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Aktif İş</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Bekleyen Kom.</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Toplam Kom.</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Ad / Firma</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Telefon</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">E-posta</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Aktif İş</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Bekleyen Kom.</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Toplam Kom.</th>
                     <th className="w-12" />
                   </tr>
                 </thead>
@@ -71,22 +71,22 @@ export default async function AraclarPage() {
                     return (
                       <tr key={broker.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-gray-900">{broker.full_name}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{broker.full_name}</div>
                           {broker.company_name && (
-                            <div className="text-xs text-gray-500">{broker.company_name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{broker.company_name}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{broker.phone ?? '-'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{broker.email ?? '-'}</td>
-                        <td className="px-4 py-3 text-sm text-right text-gray-700 font-medium">{stats.jobCount}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{broker.phone ?? '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{broker.email ?? '-'}</td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300 font-medium">{stats.jobCount}</td>
                         <td className="px-4 py-3 text-right">
                           {stats.pending > 0 ? (
                             <span className="text-sm font-semibold text-orange-700">{formatCurrency(stats.pending)}</span>
                           ) : (
-                            <span className="text-sm text-gray-400">-</span>
+                            <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">{formatCurrency(stats.total)}</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats.total)}</td>
                         <td className="px-4 py-3">
                           <Link href={`/araclar/${broker.id}`}
                             className="text-xs text-[#C8102E] hover:underline">

@@ -23,15 +23,15 @@ export default async function YonetimLayout({
   if ((profil?.roller as any)?.ad !== 'Admin') redirect('/yetkisiz')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-700">
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex items-center gap-3">
+      <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3">
         <div className="w-8 h-8 bg-[#C8102E] rounded-lg flex items-center justify-center text-white font-bold text-sm">K</div>
-        <h1 className="text-lg font-bold text-gray-900">Yönetim Paneli</h1>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Yönetim Paneli</h1>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b px-6">
+      <div className="bg-white dark:bg-gray-800 border-b px-6">
         <YonetimTabs />
       </div>
 

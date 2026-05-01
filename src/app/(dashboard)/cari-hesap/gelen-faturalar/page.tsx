@@ -134,7 +134,7 @@ export default async function GelenFaturalarPage({
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Gelen Faturalar</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Gelen Faturalar</h2>
         <div className="flex items-center gap-2">
           <PrintButton />
           <Link href="/cari-hesap/fatura-import?tab=gelen-pdf"
@@ -146,20 +146,20 @@ export default async function GelenFaturalarPage({
 
       {/* KPI */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-0.5">Toplam Fatura Tutarı</div>
-          <div className="text-xl font-bold text-gray-900">{formatCurrency(toplamTutar)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">{invoices.length} fatura</div>
+        <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Toplam Fatura Tutarı</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(toplamTutar)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{invoices.length} fatura</div>
         </div>
-        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500'}`}>Kalan Borç</div>
-          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900'}`}>{formatCurrency(toplamKalan)}</div>
-          <div className="text-xs text-gray-400 mt-0.5">ödenmemiş toplam</div>
+        <div className={`rounded-xl p-4 border ${toplamKalan > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${toplamKalan > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Kalan Borç</div>
+          <div className={`text-xl font-bold ${toplamKalan > 0 ? 'text-orange-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(toplamKalan)}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">ödenmemiş toplam</div>
         </div>
-        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gecikmiş</div>
-          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900'}`}>{gecikmisSayi}</div>
-          <div className="text-xs text-gray-400 mt-0.5">
+        <div className={`rounded-xl p-4 border ${gecikmisSayi > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
+          <div className={`text-xs mb-0.5 ${gecikmisSayi > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş</div>
+          <div className={`text-xl font-bold ${gecikmisSayi > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>{gecikmisSayi}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             <Link href="/cari-hesap/gecikis" className="hover:underline">Detay →</Link>
           </div>
         </div>
@@ -169,23 +169,23 @@ export default async function GelenFaturalarPage({
       <GelenFiltresi />
 
       {/* Sonuç sayısı */}
-      <div className="text-sm text-gray-500 px-1">
-        <span className="font-semibold text-gray-700">{invoices.length}</span> sonuç bulundu
+      <div className="text-sm text-gray-500 dark:text-gray-400 px-1">
+        <span className="font-semibold text-gray-700 dark:text-gray-300">{invoices.length}</span> sonuç bulundu
       </div>
 
       {/* Tablo */}
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tedarikçi</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura No</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Fatura Tarihi</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Vade Tarihi</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tutar</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kalan</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Durum</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tedarikçi</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura Tarihi</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Vade Tarihi</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kalan</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
