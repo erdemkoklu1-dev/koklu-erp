@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       tables,
       manifest,
       dry_run: true,
-      message: 'Onizleme tamamlandi. Gercek geri yukleme yapilmadi.',
+      message: 'Onizleme tamamlandi.',
     }
 
     const supabase = createServiceClient()

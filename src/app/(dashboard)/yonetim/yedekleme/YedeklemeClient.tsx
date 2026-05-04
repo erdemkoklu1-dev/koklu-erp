@@ -159,7 +159,7 @@ export default function YedeklemeClient({ tables, groups }: { tables: TableOptio
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Dry-run tamamlanamadi')
       setDryRun(json)
-      setMessage('Onizleme tamamlandi. Gercek geri yukleme yapilmadi.')
+      setMessage('Onizleme tamamlandi.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Dry-run tamamlanamadi')
     } finally {
@@ -359,9 +359,6 @@ export default function YedeklemeClient({ tables, groups }: { tables: TableOptio
             const totalInsertable = dryRun.tables.reduce((sum, t) => sum + (t.inserted ?? t.rows), 0)
             return (
               <div className="mt-4 space-y-3 text-sm">
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Dry-run tamamlandi; henuz gercek geri yukleme yapilmadi.
-                </div>
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700">
                   Yalnizca servis formlari ve servis form kalemleri geri yuklenebilir.
                 </div>
