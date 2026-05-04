@@ -173,16 +173,32 @@ function UrunAutocomplete({
   const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [suggestions, setSuggestions] = useState<UrunSuggestion[]>([])
-  const ref = useRef<HTMLDivElement>(null)
+  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({})
+  const inputRef = useRef<HTMLInputElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        inputRef.current && !inputRef.current.contains(e.target as Node) &&
+        dropRef.current && !dropRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  function calcPos() {
+    if (!inputRef.current) return
+    const r = inputRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - r.bottom
+    const up = spaceBelow < 220 && r.top > 220
+    setDropStyle(up
+      ? { position: 'fixed', bottom: window.innerHeight - r.top + 2, left: r.left, width: r.width, zIndex: 9999 }
+      : { position: 'fixed', top: r.bottom + 2, left: r.left, width: r.width, zIndex: 9999 }
+    )
+  }
 
   function handleChange(v: string) {
     onChange(v)
@@ -196,21 +212,27 @@ function UrunAutocomplete({
         .ilike('ad', `%${v}%`)
         .limit(8)
       setSuggestions(data ?? [])
+      calcPos()
       setOpen(true)
     }, 220)
   }
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <input
+        ref={inputRef}
         value={value}
         onChange={e => handleChange(e.target.value)}
-        onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
+        onFocus={() => { if (suggestions.length > 0) { calcPos(); setOpen(true) } }}
         className={className}
         autoComplete="off"
       />
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white dark:bg-gray-800 border rounded-lg shadow-lg max-h-52 overflow-y-auto">
+        <div
+          ref={dropRef}
+          style={dropStyle}
+          className="bg-white dark:bg-gray-800 border rounded-lg shadow-xl max-h-52 overflow-y-auto"
+        >
           {suggestions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-gray-400">Sonuç bulunamadı, manuel giriş yapabilirsiniz</div>
           ) : (
@@ -232,7 +254,7 @@ function UrunAutocomplete({
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -381,8 +403,8 @@ function PdfEditModal({
             </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700 border-b">
+          <div className="border rounded-lg">
+            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700 border-b rounded-t-lg">
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Kalemler</span>
               <button type="button" onClick={() => setItems(prev => [...prev, makeEmptyItem(prev.length + 1)])}
                 className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border hover:bg-gray-100">
@@ -392,7 +414,7 @@ function PdfEditModal({
             <div className="divide-y">
               {items.map((item, itemIdx) => (
                 <div key={itemIdx} className="grid grid-cols-12 gap-2 p-3 items-end">
-                  <div className="col-span-5">
+                  <div className="col-span-7">
                     <label className="text-[11px] text-gray-500">Açıklama</label>
                     <UrunAutocomplete
                       value={item.urun_adi}
@@ -408,7 +430,7 @@ function PdfEditModal({
                       className="mt-1 w-full border rounded px-2 py-1 text-xs"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <label className="text-[11px] text-gray-500">Miktar</label>
                     <input type="number" step="0.01" value={item.miktar} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, miktar: Number(e.target.value) } : k))}
                       className="mt-1 w-full border rounded px-2 py-1 text-xs" />
@@ -418,7 +440,7 @@ function PdfEditModal({
                     <input value={item.birim} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, birim: e.target.value } : k))}
                       className="mt-1 w-full border rounded px-2 py-1 text-xs" />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <label className="text-[11px] text-gray-500">Birim Fiyat</label>
                     <input type="number" step="0.01" value={item.birim_fiyat} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, birim_fiyat: Number(e.target.value) } : k))}
                       className="mt-1 w-full border rounded px-2 py-1 text-xs" />
@@ -1255,14 +1277,14 @@ function GelenPdfEditModal({
               {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
             </select>
           </div>
-          <div className="border rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700 border-b">
+          <div className="border rounded-lg">
+            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700 border-b rounded-t-lg">
               <span className="text-xs font-semibold">Kalemler</span>
               <button type="button" onClick={() => setItems(prev => [...prev, makeEmptyItem(prev.length + 1)])} className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border">Kalem Ekle</button>
             </div>
             {items.map((item, itemIdx) => (
               <div key={itemIdx} className="grid grid-cols-12 gap-2 p-3 border-t items-end">
-                <div className="col-span-5">
+                <div className="col-span-7">
                   <UrunAutocomplete
                     value={item.urun_adi}
                     onChange={v => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, urun_adi: v } : k))}
@@ -1277,9 +1299,9 @@ function GelenPdfEditModal({
                     className="w-full border rounded px-2 py-1 text-xs"
                   />
                 </div>
-                <input type="number" step="0.01" value={item.miktar} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, miktar: Number(e.target.value) } : k))} className="col-span-2 border rounded px-2 py-1 text-xs" />
+                <input type="number" step="0.01" value={item.miktar} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, miktar: Number(e.target.value) } : k))} className="col-span-1 border rounded px-2 py-1 text-xs" />
                 <input value={item.birim} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, birim: e.target.value } : k))} className="col-span-1 border rounded px-2 py-1 text-xs" />
-                <input type="number" step="0.01" value={item.birim_fiyat} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, birim_fiyat: Number(e.target.value) } : k))} className="col-span-2 border rounded px-2 py-1 text-xs" />
+                <input type="number" step="0.01" value={item.birim_fiyat} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, birim_fiyat: Number(e.target.value) } : k))} className="col-span-1 border rounded px-2 py-1 text-xs" />
                 <input type="number" step="0.01" value={item.satir_toplam} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, satir_toplam: Number(e.target.value) } : k))} className="col-span-1 border rounded px-2 py-1 text-xs" />
                 <button type="button" onClick={() => setItems(prev => prev.filter((_, i) => i !== itemIdx))} className="col-span-1 text-red-500 text-xs border rounded px-2 py-1">Sil</button>
               </div>
