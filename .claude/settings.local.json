@@ -29,7 +29,13 @@
       "Bash(grep -v \":0$\")",
       "Bash(grep -l \"PrintButton\" C:/Projects/koklu-erp/src/app/**/*.tsx C:/Projects/koklu-erp/src/app/**/**/*.tsx)",
       "Bash(mkdir -p \"C:/Projects/koklu-erp/src/app/\\(dashboard\\)/subeler/[id]/edit\")",
-      "Bash(mkdir -p \"C:/Projects/koklu-erp/src/app/\\(dashboard\\)/subeler/[id]/rapor\")"
+      "Bash(mkdir -p \"C:/Projects/koklu-erp/src/app/\\(dashboard\\)/subeler/[id]/rapor\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\koklu-erp\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Projects\\\\koklu-erp\\\\src\\\\app\\\\api\\\\cron\\\\cleanup-logs\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"done\")",
+      "PowerShell(New-Item *)"
     ]
   }
 }

@@ -38,6 +38,27 @@ export default function KayitlarClient({
   const [from, setFrom]           = useState('')
   const [to, setTo]               = useState('')
   const [tip, setTip]             = useState('')
+  const [cleaningUp, setCleaningUp] = useState(false)
+
+  async function temizleEskiKayitlar() {
+    const confirmed = window.confirm(
+      '15 günden eski tüm giriş/çıkış kayıtları silinecek. Bu işlem geri alınamaz.\n\nDevam etmek istiyor musunuz?'
+    )
+    if (!confirmed) return
+
+    setCleaningUp(true)
+    try {
+      const res = await fetch('/api/cron/cleanup-logs', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Temizleme hatası')
+      alert(`${data.deleted} eski kayıt silindi.`)
+      router.refresh()
+    } catch (err) {
+      alert('Temizleme hatası: ' + (err instanceof Error ? err.message : 'Bilinmeyen hata'))
+    } finally {
+      setCleaningUp(false)
+    }
+  }
 
   function filtrele(e: React.FormEvent) {
     e.preventDefault()
@@ -51,6 +72,19 @@ export default function KayitlarClient({
 
   return (
     <div className="space-y-4">
+      {/* Bilgi notu */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded text-sm text-blue-700 dark:text-blue-300 flex items-center justify-between gap-4">
+        <span>Giriş/çıkış kayıtları 15 günden eski olanlar otomatik temizlenir.</span>
+        <button
+          type="button"
+          onClick={temizleEskiKayitlar}
+          disabled={cleaningUp}
+          className="shrink-0 border border-yellow-500 text-yellow-700 dark:text-yellow-400 px-3 py-1.5 rounded text-xs hover:bg-yellow-50 dark:hover:bg-yellow-900/20 disabled:opacity-50"
+        >
+          {cleaningUp ? 'Temizleniyor...' : '15 Günden Eski Kayıtları Temizle'}
+        </button>
+      </div>
+
       {/* Özet kartlar */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">

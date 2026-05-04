@@ -1,6 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireAdminPageAccess } from '@/lib/backup/authorization'
 
 export default async function SistemPage() {
+  await requireAdminPageAccess()
   const supabase = createServiceClient()
 
   const [{ data: profiller }, { data: roller }, { data: islemler }] = await Promise.all([

@@ -7,10 +7,11 @@ import {
   Handshake, FileDown, FileInput, AlertTriangle, BarChart2, FileText,
   Bell, Factory, Settings, Building2, UserSquare2
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-type NavItem = { href: string; label: string; icon: any; modul?: string; adminOnly?: boolean }
+type NavItem = { href: string; label: string; icon: LucideIcon; modul?: string; adminOnly?: boolean }
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard',                  label: 'Anasayfa',           icon: LayoutDashboard },
@@ -39,6 +40,7 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 dakika
 
 type PermsCache = {
   isAdmin: boolean
+  isBackupManager?: boolean
   modulIzinleri: Record<string, boolean>
   ts: number
 }
@@ -91,6 +93,7 @@ export default function Sidebar() {
   const pathname = usePathname()
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [isBackupManager, setIsBackupManager] = useState(false)
   const [modulIzinleri, setModulIzinleri] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
 
@@ -99,6 +102,7 @@ export default function Sidebar() {
     const cached = readCache()
     if (cached) {
       setIsAdmin(cached.isAdmin)
+      setIsBackupManager(cached.isBackupManager ?? false)
       setModulIzinleri(cached.modulIzinleri)
       setLoading(false)
       return
@@ -123,20 +127,24 @@ export default function Sidebar() {
         if (!profil) {
           // Profil yoksa admin gibi davran (geriye dönük uyumluluk)
           setIsAdmin(true)
-          writeCache({ isAdmin: true, modulIzinleri: {} })
+          setIsBackupManager(true)
+          writeCache({ isAdmin: true, isBackupManager: true, modulIzinleri: {} })
           setLoading(false)
           return
         }
 
-        const rolAd = (profil.roller as any)?.ad
+        const rolAd = (profil.roller as { ad?: string } | null)?.ad
         if (rolAd === 'Admin') {
           setIsAdmin(true)
-          writeCache({ isAdmin: true, modulIzinleri: {} })
+          setIsBackupManager(true)
+          writeCache({ isAdmin: true, isBackupManager: true, modulIzinleri: {} })
           setLoading(false)
           return
         }
 
         setIsAdmin(false)
+        const canBackup = rolAd === 'Yonetici' || rolAd === 'Yönetici'
+        setIsBackupManager(canBackup)
 
         if (profil.rol_id) {
           const { data: izinler } = await supabase
@@ -148,7 +156,7 @@ export default function Sidebar() {
             const map: Record<string, boolean> = {}
             for (const iz of izinler ?? []) map[iz.modul_adi] = iz.okuma
             setModulIzinleri(map)
-            writeCache({ isAdmin: false, modulIzinleri: map })
+            writeCache({ isAdmin: false, isBackupManager: canBackup, modulIzinleri: map })
           }
         }
       } catch {
@@ -166,6 +174,7 @@ export default function Sidebar() {
     if (!item.modul) return true
     if (loading) return false   // Yüklenirken skeleton göster
     if (isAdmin) return true
+    if (item.href === '/yonetim' && isBackupManager) return true
     if (item.adminOnly) return false
     return modulIzinleri[item.modul] === true
   }

@@ -1,7 +1,9 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireAdminPageAccess } from '@/lib/backup/authorization'
 import RollerClient from './RollerClient'
 
 export default async function RollerPage() {
+  await requireAdminPageAccess()
   const supabase = createServiceClient()
 
   const [{ data: roller }, { data: izinler }] = await Promise.all([

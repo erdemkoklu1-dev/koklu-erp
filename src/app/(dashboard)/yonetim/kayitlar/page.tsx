@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireAdminPageAccess } from '@/lib/backup/authorization'
 import KayitlarClient from './KayitlarClient'
 
 export default async function KayitlarPage({
@@ -6,6 +7,7 @@ export default async function KayitlarPage({
 }: {
   searchParams: Promise<{ kullanici?: string; from?: string; to?: string; tip?: string }>
 }) {
+  await requireAdminPageAccess()
   const { kullanici, from, to, tip } = await searchParams
   const supabase = createServiceClient()
 
