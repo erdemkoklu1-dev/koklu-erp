@@ -32,7 +32,28 @@ export type GelenPdfRow = {
 }
 
 function normalizeName(n: string): string {
-  return n.toLowerCase().replace(/\s+/g, ' ').trim()
+  return n
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[ıİ]/g, 'i')
+    .replace(/[şŞ]/g, 's')
+    .replace(/[ğĞ]/g, 'g')
+    .replace(/[üÜ]/g, 'u')
+    .replace(/[öÖ]/g, 'o')
+    .replace(/[çÇ]/g, 'c')
+    .replace(/\b(limited|ltd|sti|stı|sirketi|anonim|as|a s|sanayi|san|ticaret|tic|pazarlama|paz|ithalat|ihracat|insaat|ins|ve|co|corp)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function normNo(s: string | null | undefined): string {
+  return (s ?? '').replace(/\s/g, '').toUpperCase()
+}
+
+function normVkn(v: string | null | undefined): string {
+  return (v ?? '').replace(/\D/g, '')
 }
 
 export async function POST(req: NextRequest) {
@@ -49,7 +70,7 @@ export async function POST(req: NextRequest) {
       .from('invoices')
       .select('invoice_number')
       .eq('invoice_type', 'alis')
-    const existingNos = new Set((existingInvoices ?? []).map(i => i.invoice_number))
+    const existingNos = new Set((existingInvoices ?? []).map(i => normNo(i.invoice_number)))
 
     // Mevcut tedarikçi isimleri (alis faturalarından)
     const { data: existingSuppliers } = await supabase
@@ -61,7 +82,7 @@ export async function POST(req: NextRequest) {
     const supplierByTaxNo = new Map<string, boolean>()
     for (const s of existingSuppliers ?? []) {
       if (s.supplier_name)    supplierByName.set(normalizeName(s.supplier_name), true)
-      if (s.supplier_tax_no)  supplierByTaxNo.set(s.supplier_tax_no.trim(), true)
+      if (s.supplier_tax_no)  supplierByTaxNo.set(normVkn(s.supplier_tax_no), true)
     }
 
     const createdInvoiceIds: string[] = []
@@ -85,7 +106,8 @@ export async function POST(req: NextRequest) {
         }
 
         // Duplicate kontrolü
-        if (existingNos.has(row.fatura_no)) {
+        const normalizedInvoiceNo = normNo(row.fatura_no)
+        if (existingNos.has(normalizedInvoiceNo)) {
           results.push({
             filename:     row.filename,
             fatura_no:    row.fatura_no,
@@ -98,7 +120,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Tedarikçi yeni mi?
-        const vknMatch  = row.satici_vkn && supplierByTaxNo.has(row.satici_vkn.trim())
+        const vknMatch  = row.satici_vkn && supplierByTaxNo.has(normVkn(row.satici_vkn))
         const nameMatch = supplierByName.has(normalizeName(row.satici_adi))
         const tedarikciYeni = !vknMatch && !nameMatch
 
@@ -146,9 +168,9 @@ export async function POST(req: NextRequest) {
         if (invErr) throw new Error(`Fatura oluşturulamadı (${row.fatura_no}): ${invErr.message}`)
 
         createdInvoiceIds.push(inv.id)
-        existingNos.add(row.fatura_no)
+        existingNos.add(normalizedInvoiceNo)
         if (row.satici_adi) supplierByName.set(normalizeName(row.satici_adi), true)
-        if (row.satici_vkn) supplierByTaxNo.set(row.satici_vkn.trim(), true)
+        if (row.satici_vkn) supplierByTaxNo.set(normVkn(row.satici_vkn), true)
 
         // Fatura kalemleri
         const validItems = (row.kalemler ?? []).filter(k => k.urun_adi?.trim())

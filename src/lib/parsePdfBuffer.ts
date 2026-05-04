@@ -157,6 +157,49 @@ function isSaticiStopLine(line: string): boolean {
   return false
 }
 
+function cleanPartyName(name: string | null): string | null {
+  if (!name) return null
+  let cleaned = name
+    .replace(/\s+/g, ' ')
+    .replace(/^(sayin|sayın|alici|alıcı|satici|satıcı|unvan|adi soyadi|adı soyadı|ad soyad|ticari unvan)\s*[:\-]?\s*/iu, '')
+    .replace(/\s+(vkn|tckn|vergi no|vergi numarası|tc kimlik).*$/iu, '')
+    .trim()
+
+  cleaned = cleaned.replace(/^(adres|tel|telefon|fax|faks|e-posta|eposta|web sitesi)\s*:\s*/iu, '').trim()
+  if (cleaned.includes(KOKLU_VKN)) return null
+  if (cleaned.length < 3) return null
+  if (ADRES_STOP.some(kw => normalize(cleaned).startsWith(kw))) return null
+  return cleaned
+}
+
+function extractNameNearTaxNo(text: string, taxNo: string | null): string | null {
+  if (!taxNo) return null
+  const idx = text.indexOf(taxNo)
+  if (idx < 0) return null
+  const beforeLines = text.slice(Math.max(0, idx - 500), idx)
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+  for (let i = beforeLines.length - 1; i >= 0; i--) {
+    const candidate = cleanPartyName(beforeLines[i])
+    if (!candidate) continue
+    if (isSaticiStopLine(candidate)) continue
+    if (/\d{5,}/.test(candidate)) continue
+    return candidate
+  }
+  return null
+}
+
+function extractNameByLabels(text: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const re = new RegExp(`${label}\\s*[:\\-]?\\s*([^\\n]{3,120})`, 'iu')
+    const m = text.match(re)
+    const candidate = cleanPartyName(m?.[1] ?? null)
+    if (candidate) return candidate
+  }
+  return null
+}
+
 // ── Müşteri adresini SAYIN bloğundan çıkar ───────────────────────
 
 const KOKLU_VKN = '5830028164'
@@ -168,7 +211,19 @@ const KOKLU_VKN = '5830028164'
 // 3. İlk geçerli satırı müşteri adı olarak al
 function extractMusteriAdres(text: string): [string | null, string | null] {
   const m = text.match(/(?:SAYIN|ALICI)[:\s]*/i)
-  if (!m || m.index == null) return [null, null]
+  if (!m || m.index == null) {
+    const labelName = extractNameByLabels(text, [
+      'Alıcı\\s*Unvanı',
+      'Alıcı',
+      'Sayın',
+      'Adı\\s*Soyadı',
+      'Ad\\s*Soyad',
+      'Ticari\\s*Unvan',
+      'Ünvan',
+      'Unvan',
+    ])
+    return [labelName, null]
+  }
 
   const after = text.slice(m.index + m[0].length)
 
@@ -263,6 +318,7 @@ function extractMusteriAdres(text: string): [string | null, string | null] {
     }
   }
 
+  musteriAdi = cleanPartyName(musteriAdi)
   console.log('=== extractMusteriAdres ===', { musteriAdi, adres: adresLines.join(' ') })
   return [musteriAdi, adresLines.join(' ').trim() || null]
 }
@@ -272,13 +328,16 @@ function extractMusteriAdres(text: string): [string | null, string | null] {
 function extractSataciBilgi(text: string): [string | null, string | null] {
   let saticiVkn: string | null = null
 
-  const vknMatches = [...text.matchAll(/VKN\s*[:\s]+(\d{10})/gi)]
-  if (vknMatches.length > 0) saticiVkn = vknMatches[0][1]
+  const vknMatches = [...text.matchAll(/(?:VKN|TCKN|VKN\/TCKN)\s*[:\s]+(\d{10,11})/gi)]
+    .map(m => m[1])
+    .filter(v => v !== KOKLU_VKN)
+  if (vknMatches.length > 0) saticiVkn = vknMatches[0]
 
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
   const nameParts: string[] = []
 
   for (const line of lines.slice(0, 25)) {
+    if (line.includes(KOKLU_VKN)) continue
     if (isSaticiStopLine(line)) break
     if (line.length >= 4 && /[A-ZÇĞİÖŞÜa-zçğışöşü]/.test(line)) {
       nameParts.push(line)
@@ -286,7 +345,11 @@ function extractSataciBilgi(text: string): [string | null, string | null] {
     }
   }
 
-  const saticiAdi = nameParts.length > 0 ? nameParts.join(' ') : null
+  const saticiAdi = cleanPartyName(
+    extractNameByLabels(text, ['Satıcı', 'Satici', 'Ticari\\s*Unvan', 'Ünvan', 'Unvan'])
+      ?? extractNameNearTaxNo(text, saticiVkn)
+      ?? (nameParts.length > 0 ? nameParts.join(' ') : null)
+  )
   return [saticiAdi, saticiVkn]
 }
 
@@ -425,6 +488,45 @@ const TL_ONLY       = /^\s*[\d.,]+\s*TL\s*$/i
 // Tablo başı/sonu ortak pattern'lar
 const TABLO_BASLA = /S[ıi]ra\s*\n?\s*No|Sira\s*\n?\s*No|S\.?\s*No\b/im
 const TABLO_BITIS = /Mal\s*[/]?\s*Hizmet\s+Toplam|Toplam\s+Tutar\s*:|TOPLAM\s+TUTAR|[ÖO]denecek\s+Tutar/im
+
+function getItemRegion(text: string): string {
+  const start = text.match(TABLO_BASLA)
+    ?? text.match(/Mal\s*[/]?\s*Hizmet|Açıklama|Aciklama|Miktar|Birim\s*Fiyat/i)
+  const end = text.match(TABLO_BITIS)
+  if (start?.index !== undefined && end?.index !== undefined && end.index > start.index) {
+    return text.slice(start.index, end.index)
+  }
+  return text
+}
+
+function makeKalem(desc: string, miktarRaw: string, birim: string, fiyatRaw: string, tail: string, idx: number): KalemItem | null {
+  const urunAdi = desc.replace(/^\d{1,4}\s+/, '').trim()
+  if (!urunAdi || urunAdi.length < 2 || isOzetSatir([urunAdi])) return null
+
+  const miktar = parseAmount(miktarRaw) ?? 1
+  const birimFiyat = parseAmount(fiyatRaw) ?? 0
+  const pctVals = [...tail.matchAll(/%\s*(\d+(?:[.,]\d+)?)/g)]
+    .map(m => parseAmount(m[1]) ?? 0)
+    .filter(v => v >= 0 && v <= 100)
+  const kdvOrani = pctVals.length >= 2 ? pctVals[1] : pctVals[0] ?? 20
+  const allAmounts = [...tail.matchAll(/([\d.,]+)\s*TL/gi)].map(m => parseAmount(m[1]) ?? 0)
+  const satirToplam = allAmounts.length > 0
+    ? allAmounts[allAmounts.length - 1]
+    : Math.round(miktar * birimFiyat * (1 + kdvOrani / 100) * 100) / 100
+  const kdvTutari = Math.round(miktar * birimFiyat * kdvOrani / 100 * 100) / 100
+
+  return {
+    urun_adi: urunAdi || `Kalem ${idx}`,
+    miktar,
+    birim,
+    birim_fiyat: Math.round(birimFiyat * 100) / 100,
+    iskonto_orani: 0,
+    iskonto_tutari: 0,
+    kdv_orani: kdvOrani,
+    kdv_tutari: kdvTutari,
+    satir_toplam: Math.round(satirToplam * 100) / 100,
+  }
+}
 
 function extractItemsEfatura(text: string): KalemItem[] {
   const baslaM = text.match(TABLO_BASLA)
@@ -585,6 +687,39 @@ function extractItemsKoklu(text: string): KalemItem[] {
 
 // ── Genel metin bazlı kalem çıkarma (fallback) ──────────────────
 
+function extractItemsFlexible(text: string): KalemItem[] {
+  const region = getItemRegion(text)
+  const lines = region.split('\n').map(l => l.trim()).filter(Boolean)
+  const items: KalemItem[] = []
+  const rowWithNo = new RegExp(`^(\\d{1,4})\\s+(.{2,}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(${BIRIM_ALTS})\\s+(\\d[\\d.,]*)\\s*(?:TL)?(.*)$`, 'i')
+  const rowNoNo = new RegExp(`^(.{3,}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(${BIRIM_ALTS})\\s+(\\d[\\d.,]*)\\s*(?:TL)?(.*)$`, 'i')
+
+  for (const line of lines) {
+    if (EFATURA_HEADER.test(line) || PURE_NUMBER.test(line) || PERCENT_ONLY.test(line) || TL_ONLY.test(line)) continue
+    if (isOzetSatir([line])) continue
+
+    const numbered = line.match(rowWithNo)
+    const unnumbered = numbered ? null : line.match(rowNoNo)
+    if (!numbered && !unnumbered) {
+      if (items.length > 0 && line.length > 2 && !/\d{2,}/.test(line)) {
+        items[items.length - 1].urun_adi += ' ' + line
+      }
+      continue
+    }
+
+    const desc = numbered ? numbered[2] : unnumbered![1]
+    const miktar = numbered ? numbered[3] : unnumbered![2]
+    const birim = numbered ? numbered[4] : unnumbered![3]
+    const fiyat = numbered ? numbered[5] : unnumbered![4]
+    const tail = numbered ? numbered[6] : unnumbered![5]
+    const item = makeKalem(desc, miktar, birim, fiyat, tail, items.length + 1)
+    if (item) items.push(item)
+  }
+
+  console.log('=== Extractor: FLEXIBLE →', items.length, 'kalem ===')
+  return items
+}
+
 function extractItemsFromText(text: string): KalemItem[] {
   const koklu = extractItemsKoklu(text)
   if (koklu.length > 0) { console.log('=== Extractor: KÖKLÜ →', koklu.length, 'kalem ==='); return koklu }
@@ -593,6 +728,8 @@ function extractItemsFromText(text: string): KalemItem[] {
   if (efatura.length > 0) { console.log('=== Extractor: E-FATURA →', efatura.length, 'kalem ==='); return efatura }
 
   const hidropres = extractItemsHidropres(text)
+  const flexible = extractItemsFlexible(text)
+  if (flexible.length > 0) return flexible
   if (hidropres.length > 0) { console.log('=== Extractor: HİDROPRES →', hidropres.length, 'kalem ==='); return hidropres }
 
   const semihler = extractItemsSemihler(text)
@@ -763,6 +900,10 @@ export async function parsePdfBuffer(
           if (freeNums.length > 0) result.musteri_vkn = freeNums[0]
         }
       }
+      if (!result.musteri_adi) {
+        result.musteri_adi = extractNameNearTaxNo(text, result.musteri_vkn)
+          ?? extractNameByLabels(text, ['Alıcı', 'Alici', 'Sayın', 'Sayin', 'Ticari\\s*Unvan', 'Ünvan', 'Unvan'])
+      }
     }
 
     // ── Finansal tutarlar ─────────────────────────────────────────
@@ -791,6 +932,18 @@ export async function parsePdfBuffer(
 
     // ── Kalemler ─────────────────────────────────────────────────
     result.kalemler = extractItemsFromText(text)
+    if (result.kalemler.length === 0) {
+      result.hata = 'Kalemler tam parse edilemedi, manuel kontrol gerekli'
+    }
+    console.log('[pdf parse]', {
+      mode,
+      dosya: filename,
+      musteri: result.musteri_adi,
+      satici: result.satici_adi,
+      vkn: result.musteri_vkn ?? result.satici_vkn ?? null,
+      fatura_no: result.fatura_no,
+      kalem_sayisi: result.kalemler.length,
+    })
 
     // ── IBAN ─────────────────────────────────────────────────────
     const ibans = [...new Set(

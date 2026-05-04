@@ -31,7 +31,28 @@ export type PdfInvoiceRow = {
 }
 
 function normalizeName(n: string): string {
-  return n.toLowerCase().replace(/\s+/g, ' ').trim()
+  return n
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[ıİ]/g, 'i')
+    .replace(/[şŞ]/g, 's')
+    .replace(/[ğĞ]/g, 'g')
+    .replace(/[üÜ]/g, 'u')
+    .replace(/[öÖ]/g, 'o')
+    .replace(/[çÇ]/g, 'c')
+    .replace(/\b(limited|ltd|sti|stı|sirketi|anonim|as|a s|sanayi|san|ticaret|tic|pazarlama|paz|ithalat|ihracat|insaat|ins|ve|co|corp)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function normNo(s: string | null | undefined): string {
+  return (s ?? '').replace(/\s/g, '').toUpperCase()
+}
+
+function normVkn(v: string | null | undefined): string {
+  return (v ?? '').replace(/\D/g, '')
 }
 
 function addYears(dateStr: string, years: number): string {
@@ -70,7 +91,8 @@ export async function POST(req: NextRequest) {
     const { data: existingInvoices } = await supabase
       .from('invoices')
       .select('invoice_number')
-    const existingNos = new Set((existingInvoices ?? []).map(i => i.invoice_number))
+      .eq('invoice_type', 'satis')
+    const existingNos = new Set((existingInvoices ?? []).map(i => normNo(i.invoice_number)))
 
     // ── Mevcut müşteriler ─────────────────────────────────────────
     const { data: existingCustomers } = await supabase
@@ -79,7 +101,7 @@ export async function POST(req: NextRequest) {
     const customerByVkn  = new Map<string, string>()
     const customerByName = new Map<string, string>()
     for (const c of existingCustomers ?? []) {
-      if (c.tax_number) customerByVkn.set(c.tax_number.trim(), c.id)
+      if (c.tax_number) customerByVkn.set(normVkn(c.tax_number), c.id)
       customerByName.set(normalizeName(c.full_name), c.id)
     }
 
@@ -101,7 +123,8 @@ export async function POST(req: NextRequest) {
     try {
       for (const row of rows) {
         // ── Duplicate kontrolü ────────────────────────────────────
-        if (!row.fatura_no || existingNos.has(row.fatura_no)) {
+        const normalizedInvoiceNo = normNo(row.fatura_no)
+        if (!row.fatura_no || existingNos.has(normalizedInvoiceNo)) {
           results.push({
             filename:     row.filename,
             fatura_no:    row.fatura_no ?? '',
@@ -118,7 +141,7 @@ export async function POST(req: NextRequest) {
         let musteriYeni = false
 
         if (row.musteri_vkn) {
-          customerId = customerByVkn.get(row.musteri_vkn.trim())
+          customerId = customerByVkn.get(normVkn(row.musteri_vkn))
         }
         if (!customerId) {
           customerId = customerByName.get(normalizeName(row.musteri_adi))
@@ -144,7 +167,7 @@ export async function POST(req: NextRequest) {
           customerId = newCust.id as string
           createdCustomerIds.push(customerId)
           customerByName.set(normalizeName(row.musteri_adi), customerId)
-          if (row.musteri_vkn) customerByVkn.set(row.musteri_vkn.trim(), customerId)
+          if (row.musteri_vkn) customerByVkn.set(normVkn(row.musteri_vkn), customerId)
           musteriYeni = true
         }
 
@@ -185,7 +208,7 @@ export async function POST(req: NextRequest) {
         if (invErr) throw new Error(`Fatura oluşturulamadı (${row.fatura_no}): ${invErr.message}`)
 
         createdInvoiceIds.push(inv.id)
-        existingNos.add(row.fatura_no)
+        existingNos.add(normalizedInvoiceNo)
 
         // ── Fatura kalemleri (invoice_items) ─────────────────────
         const validKalemler = (row.kalemler ?? []).filter(k => k.urun_adi?.trim())
