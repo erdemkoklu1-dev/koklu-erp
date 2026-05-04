@@ -422,9 +422,13 @@ const PURE_NUMBER   = /^\s*\d{1,3}\s*$/
 const PERCENT_ONLY  = /^\s*%[\d.,]+\s*$/
 const TL_ONLY       = /^\s*[\d.,]+\s*TL\s*$/i
 
+// Tablo başı/sonu ortak pattern'lar
+const TABLO_BASLA = /S[ıi]ra\s*\n?\s*No|Sira\s*\n?\s*No|S\.?\s*No\b/im
+const TABLO_BITIS = /Mal\s*[/]?\s*Hizmet\s+Toplam|Toplam\s+Tutar\s*:|TOPLAM\s+TUTAR|[ÖO]denecek\s+Tutar/im
+
 function extractItemsEfatura(text: string): KalemItem[] {
-  const baslaM = text.match(/S[ıi]ra\s*\n?\s*No|S[ıi]ra\s+No/im)
-  const bitisM = text.match(/Mal\s*[/]?\s*Hizmet\s+Toplam|Toplam\s+Tutar\s*:/im)
+  const baslaM = text.match(TABLO_BASLA)
+  const bitisM = text.match(TABLO_BITIS)
   if (!baslaM || baslaM.index === undefined || !bitisM || bitisM.index === undefined) return []
   if (bitisM.index <= baslaM.index) return []
 
@@ -490,12 +494,24 @@ function extractItemsEfatura(text: string): KalemItem[] {
 // Devam satırları (Söndürme Cihazı, Dolumu) data satırından SONRA gelir.
 
 function extractItemsKoklu(text: string): KalemItem[] {
-  const baslaM = text.match(/S[ıi]ra\s*\n?\s*No|S[ıi]ra\s+No/im)
-  const bitisM = text.match(/Mal\s*[/]?\s*Hizmet\s+Toplam|Toplam\s+Tutar\s*:/im)
-  if (!baslaM || baslaM.index === undefined || !bitisM || bitisM.index === undefined) return []
-  if (bitisM.index <= baslaM.index) return []
+  const baslaM = text.match(TABLO_BASLA)
+  const bitisM = text.match(TABLO_BITIS)
+
+  if (!baslaM || baslaM.index === undefined) {
+    console.log('=== extractItemsKoklu: tablo başı BULUNAMADI ("Sıra No" yok) ===')
+    return []
+  }
+  if (!bitisM || bitisM.index === undefined) {
+    console.log('=== extractItemsKoklu: tablo sonu BULUNAMADI ("Mal Hizmet Toplam" yok) ===')
+    return []
+  }
+  if (bitisM.index <= baslaM.index) {
+    console.log('=== extractItemsKoklu: tablo sonu baştan önce geldi ===')
+    return []
+  }
 
   const region = text.slice(baslaM.index, bitisM.index)
+  console.log('=== KALEM BÖLGESİ (ilk 600) ===\n' + region.substring(0, 600))
   const lines  = region.split('\n').map(l => l.trim()).filter(Boolean)
 
   const items: KalemItem[] = []
@@ -570,19 +586,17 @@ function extractItemsKoklu(text: string): KalemItem[] {
 // ── Genel metin bazlı kalem çıkarma (fallback) ──────────────────
 
 function extractItemsFromText(text: string): KalemItem[] {
-  // Köklü giden fatura formatı (sıra_no + ürün_adı + miktarBirim + fiyat)
   const koklu = extractItemsKoklu(text)
-  if (koklu.length > 0) return koklu
+  if (koklu.length > 0) { console.log('=== Extractor: KÖKLÜ →', koklu.length, 'kalem ==='); return koklu }
 
-  // Standart e-fatura format (miktar birim fiyat satır başında)
   const efatura = extractItemsEfatura(text)
-  if (efatura.length > 0) return efatura
+  if (efatura.length > 0) { console.log('=== Extractor: E-FATURA →', efatura.length, 'kalem ==='); return efatura }
 
   const hidropres = extractItemsHidropres(text)
-  if (hidropres.length > 0) return hidropres
+  if (hidropres.length > 0) { console.log('=== Extractor: HİDROPRES →', hidropres.length, 'kalem ==='); return hidropres }
 
   const semihler = extractItemsSemihler(text)
-  if (semihler.length > 0) return semihler
+  if (semihler.length > 0) { console.log('=== Extractor: SEMİHLER →', semihler.length, 'kalem ==='); return semihler }
 
   const items: KalemItem[] = []
   const pattern = /^\s*(\d{1,3})\s+(.+?)\s{2,}([\d.,]+)\s+(adet|kg|lt|mt|m2|m3|ton|kutu|paket|hizmet|saat|gün)\s+([\d.,]+)/gim
@@ -605,6 +619,8 @@ function extractItemsFromText(text: string): KalemItem[] {
       satir_toplam: Math.round((net + ka) * 100) / 100,
     })
   }
+
+  console.log('=== Extractor: FALLBACK →', items.length, 'kalem ===')
   return items
 }
 

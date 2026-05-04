@@ -289,23 +289,31 @@ function PdfFaturaImport() {
         supabase.from('invoices').select('invoice_number'),
         supabase.from('customers').select('full_name, tax_number'),
       ])
-      const existingNos   = new Set((invData ?? []).map((i: any) => i.invoice_number))
+      const normNo  = (s: string | null | undefined) => (s ?? '').replace(/\s/g, '').toUpperCase()
+      const normVkn = (v: string | null | undefined) => (v ?? '').replace(/\D/g, '')
+      const KOKLU_VKN = '5830028164'
+
+      const existingNos   = new Set((invData ?? []).map((i: any) => normNo(i.invoice_number)))
       const existingNames = new Set((custData ?? []).map((c: any) => normalizeName(c.full_name)))
       const existingVkns  = new Set(
-        (custData ?? []).filter((c: any) => c.tax_number).map((c: any) => c.tax_number!.trim())
+        (custData ?? [])
+          .filter((c: any) => c.tax_number)
+          .map((c: any) => normVkn(c.tax_number))
+          .filter((v: string) => v.length >= 10 && v !== KOKLU_VKN)
       )
 
       const preview: PdfPreviewRow[] = invoices.map(inv => {
         let rowStatus: PdfRowStatus
         if (inv.hata) {
           rowStatus = 'hata'
-        } else if (!inv.fatura_no || existingNos.has(inv.fatura_no)) {
+        } else if (!inv.fatura_no || existingNos.has(normNo(inv.fatura_no))) {
           rowStatus = 'duplicate'
         } else {
-          const name = inv.musteri_adi ?? ''
-          const vkn  = inv.musteri_vkn ?? ''
-          const vknMatch  = vkn  && existingVkns.has(vkn.trim())
-          const nameMatch = name && existingNames.has(normalizeName(name))
+          const name    = inv.musteri_adi ?? ''
+          const vkn     = normVkn(inv.musteri_vkn)
+          const vknMatch  = vkn.length >= 10 && vkn !== KOKLU_VKN && existingVkns.has(vkn)
+          const nameMatch = !!name && existingNames.has(normalizeName(name))
+          console.log('[giden eşleştirme] VKN:', vkn, 'vknMatch:', vknMatch, 'name:', name, 'nameMatch:', nameMatch)
           rowStatus = (vknMatch || nameMatch) ? 'eklenecek' : 'yeni_musteri'
         }
         return {
@@ -947,23 +955,30 @@ function GelenPdfFaturaImport() {
         supabase.from('invoices').select('invoice_number').eq('invoice_type', 'alis'),
         supabase.from('invoices').select('supplier_name, supplier_tax_no').eq('invoice_type', 'alis').not('supplier_name', 'is', null),
       ])
-      const existingNos   = new Set((invData ?? []).map((i: any) => i.invoice_number))
+      const normNoG  = (s: string | null | undefined) => (s ?? '').replace(/\s/g, '').toUpperCase()
+      const normVknG = (v: string | null | undefined) => (v ?? '').replace(/\D/g, '')
+
+      const existingNos   = new Set((invData ?? []).map((i: any) => normNoG(i.invoice_number)))
       const existingNames = new Set((supData ?? []).map((s: any) => normalizeName(s.supplier_name ?? '')))
       const existingTaxNos = new Set(
-        (supData ?? []).filter((s: any) => s.supplier_tax_no).map((s: any) => (s.supplier_tax_no as string).trim())
+        (supData ?? [])
+          .filter((s: any) => s.supplier_tax_no)
+          .map((s: any) => normVknG(s.supplier_tax_no))
+          .filter((v: string) => v.length >= 10)
       )
 
       const preview: GelenPdfPreviewRow[] = invoices.map(inv => {
         let rowStatus: GelenPdfRowStatus
         if (inv.hata) {
           rowStatus = 'hata'
-        } else if (inv.fatura_no && existingNos.has(inv.fatura_no)) {
+        } else if (inv.fatura_no && existingNos.has(normNoG(inv.fatura_no))) {
           rowStatus = 'duplicate'
         } else {
           const name    = inv.satici_adi ?? ''
-          const taxNo   = inv.satici_vkn ?? ''
-          const taxMatch  = !!taxNo  && existingTaxNos.has(taxNo.trim())
+          const taxNo   = normVknG(inv.satici_vkn)
+          const taxMatch  = taxNo.length >= 10 && existingTaxNos.has(taxNo)
           const nameMatch = !!name   && existingNames.has(normalizeName(name))
+          console.log('[gelen eşleştirme] VKN:', taxNo, 'taxMatch:', taxMatch, 'name:', name, 'nameMatch:', nameMatch)
           const isYeni    = !taxMatch && !nameMatch
           if (isYeni) {
             rowStatus = 'yeni_tedarikci'
