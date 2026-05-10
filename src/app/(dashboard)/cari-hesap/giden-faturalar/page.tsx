@@ -30,9 +30,9 @@ function computeDateRange(period?: string, from?: string, to?: string) {
 export default async function GidenFaturalarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; period?: string; from?: string; to?: string; sort?: string; durum?: string; sehir?: string }>
+  searchParams: Promise<{ q?: string; period?: string; from?: string; to?: string; sort?: string; durum?: string; sehir?: string; sube?: string }>
 }) {
-  const { q, period, from: fromParam, to: toParam, sort, durum, sehir } = await searchParams
+  const { q, period, from: fromParam, to: toParam, sort, durum, sehir, sube } = await searchParams
   const supabase = createServiceClient()
   const today = new Date().toISOString().split('T')[0]
 
@@ -45,7 +45,7 @@ export default async function GidenFaturalarPage({
 
   let query = supabase
     .from('invoices')
-    .select('id, invoice_number, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, customers(full_name, il)')
+    .select('id, invoice_number, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, sube_id, customers(full_name, il), subeler(ad)')
     .eq('invoice_type', 'satis')
     .neq('status', 'iptal')
     .order(dbSortCol, { ascending: dbAsc })
@@ -57,6 +57,8 @@ export default async function GidenFaturalarPage({
   if (q && q.trim().length >= 2) {
     query = query.ilike('invoice_number', `%${q.trim()}%`)
   }
+
+  if (sube) query = query.eq('sube_id', sube)
 
   if (durum && durum !== 'tumu' && durum !== 'gecikmiş') {
     if (durum === 'vergi_mahsup') {
@@ -186,6 +188,7 @@ export default async function GidenFaturalarPage({
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Şube</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Vade</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
@@ -197,10 +200,11 @@ export default async function GidenFaturalarPage({
             <tbody className="divide-y">
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">Fatura bulunamadı</td>
+                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">Fatura bulunamadı</td>
                 </tr>
               ) : invoices.map(inv => {
                 const customer = inv.customers as any
+                const invSube = inv.subeler as any
                 const kalan = Math.max(0, (inv.total_amount ?? 0) - (inv.paid_amount ?? 0))
                 const isMahsup = (inv as any).mahsup_durumu === 'vergi_mahsup'
                 const isOverdue = !!(inv.due_date && inv.due_date < today && kalan > 0)
@@ -216,7 +220,7 @@ export default async function GidenFaturalarPage({
                 return (
                   <tr key={inv.id} className={`hover:bg-gray-50 transition-colors ${isOverdue ? 'bg-red-50/40' : isMahsup ? 'bg-violet-50/30' : ''}`}>
                     <td className="px-4 py-3 font-mono text-xs">
-                      <Link href={`/cari-hesap/faturalar/${inv.id}`}
+                      <Link href={`/cari-hesap/faturalar/${inv.id}?kaynak=giden`}
                         className="text-[#C8102E] hover:underline font-semibold">
                         {inv.invoice_number}
                       </Link>
@@ -224,6 +228,7 @@ export default async function GidenFaturalarPage({
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                       {customer?.full_name ?? '—'}
                     </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{invSube?.ad ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {inv.due_date ? (
@@ -255,10 +260,16 @@ export default async function GidenFaturalarPage({
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/cari-hesap/faturalar/${inv.id}`}
-                        className="text-xs text-[#C8102E] hover:underline font-medium">
-                        Detay →
-                      </Link>
+                      <div className="flex gap-3 justify-end">
+                        <Link href={`/cari-hesap/faturalar/${inv.id}?kaynak=giden`}
+                          className="text-xs text-[#C8102E] hover:underline font-medium">
+                          Detay →
+                        </Link>
+                        <Link href={`/cari-hesap/faturalar/${inv.id}/edit?kaynak=giden`}
+                          className="text-xs text-gray-500 dark:text-gray-400 hover:underline font-medium">
+                          Düzenle
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )

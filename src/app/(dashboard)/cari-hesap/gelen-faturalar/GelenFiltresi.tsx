@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { SORT_OPTIONS, PERIOD_OPTIONS } from '../_components/FaturaFiltrePaneli'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
+import { createClient } from '@/lib/supabase/client'
 
 function GelenFiltrePaneli() {
   const sp = useSearchParams()
@@ -17,11 +18,18 @@ function GelenFiltrePaneli() {
   const [vade, setVade]         = useState(sp.get('vade_durumu') ?? 'tumu')
   const [kategori, setKategori] = useState(sp.get('kategori') ?? 'tumu')
   const [sehir, setSehir]       = useState(sp.get('sehir') ?? '')
+  const [sube, setSube]         = useState(sp.get('sube') ?? '')
+  const [subeler, setSubeler]   = useState<{ id: string; ad: string }[]>([])
+
+  useEffect(() => {
+    createClient().from('subeler').select('id, ad').order('ad')
+      .then(({ data }: { data: { id: string; ad: string }[] | null }) => setSubeler(data ?? []))
+  }, [])
 
   // State refs for debounce effect to read latest values
-  const stateRef = useRef({ q, period, from, to, sort, odeme, vade, kategori, sehir })
+  const stateRef = useRef({ q, period, from, to, sort, odeme, vade, kategori, sehir, sube })
   useEffect(() => {
-    stateRef.current = { q, period, from, to, sort, odeme, vade, kategori, sehir }
+    stateRef.current = { q, period, from, to, sort, odeme, vade, kategori, sehir, sube }
   })
 
   useEffect(() => {
@@ -34,6 +42,7 @@ function GelenFiltrePaneli() {
     setVade(sp.get('vade_durumu') ?? 'tumu')
     setKategori(sp.get('kategori') ?? 'tumu')
     setSehir(sp.get('sehir') ?? '')
+    setSube(sp.get('sube') ?? '')
   }, [sp])
 
   // Auto-trigger search on q change (min 2 chars or cleared)
@@ -53,6 +62,7 @@ function GelenFiltrePaneli() {
       if (s.vade !== 'tumu')             p.set('vade_durumu', s.vade)
       if (s.kategori !== 'tumu')         p.set('kategori', s.kategori)
       if (s.sehir)                       p.set('sehir', s.sehir)
+      if (s.sube)                        p.set('sube', s.sube)
       router.push(`/cari-hesap/gelen-faturalar?${p.toString()}`)
     }, 600)
     return () => clearTimeout(timer)
@@ -70,10 +80,11 @@ function GelenFiltrePaneli() {
     if (vade !== 'tumu')           p.set('vade_durumu', vade)
     if (kategori !== 'tumu')       p.set('kategori', kategori)
     if (sehir)                     p.set('sehir', sehir)
+    if (sube)                      p.set('sube', sube)
     router.push(`/cari-hesap/gelen-faturalar?${p.toString()}`)
   }
 
-  const hasFilters = !!(q || period || (sort !== 'date_desc') || (odeme !== 'tumu') || (vade !== 'tumu') || (kategori !== 'tumu') || sehir)
+  const hasFilters = !!(q || period || (sort !== 'date_desc') || (odeme !== 'tumu') || (vade !== 'tumu') || (kategori !== 'tumu') || sehir || sube)
 
   const inputCls = 'border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] bg-white dark:bg-gray-800'
 
@@ -116,7 +127,7 @@ function GelenFiltrePaneli() {
         </select>
       </div>
 
-      {/* Satır 2: il filtresi + dönem + sıralama + butonlar */}
+      {/* Satır 2: il filtresi + şube + dönem + sıralama + butonlar */}
       <div className="flex flex-wrap gap-3 items-end">
         <div>
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">İl</label>
@@ -129,6 +140,13 @@ function GelenFiltrePaneli() {
             {TURKEY_PROVINCES.map(il => (
               <option key={il} value={il}>{il}</option>
             ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Şube</label>
+          <select value={sube} onChange={e => setSube(e.target.value)} className={`${inputCls} min-w-40`}>
+            <option value="">Tüm Şubeler</option>
+            {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
           </select>
         </div>
         <div>

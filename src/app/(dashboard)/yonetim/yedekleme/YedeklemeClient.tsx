@@ -29,7 +29,7 @@ type SettingsState = {
 type DryRunResult = {
   table_count: number
   total_rows: number
-  tables: Array<{ file: string; rows: number; table?: string; inserted?: number; skipped?: number }>
+  tables: Array<{ file: string; rows: number; table?: string; inserted?: number; skipped?: number; merged?: number; remapped?: number; relation_risks?: number; errors?: number }>
 }
 
 type RestoreResult = {
@@ -37,6 +37,13 @@ type RestoreResult = {
   summary: {
     service_forms: { inserted: number; skipped: number; errors: string[] }
     service_form_items: { inserted: number; skipped: number; errors: string[] }
+    urunler?: { inserted: number; skipped: number; errors: string[] }
+    customers?: { inserted: number; skipped: number; merged?: number; relation_risks?: number; errors: string[] }
+    devices?: { inserted: number; skipped: number; remapped?: number; relation_risks?: number; errors: string[] }
+    teklifler?: { inserted: number; skipped: number; merged?: number; errors: string[] }
+    teklif_kalemleri?: { inserted: number; skipped: number; relation_risks?: number; errors: string[] }
+    hatirlatma_kayitlari?: { inserted: number; skipped: number; merged?: number; relation_risks?: number; errors: string[] }
+    hatirlatma_susturmalar?: { inserted: number; skipped: number; merged?: number; relation_risks?: number; errors: string[] }
   }
 }
 
@@ -169,10 +176,12 @@ export default function YedeklemeClient({ tables, groups }: { tables: TableOptio
 
   function handleRestore() {
     if (!dryRun || !restoreFile) return
-    const insertCount = dryRun.tables.reduce((sum, t) => sum + (t.inserted ?? t.rows), 0)
+    const insertCount = dryRun.tables.reduce((sum, t) => sum + (t.inserted ?? 0), 0)
+    const mergeCount = dryRun.tables.reduce((sum, t) => sum + (t.merged ?? 0), 0)
+    const remapCount = dryRun.tables.reduce((sum, t) => sum + (t.remapped ?? 0), 0)
     const skipCount = dryRun.tables.reduce((sum, t) => sum + (t.skipped ?? 0), 0)
     const confirmed = window.confirm(
-      `${insertCount} kayit eklenecek, ${skipCount} kayit atlanacak (zaten mevcut).\n\nDevam etmek istiyor musunuz?`
+      `${insertCount} kayit eklenecek, ${mergeCount} kayit mevcut kayitla eslesecek, ${remapCount} cihaz musteriye baglanacak, ${skipCount} kayit atlanacak.\n\nDevam etmek istiyor musunuz?`
     )
     if (!confirmed) return
     restoreServiceForms()
@@ -356,33 +365,47 @@ export default function YedeklemeClient({ tables, groups }: { tables: TableOptio
             <PlayCircle size={16} /> Dry-run calistir
           </button>
           {dryRun && (() => {
-            const totalInsertable = dryRun.tables.reduce((sum, t) => sum + (t.inserted ?? t.rows), 0)
+            const totalInsertable = dryRun.tables.reduce((sum, t) => sum + (t.inserted ?? 0) + (t.merged ?? 0) + (t.remapped ?? 0), 0)
             return (
               <div className="mt-4 space-y-3 text-sm">
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700">
-                  Yalnizca servis formlari ve servis form kalemleri geri yuklenebilir.
+                  Yalnizca servis formlari, servis form kalemleri, urunler, musteriler, musteri cihazlari, teklifler, teklif kalemleri ve hatirlatmalar geri yuklenebilir.
                 </div>
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100 dark:bg-gray-700 text-xs uppercase text-gray-500 dark:text-gray-400">
-                      <th className="p-2 text-left">Tablo</th>
-                      <th className="p-2 text-center">Toplam</th>
-                      <th className="p-2 text-center text-green-600">Eklenecek</th>
-                      <th className="p-2 text-center text-yellow-600">Atlanacak</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dryRun.tables.map(t => (
-                      <tr key={t.file} className="border-b dark:border-gray-600">
-                        <td className="p-2 font-medium text-gray-900 dark:text-gray-100">{t.table ?? t.file}</td>
-                        <td className="p-2 text-center">{t.rows}</td>
-                        <td className="p-2 text-center text-green-600 font-bold">{t.inserted ?? t.rows}</td>
-                        <td className="p-2 text-center text-yellow-600">{t.skipped ?? 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="flex gap-3">
+                <div className="max-w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[760px] w-full border-collapse text-xs sm:text-sm">
+                      <thead>
+                        <tr className="bg-gray-100 uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                          <th className="min-w-[180px] max-w-[260px] p-2 text-left">Tablo</th>
+                          <th className="min-w-20 whitespace-nowrap p-2 text-center">Toplam</th>
+                          <th className="min-w-24 whitespace-nowrap p-2 text-center text-green-600">Eklenecek</th>
+                          <th className="min-w-24 whitespace-nowrap p-2 text-center text-blue-600">Eslesecek</th>
+                          <th className="min-w-24 whitespace-nowrap p-2 text-center text-cyan-600">Baglanacak</th>
+                          <th className="min-w-20 whitespace-nowrap p-2 text-center text-orange-600">Risk</th>
+                          <th className="min-w-24 whitespace-nowrap p-2 text-center text-yellow-600">Atlanacak</th>
+                          <th className="min-w-20 whitespace-nowrap p-2 text-center text-red-600">Hatali</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dryRun.tables.map(t => (
+                          <tr key={t.file} className="border-b last:border-b-0 dark:border-gray-600">
+                            <td className="max-w-[260px] p-2 font-medium text-gray-900 dark:text-gray-100">
+                              <div className="truncate" title={t.table ?? t.file}>{t.table ?? t.file}</div>
+                            </td>
+                            <td className="whitespace-nowrap p-2 text-center">{t.rows}</td>
+                            <td className="whitespace-nowrap p-2 text-center font-bold text-green-600">{t.inserted ?? 0}</td>
+                            <td className="whitespace-nowrap p-2 text-center text-blue-600">{t.merged ?? 0}</td>
+                            <td className="whitespace-nowrap p-2 text-center text-cyan-600">{t.remapped ?? 0}</td>
+                            <td className="whitespace-nowrap p-2 text-center text-orange-600">{t.relation_risks ?? 0}</td>
+                            <td className="whitespace-nowrap p-2 text-center text-yellow-600">{t.skipped ?? 0}</td>
+                            <td className="whitespace-nowrap p-2 text-center text-red-600">{t.errors ?? 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
                     onClick={handleRestore}
@@ -411,7 +434,52 @@ export default function YedeklemeClient({ tables, groups }: { tables: TableOptio
               <div>
                 Kalemler: {restoreResult.summary.service_form_items.inserted} eklendi, {restoreResult.summary.service_form_items.skipped} atlandi.
               </div>
-              {[...restoreResult.summary.service_forms.errors, ...restoreResult.summary.service_form_items.errors].map(error => (
+              {restoreResult.summary.urunler && (
+                <div>
+                  Urunler: {restoreResult.summary.urunler.inserted} eklendi, {restoreResult.summary.urunler.skipped} atlandi.
+                </div>
+              )}
+              {restoreResult.summary.customers && (
+                <div>
+                  Musteriler: {restoreResult.summary.customers.inserted} eklendi, {restoreResult.summary.customers.merged ?? 0} eslesti, {restoreResult.summary.customers.skipped} atlandi.
+                </div>
+              )}
+              {restoreResult.summary.devices && (
+                <div>
+                  Cihazlar: {restoreResult.summary.devices.inserted} eklendi, {restoreResult.summary.devices.remapped ?? 0} musteriye baglandi, {restoreResult.summary.devices.skipped} atlandi.
+                </div>
+              )}
+              {restoreResult.summary.teklifler && (
+                <div>
+                  Teklifler: {restoreResult.summary.teklifler.inserted} eklendi, {restoreResult.summary.teklifler.merged ?? 0} eslesti, {restoreResult.summary.teklifler.skipped} atlandi.
+                </div>
+              )}
+              {restoreResult.summary.teklif_kalemleri && (
+                <div>
+                  Teklif kalemleri: {restoreResult.summary.teklif_kalemleri.inserted} eklendi, {restoreResult.summary.teklif_kalemleri.relation_risks ?? 0} riskli, {restoreResult.summary.teklif_kalemleri.skipped} atlandi.
+                </div>
+              )}
+              {restoreResult.summary.hatirlatma_kayitlari && (
+                <div>
+                  Hatirlatma kayitlari: {restoreResult.summary.hatirlatma_kayitlari.inserted} eklendi, {restoreResult.summary.hatirlatma_kayitlari.merged ?? 0} eslesti, {restoreResult.summary.hatirlatma_kayitlari.relation_risks ?? 0} riskli, {restoreResult.summary.hatirlatma_kayitlari.skipped} atlandi.
+                </div>
+              )}
+              {restoreResult.summary.hatirlatma_susturmalar && (
+                <div>
+                  Hatirlatma susturmalari: {restoreResult.summary.hatirlatma_susturmalar.inserted} eklendi, {restoreResult.summary.hatirlatma_susturmalar.merged ?? 0} eslesti, {restoreResult.summary.hatirlatma_susturmalar.relation_risks ?? 0} riskli, {restoreResult.summary.hatirlatma_susturmalar.skipped} atlandi.
+                </div>
+              )}
+              {[
+                ...restoreResult.summary.service_forms.errors,
+                ...restoreResult.summary.service_form_items.errors,
+                ...(restoreResult.summary.urunler?.errors ?? []),
+                ...(restoreResult.summary.customers?.errors ?? []),
+                ...(restoreResult.summary.devices?.errors ?? []),
+                ...(restoreResult.summary.teklifler?.errors ?? []),
+                ...(restoreResult.summary.teklif_kalemleri?.errors ?? []),
+                ...(restoreResult.summary.hatirlatma_kayitlari?.errors ?? []),
+                ...(restoreResult.summary.hatirlatma_susturmalar?.errors ?? []),
+              ].map(error => (
                 <div key={error} className="mt-1 text-red-700">{error}</div>
               ))}
             </div>

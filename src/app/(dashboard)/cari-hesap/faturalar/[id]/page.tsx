@@ -4,13 +4,20 @@ import { notFound } from 'next/navigation'
 import { formatCurrency, formatTRDate, INVOICE_STATUS_CONFIG, PAYMENT_METHOD_LABELS } from '@/lib/finance/formatters'
 import InvoiceActions from './_components/InvoiceActions'
 
-export default async function FaturaDetayPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function FaturaDetayPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ kaynak?: string }>
+}) {
   const { id } = await params
+  const { kaynak } = await searchParams
   const supabase = createServiceClient()
 
   const [{ data: invoice }, { data: items }, { data: payments }, { data: invoiceBrokers }] = await Promise.all([
     supabase.from('invoices')
-      .select('*, customers(full_name, phone, address, tax_number, email)')
+      .select('*, customers(full_name, phone, address, tax_number, email), subeler(ad)')
       .eq('id', id).single(),
     supabase.from('invoice_items').select('*').eq('invoice_id', id).order('line_order'),
     supabase.from('payments').select('*').eq('invoice_id', id).order('payment_date', { ascending: false }),
@@ -22,6 +29,7 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
   if (!invoice) notFound()
 
   const customer = invoice.customers as any
+  const sube = invoice.subeler as any
   const isMahsup = (invoice as any).mahsup_durumu === 'vergi_mahsup'
   const statusConf = isMahsup
     ? INVOICE_STATUS_CONFIG['vergi_mahsup']
@@ -81,14 +89,26 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
       {/* Üst bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/cari-hesap/faturalar" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Faturalar</Link>
+          <Link
+            href={
+              kaynak === 'giden' ? '/cari-hesap/giden-faturalar'
+              : kaynak === 'gelen' ? '/cari-hesap/gelen-faturalar'
+              : '/cari-hesap/faturalar'
+            }
+            className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700"
+          >
+            ←{' '}
+            {kaynak === 'giden' ? 'Giden Faturalar'
+              : kaynak === 'gelen' ? 'Gelen Faturalar'
+              : 'Faturalar'}
+          </Link>
           <span className="text-gray-300">/</span>
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{invoice.invoice_number}</h2>
           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${statusConf.className}`}>
             {statusConf.label}
           </span>
         </div>
-        <InvoiceActions invoiceId={id} status={invoice.status} kalan={kalan} />
+        <InvoiceActions invoiceId={id} status={invoice.status} kalan={kalan} kaynak={kaynak} />
       </div>
 
       {/* Mahsup bilgi kartı */}
@@ -149,6 +169,12 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
                 <span className="text-gray-700 dark:text-gray-300 text-right max-w-48">{invoice.description}</span>
               </div>
             )}
+            {sube?.ad && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Şube</span>
+                <span className="text-gray-700 dark:text-gray-300">{sube.ad}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -176,10 +202,10 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
                   <span className="text-gray-700 dark:text-gray-300">{customer.phone}</span>
                 </div>
               )}
-              {customer.address && (
+              {((invoice as any).musteri_adres || customer.address) && (
                 <div className="flex justify-between gap-4">
                   <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Adres</span>
-                  <span className="text-gray-700 dark:text-gray-300 text-right">{customer.address}</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-right">{(invoice as any).musteri_adres || customer.address}</span>
                 </div>
               )}
             </div>
@@ -200,10 +226,10 @@ export default async function FaturaDetayPage({ params }: { params: Promise<{ id
                   <span className="text-gray-700 dark:text-gray-300">{invoice.supplier_tax_no}</span>
                 </div>
               )}
-              {supplierParsed.adres && (
+              {((invoice as any).tedarikci_adres || supplierParsed.adres) && (
                 <div className="flex justify-between gap-4">
                   <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Adres</span>
-                  <span className="text-gray-700 dark:text-gray-300 text-right text-xs leading-relaxed">{supplierParsed.adres}</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-right text-xs leading-relaxed">{(invoice as any).tedarikci_adres || supplierParsed.adres}</span>
                 </div>
               )}
             </div>

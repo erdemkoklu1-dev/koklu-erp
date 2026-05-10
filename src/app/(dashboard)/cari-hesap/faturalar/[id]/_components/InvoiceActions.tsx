@@ -9,9 +9,10 @@ type Props = {
   invoiceId: string
   status: string
   kalan?: number
+  kaynak?: string
 }
 
-export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) {
+export default function InvoiceActions({ invoiceId, status, kalan = 0, kaynak }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -223,7 +224,7 @@ export default function InvoiceActions({ invoiceId, status, kalan = 0 }: Props) 
       )}
 
       <div className="flex gap-2">
-        <Link href={`/cari-hesap/faturalar/${invoiceId}/edit`}
+        <Link href={`/cari-hesap/faturalar/${invoiceId}/edit${kaynak ? `?kaynak=${kaynak}` : ''}`}
           className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50">
           Düzenle
         </Link>

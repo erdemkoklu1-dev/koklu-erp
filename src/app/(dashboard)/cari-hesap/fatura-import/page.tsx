@@ -270,7 +270,7 @@ function PdfEditModal({
   row: PdfPreviewRow
   rowIdx: number
   subeler: Sube[]
-  customers: { id: string; full_name: string; tax_number: string | null }[]
+  customers: { id: string; full_name: string; tax_number: string | null; address?: string | null }[]
   onSave: (idx: number, updated: Partial<PdfPreviewRow>) => void
   onClose: () => void
 }) {
@@ -281,6 +281,7 @@ function PdfEditModal({
   const [vade, setVade]       = useState(row.editedVade)
   const [tutar, setTutar]     = useState(row.editedTutar)
   const [subeId, setSubeId]   = useState<string | null>(row.sube_id)
+  const [adres, setAdres]     = useState(row.musteri_adresi ?? '')
   const [items, setItems]     = useState<PdfInvoiceItem[]>(row.kalemler?.length ? row.kalemler : [makeEmptyItem(1)])
   const [custDrop, setCustDrop] = useState(false)
   const custRef = useRef<HTMLDivElement>(null)
@@ -293,13 +294,20 @@ function PdfEditModal({
     return () => document.removeEventListener('mousedown', handle)
   }, [])
 
+  // Kalem toplamı değişince Ödenecek Tutar'ı otomatik güncelle
+  useEffect(() => {
+    const total = Math.round(items.reduce((s, k) => s + Number(k.miktar) * Number(k.birim_fiyat), 0) * 100) / 100
+    if (total > 0) setTutar(String(total))
+  }, [items])
+
   const filteredCust = name.length >= 1
     ? customers.filter(c => c.full_name.toLowerCase().includes(name.toLowerCase())).slice(0, 8)
     : []
 
-  function pickCustomer(c: { id: string; full_name: string; tax_number: string | null }) {
+  function pickCustomer(c: { id: string; full_name: string; tax_number: string | null; address?: string | null }) {
     setName(c.full_name)
     setVkn(c.tax_number ?? '')
+    setAdres(c.address ?? adres)
     setCustDrop(false)
   }
 
@@ -323,6 +331,7 @@ function PdfEditModal({
       odenecek_tutar: finalTutar ? Number(finalTutar) : row.odenecek_tutar,
       kalemler: cleanItems,
       sube_id: subeId,
+      musteri_adresi: adres || null,
     })
     onClose()
   }
@@ -370,6 +379,16 @@ function PdfEditModal({
               <input value={faturaNo} onChange={e => setFaturaNo(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Müşteri Adresi</label>
+            <textarea
+              value={adres}
+              onChange={e => setAdres(e.target.value)}
+              rows={2}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+            />
           </div>
 
           {/* Tarihler */}
@@ -432,7 +451,14 @@ function PdfEditModal({
                   </div>
                   <div className="col-span-1">
                     <label className="text-[11px] text-gray-500">Miktar</label>
-                    <input type="number" step="0.01" value={item.miktar} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, miktar: Number(e.target.value) } : k))}
+                    <input type="number" step="0.01" value={item.miktar}
+                      onChange={e => {
+                        const miktar = Number(e.target.value)
+                        setItems(prev => prev.map((k, i) => i === itemIdx ? {
+                          ...k, miktar,
+                          satir_toplam: Math.round(miktar * Number(k.birim_fiyat) * 100) / 100,
+                        } : k))
+                      }}
                       className="mt-1 w-full border rounded px-2 py-1 text-xs" />
                   </div>
                   <div className="col-span-1">
@@ -442,13 +468,20 @@ function PdfEditModal({
                   </div>
                   <div className="col-span-1">
                     <label className="text-[11px] text-gray-500">Birim Fiyat</label>
-                    <input type="number" step="0.01" value={item.birim_fiyat} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, birim_fiyat: Number(e.target.value) } : k))}
+                    <input type="number" step="0.01" value={item.birim_fiyat}
+                      onChange={e => {
+                        const birim_fiyat = Number(e.target.value)
+                        setItems(prev => prev.map((k, i) => i === itemIdx ? {
+                          ...k, birim_fiyat,
+                          satir_toplam: Math.round(Number(k.miktar) * birim_fiyat * 100) / 100,
+                        } : k))
+                      }}
                       className="mt-1 w-full border rounded px-2 py-1 text-xs" />
                   </div>
                   <div className="col-span-1">
                     <label className="text-[11px] text-gray-500">Tutar</label>
-                    <input type="number" step="0.01" value={item.satir_toplam} onChange={e => setItems(prev => prev.map((k, i) => i === itemIdx ? { ...k, satir_toplam: Number(e.target.value) } : k))}
-                      className="mt-1 w-full border rounded px-2 py-1 text-xs" />
+                    <input readOnly value={(Math.round(Number(item.miktar) * Number(item.birim_fiyat) * 100) / 100).toFixed(2)}
+                      className="mt-1 w-full border rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed" />
                   </div>
                   <button type="button" onClick={() => setItems(prev => prev.filter((_, i) => i !== itemIdx))}
                     className="col-span-1 text-red-500 text-xs border rounded px-2 py-1 hover:bg-red-50">
@@ -459,9 +492,13 @@ function PdfEditModal({
             </div>
           </div>
 
-          <div className="text-xs text-gray-400 dark:text-gray-500">
-            Kalem sayısı: {row.kalemler?.length ?? 0} — Değiştirilemiyor
-          </div>
+          {items.length > 0 && (
+            <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
+              Toplam: <span className="font-medium text-gray-700 dark:text-gray-200">
+                {(Math.round(items.reduce((s, k) => s + Number(k.miktar) * Number(k.birim_fiyat), 0) * 100) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+              </span> ({items.length} kalem)
+            </div>
+          )}
         </div>
         <div className="flex gap-3 px-5 py-4 border-t bg-gray-50 dark:bg-gray-700">
           <button onClick={handleSave}
@@ -499,7 +536,7 @@ function PdfFaturaImport() {
         if (erzincan) setGlobalSubeId(erzincan.id)
       }
     })
-    supabase.from('customers').select('id, full_name, tax_number').eq('is_active', true).order('full_name')
+    supabase.from('customers').select('id, full_name, tax_number, address').eq('is_active', true).order('full_name')
       .then(({ data }: { data: any; error: any }) => { if (data) setCustomers(data as any[]) })
   }, [])
 
@@ -1157,6 +1194,7 @@ type GelenParsedInvoice = {
   senaryo: string | null
   satici_adi: string | null
   satici_vkn: string | null
+  tedarikci_adres?: string | null
   kdv_matrahi: number | null
   kdv_tutari: number | null
   odenecek_tutar: number | null
@@ -1222,6 +1260,7 @@ function GelenPdfEditModal({
   const [tutar, setTutar] = useState(row.editedTutar)
   const [kategori, setKategori] = useState(row.editedKategori)
   const [subeId, setSubeId] = useState<string | null>(row.sube_id)
+  const [adres, setAdres] = useState(row.tedarikci_adres ?? '')
   const [items, setItems] = useState<GelenPdfItem[]>(row.kalemler?.length ? row.kalemler : [makeEmptyItem(1)])
 
   function handleSave() {
@@ -1250,6 +1289,7 @@ function GelenPdfEditModal({
       odenecek_tutar: finalTutar ? Number(finalTutar) : row.odenecek_tutar,
       kalemler: cleanItems,
       sube_id: subeId,
+      tedarikci_adres: adres || null,
     })
     onClose()
   }
@@ -1276,6 +1316,15 @@ function GelenPdfEditModal({
               <option value="">Şube seçin</option>
               {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Tedarikçi Adresi</label>
+            <textarea
+              value={adres}
+              onChange={e => setAdres(e.target.value)}
+              rows={2}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+            />
           </div>
           <div className="border rounded-lg">
             <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700 border-b rounded-t-lg">
@@ -1470,6 +1519,7 @@ function GelenPdfFaturaImport() {
           banka_bilgileri: r.banka_bilgileri ?? [],
           gider_kategorisi: r.editedKategori,
           bakiye_notu:     r.bakiye_notu ?? null,
+          tedarikci_adres: r.tedarikci_adres ?? null,
           sube_id:         r.sube_id ?? null,
         }))
 

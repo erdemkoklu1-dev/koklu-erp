@@ -28,12 +28,14 @@ type Props = {
   customers: { id: string; full_name: string; tax_number: string | null }[]
   allBrokers: { id: string; full_name: string; company_name: string | null }[]
   initialBrokers: any[]
+  subeler: { id: string; ad: string }[]
+  kaynak?: string
 }
 
 const KDV_RATES = ['0', '10', '20']
 const UNITS = ['adet', 'saat', 'kg', 'm', 'set', 'paket']
 
-export default function EditFaturaClient({ invoiceId, invoice, initialItems, customers, allBrokers, initialBrokers }: Props) {
+export default function EditFaturaClient({ invoiceId, invoice, initialItems, customers, allBrokers, initialBrokers, subeler, kaynak }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -54,6 +56,8 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
     stopaj_rate: String(invoice.stopaj_rate ?? '0'),
     description: invoice.description ?? '',
     notes: invoice.notes ?? '',
+    adres: (invoice as any).musteri_adres ?? (invoice as any).tedarikci_adres ?? (invoice.customers as any)?.address ?? '',
+    sube_id: (invoice as any).sube_id ?? '',
   })
 
   const [items, setItems] = useState<LineItem[]>(
@@ -149,6 +153,9 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
         total_amount: totals.total_amount,
         description: form.description || null,
         notes: form.notes || null,
+        musteri_adres: (form.invoice_type === 'satis' || form.invoice_type === 'iade_satis') ? (form.adres || null) : null,
+        tedarikci_adres: (form.invoice_type === 'alis' || form.invoice_type === 'iade_alis') ? (form.adres || null) : null,
+        sube_id: form.sube_id || null,
       }).eq('id', invoiceId)
       if (invErr) throw new Error(invErr.message)
 
@@ -211,7 +218,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
         )
       }
 
-      router.push(`/cari-hesap/faturalar/${invoiceId}`)
+      router.push(`/cari-hesap/faturalar/${invoiceId}${kaynak ? `?kaynak=${kaynak}` : ''}`)
       router.refresh()
     } catch (e: any) {
       setError(e.message); setLoading(false)
@@ -221,7 +228,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href={`/cari-hesap/faturalar/${invoiceId}`} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Fatura Detayı</Link>
+        <Link href={`/cari-hesap/faturalar/${invoiceId}${kaynak ? `?kaynak=${kaynak}` : ''}`} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Fatura Detayı</Link>
         <span className="text-gray-300">/</span>
         <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Fatura Düzenle</h2>
       </div>
@@ -255,6 +262,16 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
               <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
             </div>
+          </div>
+
+          {/* Şube */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Şube</label>
+            <select value={form.sube_id} onChange={e => setForm(p => ({ ...p, sube_id: e.target.value }))}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800">
+              <option value="">— Şube Seçin</option>
+              {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+            </select>
           </div>
 
           {/* Müşteri / Tedarikçi */}
@@ -301,6 +318,19 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
               </div>
             </div>
           )}
+          {/* Adres */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {(form.invoice_type === 'satis' || form.invoice_type === 'iade_satis') ? 'Müşteri Adresi' : 'Tedarikçi Adresi'}
+            </label>
+            <textarea
+              value={form.adres}
+              onChange={e => setForm(p => ({ ...p, adres: e.target.value }))}
+              rows={2}
+              placeholder="Adres bilgisi..."
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+            />
+          </div>
         </div>
 
         {/* Kalemler */}
@@ -459,7 +489,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
             className="flex-1 bg-[#C8102E] text-white py-3 rounded-lg font-semibold hover:bg-[#a50d26] disabled:opacity-50">
             {loading ? 'Kaydediliyor...' : 'Güncelle'}
           </button>
-          <Link href={`/cari-hesap/faturalar/${invoiceId}`}
+          <Link href={`/cari-hesap/faturalar/${invoiceId}${kaynak ? `?kaynak=${kaynak}` : ''}`}
             className="px-8 py-3 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 text-center">
             İptal
           </Link>

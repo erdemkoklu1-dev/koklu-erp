@@ -1,6 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import { formatTRDate } from '@/lib/finance/formatters'
+import { getCurrentUserRole } from '@/lib/backup/authorization'
+import GecmisActions, { type GecmisActionRecord } from './GecmisActions'
 
 const DURUM_BADGE: Record<string, string> = {
   gonderildi: 'bg-green-50 text-green-700 border-green-200',
@@ -29,12 +31,14 @@ export default async function GecmisPage({
 }) {
   const { kanal, durum, baslangic, bitis } = await searchParams
   const supabase = createServiceClient()
+  const user = await getCurrentUserRole()
+  const canDelete = ['Admin', 'Yonetici', 'Yönetici'].includes(user?.role ?? '')
 
   let query = supabase
     .from('hatirlatma_kayitlari')
     .select(`
       id, kanal, alici_email, alici_telefon, mesaj_icerigi,
-      gonderim_zamani, durum, hata_mesaji, created_at,
+      gonderim_zamani, planli_gonderim_zamani, durum, hata_mesaji, created_at,
       customers(id, full_name),
       devices(id, custom_device_name, brand, capacity)
     `)
@@ -181,6 +185,7 @@ export default async function GecmisPage({
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Kanal</th>
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Alıcı</th>
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Durum</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Aksiyon</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -194,6 +199,20 @@ export default async function GecmisPage({
                   } | null
                   const cihazAdi = cihaz?.custom_device_name
                     ?? ([cihaz?.brand, cihaz?.capacity].filter(Boolean).join(' ') || '—')
+                  const actionRecord: GecmisActionRecord = {
+                    id: k.id,
+                    kanal: k.kanal,
+                    alici_email: k.alici_email,
+                    alici_telefon: k.alici_telefon,
+                    mesaj_icerigi: k.mesaj_icerigi,
+                    gonderim_zamani: k.gonderim_zamani,
+                    planli_gonderim_zamani: k.planli_gonderim_zamani,
+                    durum: k.durum,
+                    hata_mesaji: k.hata_mesaji,
+                    created_at: k.created_at,
+                    musteri: musteri ? { id: musteri.id, full_name: musteri.full_name } : null,
+                    cihaz: cihaz ? { id: cihaz.id, ad: cihazAdi } : null,
+                  }
                   return (
                     <tr key={k.id} className={`hover:bg-gray-50 ${k.durum === 'hata' ? 'bg-red-50/30' : ''}`}>
                       <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -227,6 +246,9 @@ export default async function GecmisPage({
                             </div>
                           )}
                         </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <GecmisActions record={actionRecord} canDelete={canDelete} />
                       </td>
                     </tr>
                   )

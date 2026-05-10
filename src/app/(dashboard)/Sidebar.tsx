@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Shield, ClipboardList, FileUp, Wallet,
   Handshake, FileDown, FileInput, AlertTriangle, BarChart2, FileText,
-  Bell, Factory, Settings, Building2, UserSquare2
+  Bell, Factory, Settings, Building2, UserSquare2, Truck
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/cihazlar',                   label: 'Cihazlar',           icon: Shield,        modul: 'cihazlar' },
   { href: '/service-forms',              label: 'Servis Formları',    icon: ClipboardList, modul: 'servis_formlari' },
   { href: '/fabrika',                    label: 'Fabrika',            icon: Factory,       modul: 'fabrika' },
+  { href: '/teslimatlar',                label: 'Teslimatlar',        icon: Truck,         modul: 'teslimatlar' },
   { href: '/hatirlatmalar',              label: 'Hatırlatmalar',      icon: Bell,          modul: 'hatirlatmalar' },
   { href: '/fiyat-teklifleri',           label: 'Fiyat Teklifleri',   icon: FileText,      modul: 'fiyat_teklifleri' },
   { href: '/fiyat-teklifleri/proforma', label: 'Proforma Fatura',    icon: FileText,      modul: 'fiyat_teklifleri' },

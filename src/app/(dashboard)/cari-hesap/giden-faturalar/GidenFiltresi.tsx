@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { SORT_OPTIONS, PERIOD_OPTIONS } from '../_components/FaturaFiltrePaneli'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
+import { createClient } from '@/lib/supabase/client'
 
 const DURUM_OPTIONS = [
   { value: 'tumu',         label: 'Tüm Durumlar' },
@@ -25,10 +26,17 @@ function GidenFiltrePaneli() {
   const [sort, setSort]     = useState(sp.get('sort') ?? 'date_desc')
   const [durum, setDurum]   = useState(sp.get('durum') ?? 'tumu')
   const [sehir, setSehir]   = useState(sp.get('sehir') ?? '')
+  const [sube, setSube]     = useState(sp.get('sube') ?? '')
+  const [subeler, setSubeler] = useState<{ id: string; ad: string }[]>([])
 
-  const stateRef = useRef({ q, period, from, to, sort, durum, sehir })
   useEffect(() => {
-    stateRef.current = { q, period, from, to, sort, durum, sehir }
+    createClient().from('subeler').select('id, ad').order('ad')
+      .then(({ data }: { data: { id: string; ad: string }[] | null }) => setSubeler(data ?? []))
+  }, [])
+
+  const stateRef = useRef({ q, period, from, to, sort, durum, sehir, sube })
+  useEffect(() => {
+    stateRef.current = { q, period, from, to, sort, durum, sehir, sube }
   })
 
   useEffect(() => {
@@ -39,6 +47,7 @@ function GidenFiltrePaneli() {
     setSort(sp.get('sort') ?? 'date_desc')
     setDurum(sp.get('durum') ?? 'tumu')
     setSehir(sp.get('sehir') ?? '')
+    setSube(sp.get('sube') ?? '')
   }, [sp])
 
   // Auto-trigger search on q change (min 2 chars or cleared)
@@ -56,6 +65,7 @@ function GidenFiltrePaneli() {
       if (s.sort !== 'date_desc') p.set('sort', s.sort)
       if (s.durum !== 'tumu')     p.set('durum', s.durum)
       if (s.sehir)                p.set('sehir', s.sehir)
+      if (s.sube)                 p.set('sube', s.sube)
       router.push(`/cari-hesap/giden-faturalar?${p.toString()}`)
     }, 600)
     return () => clearTimeout(timer)
@@ -71,10 +81,11 @@ function GidenFiltrePaneli() {
     if (sort !== 'date_desc') p.set('sort', sort)
     if (durum !== 'tumu')     p.set('durum', durum)
     if (sehir)                p.set('sehir', sehir)
+    if (sube)                 p.set('sube', sube)
     router.push(`/cari-hesap/giden-faturalar?${p.toString()}`)
   }
 
-  const hasFilters = !!(q || period || (sort !== 'date_desc') || (durum !== 'tumu') || sehir)
+  const hasFilters = !!(q || period || (sort !== 'date_desc') || (durum !== 'tumu') || sehir || sube)
 
   function clear() {
     router.push('/cari-hesap/giden-faturalar')
@@ -108,8 +119,15 @@ function GidenFiltrePaneli() {
         </select>
       </div>
 
-      {/* Satır 2: il + dönem + sıralama + butonlar */}
+      {/* Satır 2: il + şube + dönem + sıralama + butonlar */}
       <div className="flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Şube</label>
+          <select value={sube} onChange={e => setSube(e.target.value)} className={`${inputCls} min-w-40`}>
+            <option value="">Tüm Şubeler</option>
+            {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+          </select>
+        </div>
         <div>
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">İl</label>
           <select value={sehir} onChange={e => setSehir(e.target.value)} className={`${inputCls} min-w-36`}>

@@ -35,9 +35,9 @@ function computeDateRange(period?: string, from?: string, to?: string) {
 export default async function FaturalarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; type?: string; q?: string; period?: string; from?: string; to?: string; sort?: string }>
+  searchParams: Promise<{ status?: string; type?: string; q?: string; period?: string; from?: string; to?: string; sort?: string; sube?: string }>
 }) {
-  const { status, type, q, period, from: fromParam, to: toParam, sort } = await searchParams
+  const { status, type, q, period, from: fromParam, to: toParam, sort, sube } = await searchParams
   const supabase = createServiceClient()
 
   const isMahsupFilter = status === 'vergi_mahsup'
@@ -46,7 +46,7 @@ export default async function FaturalarPage({
   // Ana sorgu
   let query = supabase
     .from('invoices')
-    .select('id, invoice_number, invoice_type, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, description, customers(full_name), supplier_name')
+    .select('id, invoice_number, invoice_type, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, description, sube_id, customers(full_name), supplier_name, subeler(ad)')
 
   if (isMahsupFilter) {
     query = query.eq('mahsup_durumu', 'vergi_mahsup')
@@ -54,6 +54,7 @@ export default async function FaturalarPage({
     if (status && status !== 'all') query = query.eq('status', status)
   }
   if (type && type !== 'all') query = query.eq('invoice_type', type)
+  if (sube) query = query.eq('sube_id', sube)
   if (dateFrom) query = query.gte('invoice_date', dateFrom)
   if (dateTo)   query = query.lte('invoice_date', dateTo)
 
@@ -65,6 +66,11 @@ export default async function FaturalarPage({
   query = query.order(dbSortCol, { ascending: dbAsc })
 
   const { data: rawInvoices } = await query
+
+  const { data: subeler } = await supabase
+    .from('subeler')
+    .select('id, ad')
+    .order('ad')
 
   // Counts (no date filter, to keep status chips accurate)
   const { data: allInvoices } = await supabase
@@ -131,7 +137,7 @@ export default async function FaturalarPage({
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const hasActiveFilters = !!(status && status !== 'all') || !!(type && type !== 'all') || !!q || !!period || !!dateFrom || !!dateTo || !!(sort && sort !== 'date_desc')
+  const hasActiveFilters = !!(status && status !== 'all') || !!(type && type !== 'all') || !!q || !!period || !!dateFrom || !!dateTo || !!(sort && sort !== 'date_desc') || !!sube
 
   const statusFilters = [
     { key: 'all', label: 'Tümü' },
@@ -154,6 +160,7 @@ export default async function FaturalarPage({
     if (period === 'ozel' && fromParam) p.set('from', fromParam)
     if (period === 'ozel' && toParam)   p.set('to', toParam)
     if (sort && sort !== 'date_desc')   p.set('sort', sort)
+    if (sube) p.set('sube', sube)
     return `/cari-hesap/faturalar?${p.toString()}`
   }
 
@@ -166,6 +173,7 @@ export default async function FaturalarPage({
     if (period === 'ozel' && fromParam) p.set('from', fromParam)
     if (period === 'ozel' && toParam)   p.set('to', toParam)
     if (sort && sort !== 'date_desc')   p.set('sort', sort)
+    if (sube) p.set('sube', sube)
     return `/cari-hesap/faturalar?${p.toString()}`
   }
 
@@ -250,6 +258,7 @@ export default async function FaturalarPage({
           {period === 'ozel' && fromParam && <input type="hidden" name="from" value={fromParam} />}
           {period === 'ozel' && toParam   && <input type="hidden" name="to"   value={toParam} />}
           {sort && sort !== 'date_desc' && <input type="hidden" name="sort" value={sort} />}
+          {sube && <input type="hidden" name="sube" value={sube} />}
           <input name="q" defaultValue={q ?? ''} placeholder="Fatura no, müşteri ara..."
             className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]" />
           <button type="submit" className="border rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:bg-gray-50">Ara</button>
@@ -264,6 +273,7 @@ export default async function FaturalarPage({
           type: type ?? undefined,
           q: q ?? undefined,
         }}
+        subeler={subeler ?? []}
       />
 
       {/* Özet kartlar */}
@@ -319,6 +329,7 @@ export default async function FaturalarPage({
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri / Tedarikçi</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Şube</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Vade</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
@@ -330,6 +341,7 @@ export default async function FaturalarPage({
               <tbody className="divide-y">
                 {filtered.map(inv => {
                   const customer = inv.customers as any
+                  const invSube = inv.subeler as any
                   const kalan = (inv.total_amount ?? 0) - (inv.paid_amount ?? 0)
                   const unpaid = !['odendi', 'iptal', 'taslak'].includes(inv.status)
                   const isMahsup = (inv as any).mahsup_durumu === 'vergi_mahsup'
@@ -363,6 +375,7 @@ export default async function FaturalarPage({
                         {customer?.full_name ?? inv.supplier_name ?? '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{TYPE_LABELS[inv.invoice_type] ?? inv.invoice_type}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{invSube?.ad ?? '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatTRDate(inv.invoice_date)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                         <span className={inv.due_date && unpaid && !isMahsup && inv.due_date < today ? 'text-red-600 font-medium' : ''}>

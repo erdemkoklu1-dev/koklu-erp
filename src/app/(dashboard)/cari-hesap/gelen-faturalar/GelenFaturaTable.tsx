@@ -14,6 +14,7 @@ type Invoice = {
   total_amount: number | null
   paid_amount: number | null
   status: string | null
+  subeler?: { ad: string | null } | null
 }
 
 type Props = {
@@ -40,7 +41,7 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
   if (invoices.length === 0) {
     return (
       <tr>
-        <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
+        <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
           Fatura bulunamadı
         </td>
       </tr>
@@ -73,6 +74,7 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
 
         const rowBg = isOverdue ? 'bg-red-50/60' : isToday ? 'bg-orange-50/60' : ''
         const statusCfg = INVOICE_STATUS_CONFIG[inv.status as keyof typeof INVOICE_STATUS_CONFIG]
+        const sube = inv.subeler as any
 
         return (
           <tr key={inv.id} className={`${rowBg} hover:bg-gray-50 transition-colors`}>
@@ -85,6 +87,7 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
               </Link>
             </td>
             <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-300">{inv.invoice_number}</td>
+            <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{sube?.ad ?? '—'}</td>
             <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatTRDate(inv.invoice_date)}</td>
             <td className="px-4 py-3 whitespace-nowrap">
               {inv.due_date ? (
@@ -128,10 +131,16 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
             <td className="px-4 py-3 text-right">
               <div className="flex gap-2 justify-end">
                 <Link
-                  href={`/cari-hesap/faturalar/${inv.id}`}
+                  href={`/cari-hesap/faturalar/${inv.id}?kaynak=gelen`}
                   className="text-xs text-[#C8102E] hover:underline font-medium"
                 >
                   Detay
+                </Link>
+                <Link
+                  href={`/cari-hesap/faturalar/${inv.id}/edit?kaynak=gelen`}
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:underline font-medium"
+                >
+                  Düzenle
                 </Link>
                 {kalan > 0 && (
                   <button

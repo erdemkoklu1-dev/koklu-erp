@@ -95,13 +95,26 @@ export async function POST(req: NextRequest) {
     const existingNos = new Set((existingInvoices ?? []).map(i => normNo(i.invoice_number)))
 
     // ── Mevcut müşteriler ─────────────────────────────────────────
-    const { data: existingCustomers } = await supabase
-      .from('customers')
-      .select('id, full_name, tax_number')
+    // tc_kimlik sütunu varsa TCKN ile eşleştirmeyi de destekle
+    type CustomerRow = { id: string; full_name: string; tax_number: string | null; tc_kimlik?: string | null }
+    let existingCustomers: CustomerRow[] = []
+    {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, full_name, tax_number, tc_kimlik')
+      if (error) {
+        // tc_kimlik sütunu henüz eklenmemiş — temel sütunlarla devam et
+        const { data: data2 } = await supabase.from('customers').select('id, full_name, tax_number')
+        existingCustomers = data2 ?? []
+      } else {
+        existingCustomers = data ?? []
+      }
+    }
     const customerByVkn  = new Map<string, string>()
     const customerByName = new Map<string, string>()
-    for (const c of existingCustomers ?? []) {
+    for (const c of existingCustomers) {
       if (c.tax_number) customerByVkn.set(normVkn(c.tax_number), c.id)
+      if (c.tc_kimlik)  customerByVkn.set(normVkn(c.tc_kimlik), c.id)
       customerByName.set(normalizeName(c.full_name), c.id)
     }
 
@@ -200,6 +213,7 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    row.senaryo ? `PDF e-Fatura: ${row.senaryo}` : 'PDF e-Fatura',
             notes:          bankaNotu || null,
+            musteri_adres:  row.musteri_adresi || null,
             sube_id:        row.sube_id || null,
           })
           .select('id')
@@ -214,16 +228,14 @@ export async function POST(req: NextRequest) {
         const validKalemler = (row.kalemler ?? []).filter(k => k.urun_adi?.trim())
         if (validKalemler.length > 0) {
           const itemRows = validKalemler.map((k, idx) => ({
-            invoice_id:      inv.id,
-            line_order:      idx + 1,
-            description:     k.urun_adi,
-            quantity:        k.miktar        || 1,
-            unit:            k.birim         || 'adet',
-            unit_price:      k.birim_fiyat   || 0,
-            discount_rate:   k.iskonto_orani  || 0,
-            discount_amount: k.iskonto_tutari || 0,
-            kdv_rate:        k.kdv_orani     || 20,
-            notes:           null,
+            invoice_id:  inv.id,
+            line_order:  idx + 1,
+            description: k.urun_adi,
+            quantity:    k.miktar      || 1,
+            unit:        k.birim       || 'adet',
+            unit_price:  k.birim_fiyat || 0,
+            kdv_rate:    k.kdv_orani   || 20,
+            notes:       null,
           }))
 
           const { error: itemErr } = await supabase
@@ -231,7 +243,7 @@ export async function POST(req: NextRequest) {
             .insert(itemRows)
 
           if (itemErr) {
-            console.error(`[pdf-fatura-save] invoice_items hatası (${row.fatura_no}):`, itemErr.message)
+            throw new Error(`Fatura kalemleri kaydedilemedi (${row.fatura_no}): ${itemErr.message}`)
           }
         }
 

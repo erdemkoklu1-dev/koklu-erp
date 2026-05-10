@@ -35,7 +35,10 @@
       "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Projects\\\\koklu-erp\\\\src\\\\app\\\\api\\\\cron\\\\cleanup-logs\")",
       "Bash(Out-Null)",
       "Bash(Write-Output \"done\")",
-      "PowerShell(New-Item *)"
+      "PowerShell(New-Item *)",
+      "Bash(dir /s \"C:\\\\Projects\\\\koklu-erp\\\\src\\\\app\\\\api\")",
+      "Bash(findstr \"route.ts\")",
+      "Bash(Get-ChildItem *)"
     ]
   }
 }

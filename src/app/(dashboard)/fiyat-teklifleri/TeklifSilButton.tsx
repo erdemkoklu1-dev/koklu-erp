@@ -4,28 +4,42 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-export function TeklifSilButton({ id, teklifNo }: { id: string; teklifNo: string }) {
+export function TeklifSilButton({ id, teklifNo, className }: { id: string; teklifNo: string; className?: string }) {
   const [modal, setModal]       = useState(false)
   const [siliniyor, setSiliniyor] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
 
   async function handleSil() {
     setSiliniyor(true)
+    setError('')
     const supabase = createClient()
-    const { error } = await supabase.from('teklifler').delete().eq('id', id)
-    if (error) {
-      alert('Silinemedi: ' + error.message)
+    const { error: kalemErr } = await supabase.from('teklif_kalemleri').delete().eq('teklif_id', id)
+    if (kalemErr) {
+      setError('Teklif kalemleri silinemedi. Yetkinizi kontrol edin veya yoneticiye basvurun.')
       setSiliniyor(false)
       return
     }
+
+    const { error: teklifErr } = await supabase.from('teklifler').delete().eq('id', id)
+    if (teklifErr) {
+      setError(teklifErr.code === '23503'
+        ? 'Bu teklif bagli kayitlar nedeniyle silinemiyor.'
+        : 'Teklif silinemedi. Yetkinizi kontrol edin veya yoneticiye basvurun.')
+      setSiliniyor(false)
+      return
+    }
+
     setModal(false)
+    alert('Teklif silindi.')
+    router.push('/fiyat-teklifleri')
     router.refresh()
   }
 
   return (
     <>
       <button onClick={() => setModal(true)}
-        className="text-red-500 text-sm font-medium hover:underline">
+        className={className ?? 'text-red-500 text-sm font-medium hover:underline'}>
         Sil
       </button>
 
@@ -40,6 +54,11 @@ export function TeklifSilButton({ id, teklifNo }: { id: string; teklifNo: string
                 <span className="font-semibold text-gray-900 dark:text-gray-100">{teklifNo}</span> numaralı teklif
                 ve tüm kalemleri kalıcı olarak silinecek. Emin misiniz?
               </p>
+              {error && (
+                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </p>
+              )}
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
               <button onClick={handleSil} disabled={siliniyor}

@@ -200,6 +200,27 @@ function extractNameByLabels(text: string, labels: string[]): string | null {
   return null
 }
 
+// ── e-Arşiv dosya adından bilgi çıkar ───────────────────────────
+// Dosya adı formatı: KOK2026000000019_10694184092_KENAN ALKAN.pdf
+// ZIP içinde: uuid/KOK2026000000019_10694184092_KENAN ALKAN.pdf
+
+function parseEArsivFromFilename(filename: string): {
+  fatura_no: string
+  musteri_vkn: string
+  musteri_unvan: string
+  musteri_tip: 'bireysel' | 'tuzel'
+} | null {
+  const baseName = (filename.split('/').pop() ?? filename).replace(/\.pdf$/i, '')
+  const match = baseName.match(/^(KOK\d+)_(\d{10,11})_(.+)$/)
+  if (!match) return null
+  return {
+    fatura_no:     match[1],
+    musteri_vkn:   match[2],
+    musteri_unvan: match[3].trim(),
+    musteri_tip:   match[2].length === 11 ? 'bireysel' : 'tuzel',
+  }
+}
+
 // ── Müşteri adresini SAYIN bloğundan çıkar ───────────────────────
 
 const KOKLU_VKN = '5830028164'
@@ -870,39 +891,50 @@ export async function parsePdfBuffer(
       result.musteri_adi    = musteriAdi
       result.musteri_adresi = musteriAdresi
     } else {
-      const [musteriAdi, musteriAdresi] = extractMusteriAdres(text)
-      result.musteri_adi    = musteriAdi
-      result.musteri_adresi = musteriAdresi
+      // e-Arşiv (KOK...) faturalarda dosya adından müşteri bilgisi al — en güvenilir
+      const fromFilename = parseEArsivFromFilename(filename)
 
-      // VKN çıkarma: Köklü VKN'si dışındaki ilk VKN müşterinin
-      // "VKN: XXXXXXXXXX" veya "VKN/TCKN: XXXXXXXXXXX" formatlarını destekle
-      const allVknMatches = [...text.matchAll(/VKN(?:\/TCKN)?\s*[:\s]+(\d{10,11})/gi)]
-        .map(m => m[1])
-        .filter(v => v !== KOKLU_VKN)
-      if (allVknMatches.length > 0) {
-        result.musteri_vkn = allVknMatches[0]
-      }
+      if (fromFilename) {
+        result.musteri_adi    = fromFilename.musteri_unvan
+        result.musteri_vkn    = fromFilename.musteri_vkn
+        result.musteri_adresi = null
+        // Fatura no text parse'tan gelmemişse dosya adından al
+        if (!result.fatura_no) result.fatura_no = fromFilename.fatura_no
+      } else {
+        // Standart e-Fatura (KYS...) ve diğerleri — text parse
+        const [musteriAdi, musteriAdresi] = extractMusteriAdres(text)
+        result.musteri_adi    = musteriAdi
+        result.musteri_adresi = musteriAdresi
 
-      // TCKN ayrıca ara (bireysel müşteri — "TCKN: XXXXXXXXXXX" veya "T.C. Kimlik No: ...")
-      if (!result.musteri_vkn) {
-        const sayinM = text.match(/SAYIN/i)
-        const sayinBlock = sayinM?.index !== undefined
-          ? text.slice(sayinM.index, sayinM.index + 800)
-          : text
-        const tcMatches = [...sayinBlock.matchAll(
-          /(?:T\.?C\.?\s*(?:Kimlik\s*)?(?:No)?|TCKN)\s*[:/\s]+(\d{11})/gi
-        )].map(m => m[1]).filter(v => v !== KOKLU_VKN)
-        if (tcMatches.length > 0) {
-          result.musteri_vkn = tcMatches[0]
-        } else {
-          // Son çare: belgede serbest 11 haneli sayı (Köklü VKN hariç)
-          const freeNums = [...text.matchAll(/\b(\d{11})\b/g)].map(m => m[1]).filter(v => v !== KOKLU_VKN)
-          if (freeNums.length > 0) result.musteri_vkn = freeNums[0]
+        // VKN çıkarma: Köklü VKN'si dışındaki ilk VKN müşterinin
+        const allVknMatches = [...text.matchAll(/VKN(?:\/TCKN)?\s*[:\s]+(\d{10,11})/gi)]
+          .map(m => m[1])
+          .filter(v => v !== KOKLU_VKN)
+        if (allVknMatches.length > 0) {
+          result.musteri_vkn = allVknMatches[0]
         }
-      }
-      if (!result.musteri_adi) {
-        result.musteri_adi = extractNameNearTaxNo(text, result.musteri_vkn)
-          ?? extractNameByLabels(text, ['Alıcı', 'Alici', 'Sayın', 'Sayin', 'Ticari\\s*Unvan', 'Ünvan', 'Unvan'])
+
+        // TCKN ayrıca ara (bireysel müşteri — "TCKN: XXXXXXXXXXX" veya "T.C. Kimlik No: ...")
+        if (!result.musteri_vkn) {
+          const sayinM = text.match(/SAYIN/i)
+          const sayinBlock = sayinM?.index !== undefined
+            ? text.slice(sayinM.index, sayinM.index + 800)
+            : text
+          const tcMatches = [...sayinBlock.matchAll(
+            /(?:T\.?C\.?\s*(?:Kimlik\s*)?(?:No)?|TCKN)\s*[:/\s]+(\d{11})/gi
+          )].map(m => m[1]).filter(v => v !== KOKLU_VKN)
+          if (tcMatches.length > 0) {
+            result.musteri_vkn = tcMatches[0]
+          } else {
+            // Son çare: belgede serbest 11 haneli sayı (Köklü VKN hariç)
+            const freeNums = [...text.matchAll(/\b(\d{11})\b/g)].map(m => m[1]).filter(v => v !== KOKLU_VKN)
+            if (freeNums.length > 0) result.musteri_vkn = freeNums[0]
+          }
+        }
+        if (!result.musteri_adi) {
+          result.musteri_adi = extractNameNearTaxNo(text, result.musteri_vkn)
+            ?? extractNameByLabels(text, ['Alıcı', 'Alici', 'Sayın', 'Sayin', 'Ticari\\s*Unvan', 'Ünvan', 'Unvan'])
+        }
       }
     }
 

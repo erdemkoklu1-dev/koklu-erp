@@ -1,40 +1,145 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
-export async function DELETE(
+type DependencyCounts = {
+  service_forms: number
+  devices: number
+  faturalar: number
+  gelen_faturalar: number
+  payments: number
+  on_kayitlar: number
+  documents: number
+  customer_accounts: number
+  teklifler: number
+  proforma_faturalar: number
+  mutabakat_formlari: number
+}
+
+async function countRows(
+  supabase: ReturnType<typeof createServiceClient>,
+  table: string,
+  column: string,
+  value: string,
+) {
+  const { count, error } = await supabase
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+    .eq(column, value)
+  if (error) throw error
+  return count ?? 0
+}
+
+async function getCustomerDependencies(
+  supabase: ReturnType<typeof createServiceClient>,
+  id: string,
+): Promise<DependencyCounts> {
+  const [
+    serviceForms,
+    devices,
+    invoicesResult,
+    onKayitlar,
+    documents,
+    customerAccounts,
+    teklifler,
+    proformaFaturalar,
+    mutabakatFormlari,
+  ] = await Promise.all([
+    countRows(supabase, 'service_forms', 'customer_id', id),
+    countRows(supabase, 'devices', 'customer_id', id),
+    supabase.from('invoices').select('id, invoice_type').eq('customer_id', id),
+    countRows(supabase, 'on_kayitlar', 'customer_id', id),
+    countRows(supabase, 'documents', 'customer_id', id),
+    countRows(supabase, 'customer_accounts', 'customer_id', id),
+    countRows(supabase, 'teklifler', 'musteri_id', id),
+    countRows(supabase, 'proforma_faturalar', 'customer_id', id),
+    countRows(supabase, 'mutabakat_formlari', 'musteri_id', id),
+  ])
+
+  if (invoicesResult.error) throw invoicesResult.error
+
+  const invoices = invoicesResult.data ?? []
+  const invoiceIds = invoices.map(invoice => invoice.id as string).filter(Boolean)
+  let payments = 0
+  if (invoiceIds.length > 0) {
+    const { count, error } = await supabase
+      .from('payments')
+      .select('id', { count: 'exact', head: true })
+      .in('invoice_id', invoiceIds)
+    if (error) throw error
+    payments = count ?? 0
+  }
+
+  return {
+    service_forms: serviceForms,
+    devices,
+    faturalar: invoices.filter(invoice => invoice.invoice_type === 'satis').length,
+    gelen_faturalar: invoices.filter(invoice => invoice.invoice_type === 'alis').length,
+    payments,
+    on_kayitlar: onKayitlar,
+    documents,
+    customer_accounts: customerAccounts,
+    teklifler,
+    proforma_faturalar: proformaFaturalar,
+    mutabakat_formlari: mutabakatFormlari,
+  }
+}
+
+function totalDependencies(counts: DependencyCounts) {
+  return Object.values(counts).reduce((sum, count) => sum + count, 0)
+}
+
+export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params
     if (!id) return NextResponse.json({ error: 'ID eksik' }, { status: 400 })
 
     const supabase = createServiceClient()
+    const dependencies = await getCustomerDependencies(supabase, id)
 
-    // Önce müşteriye ait fatura ID'lerini çek
-    const { data: invoices } = await supabase
-      .from('invoices')
-      .select('id')
-      .eq('customer_id', id)
-    const invoiceIds = (invoices ?? []).map(i => i.id)
+    return NextResponse.json({
+      ok: true,
+      dependencies,
+      dependency_total: totalDependencies(dependencies),
+    })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}
 
-    // Faturalara bağlı alt tabloları temizle
-    if (invoiceIds.length > 0) {
-      await supabase.from('invoice_brokers').delete().in('invoice_id', invoiceIds)
-      await supabase.from('invoice_items').delete().in('invoice_id', invoiceIds)
-      await supabase.from('payments').delete().in('invoice_id', invoiceIds)
-      await supabase.from('invoices').delete().in('id', invoiceIds)
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params
+    if (!id) return NextResponse.json({ error: 'ID eksik' }, { status: 400 })
+
+    const supabase = createServiceClient()
+    const dependencies = await getCustomerDependencies(supabase, id)
+    const dependencyTotal = totalDependencies(dependencies)
+
+    if (dependencyTotal > 0) {
+      const { error } = await supabase.from('customers').update({ is_active: false }).eq('id', id)
+      if (error) return NextResponse.json({ error: 'Musteri pasife alinamadi.' }, { status: 500 })
+
+      return NextResponse.json({
+        ok: true,
+        deactivated: true,
+        deleted: false,
+        dependencies,
+        dependency_total: dependencyTotal,
+        message: 'Bu musteriye bagli servis formu, cihaz, fatura veya diger kayitlar bulundugu icin kalici silme yapilamadi. Musteri pasif duruma alindi.',
+      })
     }
 
-    // Diğer bağlı tablolar
-    await supabase.from('devices').delete().eq('customer_id', id)
-    await supabase.from('on_kayitlar').delete().eq('customer_id', id)
-
-    // Müşteriyi sil
     const { error } = await supabase.from('customers').delete().eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: 'Musteri silinemedi.' }, { status: 500 })
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, deleted: true, deactivated: false })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: msg }, { status: 500 })

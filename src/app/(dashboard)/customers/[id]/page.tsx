@@ -27,6 +27,19 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     .order('kayit_tarihi', { ascending: false })
     .limit(20)
 
+  const { data: serviceForms } = await supabase
+    .from('service_forms')
+    .select('id, form_number, service_date, status, general_notes, customer_note')
+    .eq('customer_id', id)
+    .order('service_date', { ascending: false })
+    .limit(5)
+
+  const [{ data: teslimatlar }, { data: acikEmanetler }, { data: geriBekleyenler }] = await Promise.all([
+    supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum').eq('customer_id', id).order('teslimat_tarihi', { ascending: false }).limit(5),
+    supabase.from('emanet_takipleri').select('id, miktar, geri_alinan_miktar, durum, hedef_tarih, urunler(ad)').eq('customer_id', id).in('durum', ['acik', 'kismi_kapandi']).limit(5),
+    supabase.from('geri_teslim_takipleri').select('id, miktar, teslim_edilen_miktar, durum, hedef_tarih, urunler(ad)').eq('customer_id', id).in('durum', ['bekliyor', 'kismi_teslim']).limit(5),
+  ])
+
   const bekleyenTutar = (onKayitlar ?? [])
     .filter(k => k.durum === 'beklemede')
     .reduce((s, k) => s + (k.toplam_tutar ?? 0), 0)
@@ -208,6 +221,51 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           email={customer.email ?? null}
         />
 
+        {/* Teslimatlar */}
+        <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Teslimat / Hareket Özeti</h2>
+            <Link href={`/teslimatlar/hareket-gecmisi?customer=${id}`} className="text-xs font-medium text-[#C8102E] hover:underline">
+              Hareket geçmişi
+            </Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400">Son hareketler</div>
+              <div className="mt-2 space-y-2">
+                {(teslimatlar ?? []).map(t => (
+                  <Link key={t.id} href={`/teslimatlar/${t.id}`} className="block text-sm hover:text-[#C8102E]">
+                    <span className="font-mono font-semibold">{t.teslimat_no}</span> - {formatTRDate(t.teslimat_tarihi)}
+                  </Link>
+                ))}
+                {(teslimatlar ?? []).length === 0 && <div className="text-sm text-gray-400">Kayıt yok</div>}
+              </div>
+            </div>
+            <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400">Açık emanetler</div>
+              <div className="mt-2 space-y-2">
+                {(acikEmanetler ?? []).map(e => (
+                  <div key={e.id} className="text-sm">
+                    {(e.urunler as any)?.ad ?? 'Emanet'} - {e.geri_alinan_miktar}/{e.miktar}
+                  </div>
+                ))}
+                {(acikEmanetler ?? []).length === 0 && <div className="text-sm text-gray-400">Yok</div>}
+              </div>
+            </div>
+            <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400">Geri teslim bekleyenler</div>
+              <div className="mt-2 space-y-2">
+                {(geriBekleyenler ?? []).map(e => (
+                  <div key={e.id} className="text-sm">
+                    {(e.urunler as any)?.ad ?? 'Cihaz'} - {e.teslim_edilen_miktar}/{e.miktar}
+                  </div>
+                ))}
+                {(geriBekleyenler ?? []).length === 0 && <div className="text-sm text-gray-400">Yok</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Son servisler */}
         <div className="bg-white dark:bg-gray-800 border rounded-lg p-5">
           <div className="flex items-center justify-between mb-3">
@@ -218,9 +276,39 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               + Servis Formu
             </Link>
           </div>
-          <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
-            Bu müşteriye ait servis kaydı bulunmuyor.
-          </div>
+          {(serviceForms ?? []).length === 0 ? (
+            <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
+              Bu müşteriye ait servis kaydı bulunmuyor.
+            </div>
+          ) : (
+            <div className="divide-y">
+              {(serviceForms ?? []).map(form => {
+                const note = form.general_notes ?? form.customer_note
+                return (
+                  <Link
+                    key={form.id}
+                    href={`/service-forms/${form.id}`}
+                    className="block py-3 first:pt-0 last:pb-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-mono text-sm font-semibold text-[#C8102E]">{form.form_number ?? '-'}</div>
+                        {note && (
+                          <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{note}</div>
+                        )}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{formatTRDate(form.service_date)}</div>
+                        <span className="mt-1 inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          {form.status === 'completed' ? 'Tamamlandı' : form.status ?? '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Ön Kayıtlar */}

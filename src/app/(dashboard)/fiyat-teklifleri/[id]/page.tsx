@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { formatTRDate } from '@/lib/finance/formatters'
+import { TeklifSilButton } from '../TeklifSilButton'
 
 const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
   taslak:     { label: 'Taslak',     className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
@@ -11,6 +12,8 @@ const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
   kaybedildi: { label: 'Kaybedildi', className: 'bg-red-50 text-red-700 border-red-200' },
   iptal:      { label: 'İptal',      className: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
 }
+
+type TeklifCustomer = { full_name?: string | null }
 
 function fmt(n: number, currency: string) {
   const str = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(n)
@@ -31,7 +34,8 @@ export default async function TeklifDetayPage({ params }: { params: Promise<{ id
   if (!teklif) notFound()
 
   const conf = DURUM_CONFIG[teklif.durum] ?? DURUM_CONFIG.taslak
-  const musteriAdi = (teklif.customers as any)?.full_name ?? teklif.musteri_adi
+  const customer = teklif.customers as TeklifCustomer | null
+  const musteriAdi = customer?.full_name ?? teklif.musteri_adi
   const currency   = teklif.para_birimi as string
 
   return (
@@ -53,6 +57,11 @@ export default async function TeklifDetayPage({ params }: { params: Promise<{ id
             className="bg-[#C8102E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#a50d26] transition-colors">
             Durum Güncelle
           </Link>
+          <TeklifSilButton
+            id={id}
+            teklifNo={teklif.teklif_no}
+            className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-sm hover:bg-red-50 transition-colors"
+          />
         </div>
       </div>
 

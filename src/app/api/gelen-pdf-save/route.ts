@@ -21,6 +21,7 @@ export type GelenPdfRow = {
   senaryo?: string | null
   satici_adi: string
   satici_vkn?: string | null    // maps to supplier_tax_no
+  tedarikci_adres?: string | null
   kdv_matrahi?: number | null
   kdv_tutari?: number | null
   odenecek_tutar?: number | null
@@ -160,6 +161,7 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    `PDF Gelen Fatura${row.senaryo ? `: ${row.senaryo}` : ''}`,
             notes:          notesParts.join(' | ') || null,
+            tedarikci_adres: row.tedarikci_adres || null,
             sube_id:        row.sube_id || null,
           })
           .select('id')

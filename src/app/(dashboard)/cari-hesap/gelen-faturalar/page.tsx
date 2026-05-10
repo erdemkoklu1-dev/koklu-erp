@@ -33,7 +33,7 @@ export default async function GelenFaturalarPage({
 }: {
   searchParams: Promise<{
     q?: string; tedarikci?: string; odeme_durumu?: string; vade_durumu?: string; kategori?: string
-    period?: string; from?: string; to?: string; sort?: string; sehir?: string
+    period?: string; from?: string; to?: string; sort?: string; sehir?: string; sube?: string
   }>
 }) {
   const params = await searchParams
@@ -66,7 +66,7 @@ export default async function GelenFaturalarPage({
   if (!noSehirMatch) {
     let query = supabase
       .from('invoices')
-      .select('id, invoice_number, supplier_name, invoice_date, due_date, total_amount, paid_amount, status, notes')
+      .select('id, invoice_number, supplier_name, invoice_date, due_date, total_amount, paid_amount, status, notes, sube_id, subeler(ad)')
       .eq('invoice_type', 'alis')
       .neq('status', 'iptal')
       .order(dbSortCol, { ascending: dbAsc })
@@ -92,6 +92,7 @@ export default async function GelenFaturalarPage({
     if (supplierFilter !== null && supplierFilter.length > 0) {
       query = query.in('supplier_name', supplierFilter)
     }
+    if (params.sube) query = query.eq('sube_id', params.sube)
 
     const { data } = await query
     invoices = data ?? []
@@ -181,6 +182,7 @@ export default async function GelenFaturalarPage({
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tedarikçi</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Şube</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura Tarihi</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Vade Tarihi</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
