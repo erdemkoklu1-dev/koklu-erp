@@ -213,7 +213,6 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    row.senaryo ? `PDF e-Fatura: ${row.senaryo}` : 'PDF e-Fatura',
             notes:          bankaNotu || null,
-            musteri_adres:  row.musteri_adresi || null,
             sube_id:        row.sube_id || null,
           })
           .select('id')

@@ -297,8 +297,8 @@ function PdfEditModal({
   // Kalem toplamı değişince Ödenecek Tutar'ı otomatik güncelle
   useEffect(() => {
     const total = Math.round(items.reduce((s, k) => s + Number(k.miktar) * Number(k.birim_fiyat), 0) * 100) / 100
-    if (total > 0) setTutar(String(total))
-  }, [items])
+    if (!tutar && total > 0) setTutar(String(total))
+  }, [items, tutar])
 
   const filteredCust = name.length >= 1
     ? customers.filter(c => c.full_name.toLowerCase().includes(name.toLowerCase())).slice(0, 8)
@@ -525,7 +525,7 @@ function PdfFaturaImport() {
   const [subeler, setSubeler] = useState<Sube[]>([])
   const [globalSubeId, setGlobalSubeId] = useState<string | null>(null)
   const [editRowIdx, setEditRowIdx] = useState<number | null>(null)
-  const [customers, setCustomers] = useState<{ id: string; full_name: string; tax_number: string | null }[]>([])
+  const [customers, setCustomers] = useState<{ id: string; full_name: string; tax_number: string | null; tc_kimlik?: string | null }[]>([])
 
   // Şubeleri yükle ve Erzincan Merkez'i varsayılan yap
   useEffect(() => {
@@ -536,7 +536,7 @@ function PdfFaturaImport() {
         if (erzincan) setGlobalSubeId(erzincan.id)
       }
     })
-    supabase.from('customers').select('id, full_name, tax_number, address').eq('is_active', true).order('full_name')
+    supabase.from('customers').select('id, full_name, tax_number, tc_kimlik, address').eq('is_active', true).order('full_name')
       .then(({ data }: { data: any; error: any }) => { if (data) setCustomers(data as any[]) })
   }, [])
 
@@ -565,19 +565,20 @@ function PdfFaturaImport() {
       // ── Mevcut fatura no ve müşteri bilgilerini çek ───────────
       const [{ data: invData }, { data: custData }] = await Promise.all([
         supabase.from('invoices').select('invoice_number, invoice_date, total_amount').eq('invoice_type', 'satis'),
-        supabase.from('customers').select('full_name, tax_number'),
+        supabase.from('customers').select('full_name, tax_number, tc_kimlik'),
       ])
       const KOKLU_VKN = '5830028164'
 
       const existingNos   = new Set((invData ?? []).map((i: any) => normNo(i.invoice_number)))
-      const customersForMatch = (custData ?? []) as { full_name: string; tax_number: string | null }[]
+      const customersForMatch = (custData ?? []) as { full_name: string; tax_number: string | null; tc_kimlik?: string | null }[]
 
       const preview: PdfPreviewRow[] = invoices.map(inv => {
         let rowStatus: PdfRowStatus
         let message = ''
         const invoiceNo = normNo(inv.fatura_no)
         const itemCount = inv.kalemler?.length ?? 0
-        if (inv.hata) {
+        const isManualWarning = !!inv.hata && /manuel kontrol gerekli/i.test(inv.hata)
+        if (inv.hata && !isManualWarning) {
           rowStatus = 'hata'
           message = inv.hata
         } else if (!inv.fatura_no) {
@@ -592,14 +593,15 @@ function PdfFaturaImport() {
         } else {
           const name    = inv.musteri_adi ?? ''
           const vkn     = normVkn(inv.musteri_vkn)
+          // VKN veya TCKN ile eşleştir — tc_kimlik kolonunu da kontrol et
           const vknMatch  = vkn.length >= 10 && vkn !== KOKLU_VKN
-            ? customersForMatch.find(c => normVkn(c.tax_number) === vkn)
+            ? customersForMatch.find(c => normVkn(c.tax_number) === vkn || normVkn(c.tc_kimlik) === vkn)
             : undefined
           const nameMatch = !vknMatch ? findByName(customersForMatch, name) : undefined
           const matchMethod = vknMatch ? 'vkn' : nameMatch ? 'unvan' : 'bulunamadı'
           console.log('[giden eşleştirme] VKN:', vkn, 'vknMatch:', vknMatch, 'name:', name, 'nameMatch:', nameMatch)
           rowStatus = (vknMatch || nameMatch) ? 'eklenecek' : 'yeni_musteri'
-          message = vknMatch
+          message = isManualWarning ? inv.hata! : vknMatch
             ? 'Müşteri VKN ile eşleştirildi'
             : nameMatch
               ? 'Müşteri unvan ile eşleştirildi'
@@ -718,7 +720,7 @@ function PdfFaturaImport() {
         const vkn  = normVkn(merged.editedVkn)
         const name = merged.editedName.trim()
         const hasRequired = !!name && !!merged.editedFaturaNo.trim() && !!merged.editedTutar && (merged.kalemler?.length ?? 0) > 0
-        const vknMatch  = vkn.length >= 10 && customers.some(c => normVkn(c.tax_number) === vkn)
+        const vknMatch  = vkn.length >= 10 && customers.some(c => normVkn(c.tax_number) === vkn || normVkn(c.tc_kimlik) === vkn)
         const nameMatch = !!name && customers.some(c => namesMatch(c.full_name, name))
         merged.rowStatus = hasRequired ? (vknMatch || nameMatch ? 'eklenecek' : 'yeni_musteri') : 'hata'
         merged.hata = hasRequired ? null : 'Eksik veri var, manuel kontrol gerekli'
@@ -788,7 +790,7 @@ function PdfFaturaImport() {
     const istanbulSube = subeler.find(s => s.ad === 'İstanbul Şube')
 
     return (
-      <div className="p-6 space-y-4 max-w-6xl mx-auto">
+      <div className="p-6 space-y-4 max-w-6xl mx-auto overflow-x-hidden">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -863,20 +865,20 @@ function PdfFaturaImport() {
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
 
         {/* Satır listesi */}
-        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-x-auto">
-          <table className="w-full min-w-[1080px] table-fixed text-sm">
+        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-x-auto max-w-full">
+          <table className="w-full min-w-[900px] table-fixed text-sm">
             <colgroup>
+              <col className="w-24" />
+              <col className="w-48" />
               <col className="w-28" />
-              <col className="w-56" />
-              <col className="w-32" />
-              <col className="w-28" />
-              <col className="w-40" />
-              <col className="w-28" />
+              <col className="w-24" />
+              <col className="w-36" />
               <col className="w-20" />
-              <col className="w-32" />
               <col className="w-16" />
+              <col className="w-28" />
+              <col className="w-14" />
               <col className="w-20" />
-              <col className="w-12" />
+              <col className="w-10" />
             </colgroup>
             <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
@@ -979,8 +981,8 @@ function PdfFaturaImport() {
                     {row.expanded && (row.kalemler?.length ?? 0) > 0 && (
                       <tr className={`${rowBg} border-t border-dashed`}>
                       <td colSpan={11} className="px-6 pb-3 pt-1">
-                          <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
-                            <table className="w-full text-xs">
+                          <div className="w-full overflow-x-auto bg-white dark:bg-gray-800 border rounded-lg">
+                            <table className="min-w-full text-xs">
                               <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                                 <tr>
                                   <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">#</th>
@@ -998,7 +1000,7 @@ function PdfFaturaImport() {
                                 {(row.kalemler ?? []).map((k, ki) => (
                                   <tr key={ki} className="hover:bg-gray-50">
                                     <td className="px-3 py-1.5 text-gray-400 dark:text-gray-500">{ki + 1}</td>
-                                    <td className="px-3 py-1.5 text-gray-800 dark:text-gray-200">{k.urun_adi}</td>
+                                    <td className="px-3 py-1.5 max-w-[200px] truncate text-gray-800 dark:text-gray-200" title={k.urun_adi}>{k.urun_adi}</td>
                                     <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{k.miktar}</td>
                                     <td className="px-3 py-1.5 text-gray-500 dark:text-gray-400">{k.birim}</td>
                                     <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{fmtAmt(k.birim_fiyat)}</td>
@@ -1419,7 +1421,8 @@ function GelenPdfFaturaImport() {
         let message = ''
         const invoiceNo = normNo(inv.fatura_no)
         const itemCount = inv.kalemler?.length ?? 0
-        if (inv.hata) {
+        const isManualWarning = !!inv.hata && /manuel kontrol gerekli/i.test(inv.hata)
+        if (inv.hata && !isManualWarning) {
           rowStatus = 'hata'
           message = inv.hata
         } else if (!inv.fatura_no) {
@@ -1456,7 +1459,7 @@ function GelenPdfFaturaImport() {
           } else {
             rowStatus = 'eklenecek'
           }
-          message = taxMatch
+          message = isManualWarning ? inv.hata! : taxMatch
             ? 'Tedarikçi VKN ile eşleştirildi'
             : nameMatch
               ? 'Tedarikçi unvan ile eşleştirildi'
@@ -1626,7 +1629,7 @@ function GelenPdfFaturaImport() {
     const istanbulSube = subeler.find(s => s.ad === 'İstanbul Şube')
 
     return (
-      <div className="p-6 space-y-4 max-w-6xl mx-auto">
+      <div className="w-full overflow-x-hidden p-6 space-y-4 max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={resetAll} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Geri</button>
@@ -1740,7 +1743,7 @@ function GelenPdfFaturaImport() {
           />
         )}
 
-        <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-x-auto">
+        <div className="w-full overflow-x-auto bg-white dark:bg-gray-800 border rounded-xl">
           <table className="w-full min-w-[1120px] table-fixed text-sm">
             <colgroup>
               <col className="w-[96px]" />
@@ -1917,8 +1920,8 @@ function GelenPdfFaturaImport() {
                               IBAN: {row.banka_bilgileri.map(b => b.banka_adi ? `${b.banka_adi}: ${b.iban}` : b.iban).join(' | ')}
                             </div>
                           )}
-                          <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
-                            <table className="w-full text-xs">
+                          <div className="w-full overflow-x-auto bg-white dark:bg-gray-800 border rounded-lg">
+                            <table className="min-w-full text-xs">
                               <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                                 <tr>
                                   <th className="text-left px-3 py-2 text-gray-500 dark:text-gray-400">#</th>
@@ -1934,7 +1937,7 @@ function GelenPdfFaturaImport() {
                                 {(row.kalemler ?? []).map((k, ki) => (
                                   <tr key={ki} className="hover:bg-gray-50">
                                     <td className="px-3 py-1.5 text-gray-400 dark:text-gray-500">{ki + 1}</td>
-                                    <td className="px-3 py-1.5 text-gray-800 dark:text-gray-200">{k.urun_adi}</td>
+                                    <td className="px-3 py-1.5 max-w-[200px] truncate text-gray-800 dark:text-gray-200" title={k.urun_adi}>{k.urun_adi}</td>
                                     <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{k.miktar}</td>
                                     <td className="px-3 py-1.5 text-gray-500 dark:text-gray-400">{k.birim}</td>
                                     <td className="px-3 py-1.5 text-right text-gray-700 dark:text-gray-300">{fmtAmt(k.birim_fiyat)}</td>
