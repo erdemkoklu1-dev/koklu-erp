@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/finance/formatters'
 import { useSearchParams } from 'next/navigation'
+import { detectBranch } from '@/lib/invoice-ai-parser'
 
 // ---- Yardımcı fonksiyonlar ----
 
@@ -82,12 +83,17 @@ type ParsedInvoice = {
   musteri_adi: string | null
   musteri_vkn: string | null
   musteri_adresi: string | null
+  musteri_il?: string | null
+  mal_hizmet_toplami: number | null
   kdv_matrahi: number | null
   kdv_tutari: number | null
+  vergiler_dahil_toplam: number | null
   odenecek_tutar: number | null
   kalemler: PdfInvoiceItem[]
   banka_bilgileri: Array<{ iban: string; banka_adi?: string | null }>
   hata?: string | null
+  parse_durumu?: 'temiz_parse' | 'manuel_kontrol_gerekli' | 'parse_hatasi'
+  parse_uyarilari?: string[]
 }
 
 type PdfRowStatus = 'eklenecek' | 'yeni_musteri' | 'duplicate' | 'hata'
@@ -626,9 +632,20 @@ function PdfFaturaImport() {
             mesaj: message,
           })
         }
+        // İl bilgisine göre şube otomatik ata — globalSubeId yoksa veya il biliniyorsa
+        const autoSubeId = inv.musteri_il
+          ? detectBranch(inv.musteri_il, subeler) ?? globalSubeId
+          : globalSubeId
+
+        // Tarih boşsa hata mesajı ekle ama import'u engelleme
+        let finalHata = rowStatus === 'hata' ? message : (inv.hata ?? null)
+        if (!finalHata && !inv.fatura_tarihi && rowStatus !== 'hata' && rowStatus !== 'duplicate') {
+          finalHata = 'Manuel kontrol gerekli: tarih otomatik çıkarılamadı, lütfen düzenle'
+        }
+
         return {
           ...inv,
-          hata: rowStatus === 'hata' ? message : inv.hata,
+          hata: finalHata,
           rowStatus,
           editedName: inv.musteri_adi ?? '',
           editedVkn: inv.musteri_vkn ?? '',
@@ -636,7 +653,7 @@ function PdfFaturaImport() {
           editedTarih: inv.fatura_tarihi ?? '',
           editedVade: inv.vade_tarihi ?? '',
           editedTutar: inv.odenecek_tutar != null ? String(inv.odenecek_tutar) : '',
-          sube_id: globalSubeId,
+          sube_id: autoSubeId,
           expanded: false,
         }
       })

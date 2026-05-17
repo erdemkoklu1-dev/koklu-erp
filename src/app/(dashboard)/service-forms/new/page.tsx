@@ -42,6 +42,26 @@ type DeviceGroup = {
 
 const STATUS_OPTIONS = ['SAĞLAM', 'HASARLI', 'DEĞİŞTİRİLDİ', 'YOK']
 
+function formatDateForInput(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getNextServiceDateFromGroups(control: number | null, groups: DeviceGroup[], baseDateStr: string): string {
+  const firstGroup = groups[0]
+  if (firstGroup) {
+    if (control === null && firstGroup.control1_date) return firstGroup.control1_date
+    if (control === 1 && firstGroup.control2_date) return firstGroup.control2_date
+    if (control === 2 && firstGroup.control3_date) return firstGroup.control3_date
+    if (control === 3 && firstGroup.expiry_date) return firstGroup.expiry_date
+  }
+  const base = new Date(baseDateStr)
+  base.setMonth(base.getMonth() + 6)
+  return formatDateForInput(base)
+}
+
 function newItem(): FormItem {
   return {
     id: Math.random().toString(36).slice(2),
@@ -117,6 +137,7 @@ export default function NewServiceFormPage() {
   const [generalNotes, setGeneralNotes] = useState('')
   const [customerNote, setCustomerNote] = useState('')
   const [nextServiceDate, setNextServiceDate] = useState('')
+  const [nextServiceAutoCalculated, setNextServiceAutoCalculated] = useState(false)
   const [items, setItems] = useState<FormItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -181,6 +202,9 @@ export default function NewServiceFormPage() {
         controls.filter(v => v === b).length - controls.filter(v => v === a).length
       )[0]
       setControlNumber(most)
+      const nextDate = getNextServiceDateFromGroups(most, result, serviceDate)
+      setNextServiceDate(nextDate)
+      setNextServiceAutoCalculated(true)
     }
   }
 
@@ -422,7 +446,12 @@ export default function NewServiceFormPage() {
                 <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">BU SERVİS:</div>
                 <div className="flex gap-2">
                   {[1, 2, 3].map(n => (
-                    <button key={n} type="button" onClick={() => setControlNumber(n)}
+                    <button key={n} type="button" onClick={() => {
+                      setControlNumber(n)
+                      const nextDate = getNextServiceDateFromGroups(n, deviceGroups, serviceDate)
+                      setNextServiceDate(nextDate)
+                      setNextServiceAutoCalculated(true)
+                    }}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                         controlNumber === n
                           ? 'bg-[#C8102E] text-white border-[#C8102E]'
@@ -431,7 +460,12 @@ export default function NewServiceFormPage() {
                       {n}. Kontrol
                     </button>
                   ))}
-                  <button type="button" onClick={() => setControlNumber(null)}
+                  <button type="button" onClick={() => {
+                    setControlNumber(null)
+                    const nextDate = getNextServiceDateFromGroups(null, deviceGroups, serviceDate)
+                    setNextServiceDate(nextDate)
+                    setNextServiceAutoCalculated(true)
+                  }}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                       controlNumber === null
                         ? 'bg-gray-800 text-white border-gray-800'
@@ -560,8 +594,17 @@ export default function NewServiceFormPage() {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Sonraki Servis Tarihi</label>
-            <input type="date" value={nextServiceDate} onChange={e => setNextServiceDate(e.target.value)}
-              className="mt-1 w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
+            <input
+              type="date"
+              value={nextServiceDate}
+              onChange={e => { setNextServiceDate(e.target.value); setNextServiceAutoCalculated(false) }}
+              className="mt-1 w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] dark:bg-gray-700 dark:text-white dark:border-gray-600"
+            />
+            {nextServiceAutoCalculated && nextServiceDate && (
+              <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
+                Otomatik hesaplandı. İsterseniz değiştirebilirsiniz.
+              </p>
+            )}
           </div>
         </div>
 

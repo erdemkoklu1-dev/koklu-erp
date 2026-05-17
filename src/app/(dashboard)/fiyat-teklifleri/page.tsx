@@ -14,6 +14,30 @@ const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
   iptal:      { label: 'İptal',      className: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600' },
 }
 
+const DURUM_ALIASES: Record<string, string[]> = {
+  bekliyor:   ['bekliyor', 'Bekliyor', 'bekleyen', 'Bekleyen', 'taslak', 'Taslak', 'gonderildi', 'Gonderildi', 'gönderildi', 'Gönderildi'],
+  gonderildi: ['gonderildi', 'Gonderildi', 'gönderildi', 'Gönderildi'],
+  kazanildi:  ['kazanildi', 'Kazanildi', 'kazanıldı', 'Kazanıldı'],
+  kaybedildi: ['kaybedildi', 'Kaybedildi'],
+  iptal:      ['iptal', 'İptal', 'Iptal'],
+  taslak:     ['taslak', 'Taslak'],
+}
+
+function normalizeDurum(durum: string | null | undefined) {
+  return String(durum ?? '')
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i')
+}
+
+function getDurumAliases(durum: string | null | undefined) {
+  const normalized = normalizeDurum(durum)
+  if (!normalized || normalized === 'tumu') return null
+  return DURUM_ALIASES[normalized] ?? [durum!.trim()]
+}
+
 function formatAmount(amount: number, currency: string) {
   if (currency === 'TL') {
     return new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(amount) + ' ₺'
@@ -40,7 +64,8 @@ export default async function FiyatTeklifleriPage({
     .select('id, teklif_no, tarih, musteri_adi, musteri_sehir, genel_toplam, para_birimi, kdv_durumu, durum, customers(full_name)')
     .order('created_at', { ascending: false })
 
-  if (durum && durum !== 'tumu') query = query.eq('durum', durum)
+  const durumAliases = getDurumAliases(durum)
+  if (durumAliases) query = query.in('durum', durumAliases)
   if (from) query = query.gte('tarih', from)
   if (to)   query = query.lte('tarih', to)
   if (q)    query = query.ilike('musteri_adi', `%${q}%`)
@@ -54,9 +79,9 @@ export default async function FiyatTeklifleriPage({
     .select('durum, genel_toplam')
 
   const toplam    = (ozet ?? []).length
-  const kazanilan = (ozet ?? []).filter(t => t.durum === 'kazanildi').length
-  const kaybedilen = (ozet ?? []).filter(t => t.durum === 'kaybedildi').length
-  const bekleyen  = (ozet ?? []).filter(t => ['bekliyor', 'gonderildi', 'taslak'].includes(t.durum)).length
+  const kazanilan = (ozet ?? []).filter(t => getDurumAliases('kazanildi')?.includes(t.durum)).length
+  const kaybedilen = (ozet ?? []).filter(t => getDurumAliases('kaybedildi')?.includes(t.durum)).length
+  const bekleyen  = (ozet ?? []).filter(t => getDurumAliases('bekliyor')?.includes(t.durum)).length
 
   function buildUrl(overrides: Record<string, string | undefined>) {
     const params = new URLSearchParams()
@@ -101,24 +126,36 @@ export default async function FiyatTeklifleriPage({
 
       <div className="p-6 max-w-6xl mx-auto space-y-5">
 
-        {/* Özet kartlar */}
+        {/* Özet kartlar — tıklanabilir filtre */}
         <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
-            <div className="text-xs text-gray-500 dark:text-gray-400">Toplam Teklif</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{toplam}</div>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-xs text-green-600">Kazanılan</div>
-            <div className="text-2xl font-bold text-green-700 mt-1">{kazanilan}</div>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="text-xs text-red-600">Kaybedilen</div>
-            <div className="text-2xl font-bold text-red-700 mt-1">{kaybedilen}</div>
-          </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="text-xs text-yellow-700">Bekleyen</div>
-            <div className="text-2xl font-bold text-yellow-700 mt-1">{bekleyen}</div>
-          </div>
+          <Link href={buildUrl({ durum: undefined })}
+            className={`rounded-lg p-4 border-2 block transition-all cursor-pointer ${
+              durumFilter === 'tumu'
+                ? 'ring-2 ring-[#C8102E] border-[#C8102E] bg-red-50 dark:bg-red-900/20'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:shadow-md hover:border-gray-400'
+            }`}>
+            <div className={`text-xs font-medium ${durumFilter === 'tumu' ? 'text-[#C8102E]' : 'text-gray-500 dark:text-gray-400'}`}>Toplam Teklif</div>
+            <div className={`text-2xl font-bold mt-1 ${durumFilter === 'tumu' ? 'text-[#C8102E]' : 'text-gray-900 dark:text-gray-100'}`}>{toplam}</div>
+          </Link>
+          {([
+            { label: 'Kazanılan',  value: 'kazanildi',  count: kazanilan,  bg: 'bg-green-50 dark:bg-green-900/20',  border: 'border-green-200 dark:border-green-700',  text: 'text-green-700 dark:text-green-400',  labelCls: 'text-green-600 dark:text-green-500' },
+            { label: 'Kaybedilen', value: 'kaybedildi', count: kaybedilen, bg: 'bg-red-50 dark:bg-red-900/20',    border: 'border-red-200 dark:border-red-700',    text: 'text-red-700 dark:text-red-400',    labelCls: 'text-red-600 dark:text-red-500' },
+            { label: 'Bekleyen',   value: 'bekliyor',   count: bekleyen,   bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-700', text: 'text-yellow-700 dark:text-yellow-400', labelCls: 'text-yellow-700 dark:text-yellow-500' },
+          ] as const).map(card => {
+            const isActive = durumFilter === card.value
+            const href = isActive ? buildUrl({ durum: undefined }) : buildUrl({ durum: card.value })
+            return (
+              <Link key={card.value} href={href}
+                className={`rounded-lg p-4 border-2 block transition-all cursor-pointer ${
+                  isActive
+                    ? 'ring-2 ring-[#C8102E] border-[#C8102E] bg-red-50 dark:bg-red-900/20'
+                    : `${card.bg} ${card.border} hover:shadow-md`
+                }`}>
+                <div className={`text-xs font-medium ${isActive ? 'text-[#C8102E]' : card.labelCls}`}>{card.label}</div>
+                <div className={`text-2xl font-bold mt-1 ${isActive ? 'text-[#C8102E]' : card.text}`}>{card.count}</div>
+              </Link>
+            )
+          })}
         </div>
 
         {/* Filtreler */}
@@ -204,7 +241,8 @@ export default async function FiyatTeklifleriPage({
             <tbody className="divide-y">
               {teklifler && teklifler.length > 0 ? teklifler.map((t) => {
                 const conf = DURUM_CONFIG[t.durum] ?? DURUM_CONFIG.taslak
-                const musteriAdi = (t.customers as any)?.full_name ?? t.musteri_adi
+                const customer = t.customers as { full_name?: string | null } | { full_name?: string | null }[] | null
+                const musteriAdi = (Array.isArray(customer) ? customer[0]?.full_name : customer?.full_name) ?? t.musteri_adi
                 const kdvLabel = t.kdv_durumu === 'dahil' ? 'KDV Dahil' : t.kdv_durumu === 'haric' ? 'KDV Hariç' : 'KDV Yok'
                 return (
                   <tr key={t.id} className="hover:bg-gray-50">

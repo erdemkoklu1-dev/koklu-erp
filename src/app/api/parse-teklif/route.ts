@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { parseTeklifWithGroq } from '@/lib/teklif-ai-parser'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
@@ -121,13 +122,14 @@ function groupByY(items: PdfItem[], tolerance = 3): PdfRow[] {
   return rows
 }
 
-// Header satırını bul: "No", "Açıklama", "Miktar" içeren satır
+// Header satırını bul: "No", "Açıklama/MALIN CİNSİ", "Miktar/ADET" içeren satır
 function findHeaderRow(rows: PdfRow[]): { index: number; cols: Record<string, number> } {
   for (let i = 0; i < rows.length; i++) {
     const rowStr = rows[i].map(r => r.text).join(' ').toLowerCase()
-    const hasNo       = /\bno\.?\b/.test(rowStr)
+    const hasNo       = /\bno\.?\b|\bs\.?\s*no\b/.test(rowStr)
     const hasAciklama = rowStr.includes('açıklama') || rowStr.includes('aciklama') || rowStr.includes('tanım')
-    const hasMiktar   = rowStr.includes('miktar') || rowStr.includes('qty')
+                     || rowStr.includes('malın cinsi') || rowStr.includes('malin cinsi') || rowStr.includes('ürün') || rowStr.includes('mal cinsi')
+    const hasMiktar   = rowStr.includes('miktar') || rowStr.includes('qty') || rowStr.includes('adet')
 
     if (hasNo && hasAciklama && hasMiktar) {
       const cols: Record<string, number> = {}
@@ -248,13 +250,35 @@ async function parsePdfTeklif(file: File): Promise<ParsedTeklif> {
   const paraBirimi = detectParaBirimi(pdfItems)
   const genelToplam = findGenelToplam(pdfItems)
 
-  // Önce Claude dene (varsa)
+  // PDF text (satır bazlı, boşlukla birleştirilmiş)
+  const rows = groupByY(pdfItems)
+  const pdfText = rows.map(r => r.map(i => i.text).join(' ')).join('\n')
+
+  // 1. Groq AI dene (birincil)
+  try {
+    const result = await parseTeklifWithGroq(pdfText)
+    if (result.kalemler.length > 0) {
+      return {
+        tedarikci:     result.tedarikci,
+        tarih:         result.tarih,
+        ref_no:        result.ref_no,
+        para_birimi:   result.para_birimi,
+        kalemler:      result.kalemler,
+        ara_toplam:    result.ara_toplam,
+        iskonto_toplam: 0,
+        genel_toplam:  result.genel_toplam || genelToplam,
+      }
+    }
+  } catch (e) {
+    console.log('[parse-teklif] Groq başarısız, Claude deneniyor:', (e as Error).message)
+  }
+
+  // 2. Claude dene (yedek)
   try {
     const { default: Anthropic } = await import('@anthropic-ai/sdk')
     const client = new Anthropic()
 
     // Claude'a sadece kalem tablosunu gönder (ticari şartlar kesilmiş)
-    const rows  = groupByY(pdfItems)
     const lines = rows.map(r => r.map(i => i.text).join('\t'))
     const tableEnd = lines.findIndex(l => STOP_PATTERNS.some(p => p.test(l)))
     const tableText = (tableEnd > 0 ? lines.slice(0, tableEnd) : lines).join('\n')
@@ -361,8 +385,8 @@ function simpleTextParse(rows: PdfRow[], paraBirimi: string): ParsedKalem[] {
     // Ticari şartlar veya toplam → dur
     if (STOP_PATTERNS.some(p => p.test(rowStr))) break
 
-    // Header satırı → tabloya girdik
-    if (/\bno\.?\b.*açıklama.*miktar/i.test(rowStr)) { inTable = true; continue }
+    // Header satırı → tabloya girdik (Köklü şablon: S.NO ADET MALIN CİNSİ)
+    if (/\bno\.?\b.*(açıklama|malin\s*cinsi|malın\s*cinsi|ürün).*(miktar|adet)/i.test(rowStr)) { inTable = true; continue }
     if (!inTable) continue
 
     // İskonto/toplam satırlarını atla

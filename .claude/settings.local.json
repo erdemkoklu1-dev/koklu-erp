@@ -38,7 +38,8 @@
       "PowerShell(New-Item *)",
       "Bash(dir /s \"C:\\\\Projects\\\\koklu-erp\\\\src\\\\app\\\\api\")",
       "Bash(findstr \"route.ts\")",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(Get-Content *)"
     ]
   }
 }

@@ -214,26 +214,32 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
         </div>
       </div>
 
-      {/* İstatistik kartları */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Toplam</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{filtered.length}</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Erzincan</div>
-          <div className="text-2xl font-bold text-gray-700 dark:text-gray-300">{filtered.filter(c => c.city === 'Erzincan').length}</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 border rounded-lg p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">İstanbul</div>
-          <div className="text-2xl font-bold text-gray-700 dark:text-gray-300">{filtered.filter(c => c.city === 'İstanbul').length}</div>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="text-sm text-red-600">Acil / Gecikmiş</div>
-          <div className="text-2xl font-bold text-red-700">
-            {filtered.filter(c => c.controlStatus === 'overdue' || c.controlStatus === 'urgent' || c.controlStatus === 'expired').length}
-          </div>
-        </div>
+      {/* Kontrol durumu kartları — tıklanabilir filtre */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {(Object.keys(statusConfig) as ControlStatus[]).map(s => {
+          const count = countStatus(s)
+          const cfg = statusConfig[s]
+          const isActive = statusFilter === s
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(isActive ? 'all' : s)}
+              className={`rounded-lg p-4 border text-left transition-colors cursor-pointer ${
+                isActive
+                  ? 'bg-[#C8102E] border-[#C8102E]'
+                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:border-[#C8102E]'
+              }`}
+            >
+              <div className={`text-xs font-medium ${isActive ? 'text-white' : cfg.color}`}>
+                {cfg.label}
+              </div>
+              <div className={`text-2xl font-bold mt-1 ${isActive ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
+                {count}
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {hatirlatmaTarget && (

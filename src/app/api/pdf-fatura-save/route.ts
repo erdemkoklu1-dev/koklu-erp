@@ -16,7 +16,7 @@ export type PdfInvoiceItem = {
 export type PdfInvoiceRow = {
   filename: string
   fatura_no: string
-  fatura_tarihi: string          // YYYY-MM-DD
+  fatura_tarihi: string | null   // YYYY-MM-DD — null ise DB'ye null yazılır
   vade_tarihi?: string | null
   senaryo?: string | null
   musteri_adi: string
@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
             invoice_number: row.fatura_no,
             invoice_type:   'satis',
             customer_id:    customerId,
-            invoice_date:   row.fatura_tarihi,
+            invoice_date:   row.fatura_tarihi || null,
             due_date:       row.vade_tarihi   || null,
             subtotal,
             kdv_rate,
