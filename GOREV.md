@@ -1,166 +1,116 @@
-# GÖREV: Gelen Fatura Import — Son 8 Manuel Kategori + 1 Parse Hatası
+# GÖREV: Groq API Hata Yönetimi — Vercel'de Çalışmıyor
 
----
+## 🔴 Sorun
+Canlı ortamda (Vercel) gelen fatura yüklenince hata çıkıyor:
+```
+Unexpected token 'R', "Request En"... is not valid JSON
+```
+Groq API çağrısı başarısız oluyor ve tüm parse işlemi çöküyor.
 
-## 1️⃣ "Genel Gider" Kategorisi Manuel Kategori Sayılmasın
+## ✅ Yapılacak — 2 Adım
 
-### Sorun
-Bazı faturalarda kategori "Genel Gider" olarak atanmış (dropdown'da seçili) ama durum hâlâ "Manuel Kategori". Çünkü kod "Genel Gider"ı varsayılan/boş kategori olarak kabul edip "kategori seçilmedi" sayıyor.
+### ADIM 1: Tüm Groq API çağrılarına try-catch + fallback ekle
 
-### Yapılacak
-
-Durum hesaplama kodunu bul:
+Groq API kullanan TÜM dosyaları bul:
 ```bash
-grep -rn "manuel.*kategori\|Manuel.*Kategori\|Genel Gider\|genel_gider" src/app/(dashboard)/cari-hesap/ --include="*.tsx" --include="*.ts"
+grep -rn "api.groq.com\|parseGelenFaturaWithAI\|parseInvoiceWithAI\|parseTeklifWithAI\|GROQ_API_KEY" src/ --include="*.ts" --include="*.tsx" -l
 ```
 
-"Genel Gider" de geçerli bir kategori olarak kabul et:
+Her Groq API çağrısını try-catch ile sar. AI başarısız olursa mevcut regex parse'a fallback yapsın:
 
 ```typescript
-// ESKİ (HATALI) — muhtemelen şöyle bir koşul var:
-if (!invoice.gider_kategori || invoice.gider_kategori === 'Genel Gider') {
-  status = 'manuel_kategori';
+// HER API route'ta bu pattern'i uygula:
+
+let parsedResult = null;
+
+// Önce AI dene
+try {
+  if (process.env.GROQ_API_KEY) {
+    parsedResult = await parseWithAI(pdfText);
+    console.log('AI parse başarılı');
+  }
+} catch (aiError) {
+  console.error('AI parse başarısız, regex fallback kullanılacak:', aiError);
+  parsedResult = null; // Fallback'e düşür
 }
 
-// YENİ (DOĞRU):
-if (!invoice.gider_kategori) {
-  status = 'manuel_kategori';
-}
-// "Genel Gider" DE geçerli bir kategori — Manuel Kategori DEĞİL
-```
-
-Veya:
-```typescript
-// Eğer bir suggestedCategory varsa (AI veya kural bazlı), 
-// Genel Gider olsa bile kabul et:
-if (!invoice.gider_kategori && !invoice.suggestedCategory) {
-  status = 'manuel_kategori';
-} else {
-  // Kategori var (öneri dahil Genel Gider) → çözüldü
-  status = invoice.existingTedarikci ? 'tedarikci_mevcut' : 'yeni_tedarikci';
-}
-```
-
----
-
-## 2️⃣ Kategori Kurallarını Genişlet
-
-Kalan Manuel Kategori faturalarına bakarak yeni kurallar ekle:
-
-```bash
-grep -rn "suggestIncomingExpenseCategory\|GIDER_KATEGORILERI\|kategori.*rule\|categoryRules" src/ --include="*.ts" --include="*.tsx"
-```
-
-Mevcut kural listesine ekle:
-
-```typescript
-// Yeni kurallar:
-{ keywords: ['BASINÇLI KAP', 'BASINÇLI', 'DELTA', 'ÇELİK', 'METAL', 'SAC', 'KAYNAK'], category: 'Hammadde' },
-{ keywords: ['BELGELENDİR', 'SERTİFİKA', 'TSE', 'ISO', 'NEMACERT', 'TÜRKAK', 'KALIBRASYON'], category: 'Belgelendirme' },
-{ keywords: ['ROBOT', 'ELEKTRONİK', 'SENSOR', 'SENSÖR', 'ARDUINO', 'ROBOTZADE'], category: 'Elektronik / Teknik' },
-{ keywords: ['REKLAM', 'MATBAA', 'BASIM', 'TABELA', 'KARTVIZIT'], category: 'Reklam / Tanıtım' },
-{ keywords: ['MUHASEBE', 'MALİ MÜŞAVİR', 'SMMM', 'YMM', 'DENETIM'], category: 'Muhasebe / Denetim' },
-{ keywords: ['HEPSİJET', 'D-FAST', 'TRENDYOL', 'N11', 'GİTTİGİDİYOR'], category: 'Kargo / Nakliye' },
-{ keywords: ['PAZARLAMA', 'NH1'], category: 'Genel Gider' },
-```
-
-Ayrıca "Belgelendirme" ve "Elektronik / Teknik" kategorilerini dropdown listesine ekle (GIDER_KATEGORILERI sabitine):
-
-```typescript
-const GIDER_KATEGORILERI = [
-  'Genel Gider',
-  'Internet / İletişim',
-  'Elektrik',
-  'Doğalgaz',
-  'Su',
-  'Kira',
-  'Yakıt / Akaryakıt',
-  'Market / Gıda',
-  'Kargo / Nakliye',
-  'Hammadde',
-  'Araç Gideri',
-  'Vergi / Resmi',
-  'Ofis / Kırtasiye',
-  'Belgelendirme',        // YENİ
-  'Elektronik / Teknik',  // YENİ
-  'Reklam / Tanıtım',     // YENİ
-  'Muhasebe / Denetim',   // YENİ
-];
-```
-
----
-
-## 3️⃣ "öder" Tedarikçi Adı Düzelt
-
-### Sorun
-Bir faturada tedarikçi adı "öder" olarak çıkmış (VKN: 48085137792). Bu hatalı parse.
-
-### Yapılacak
-Tedarikçi adı kontrolüne ek kurallar ekle:
-
-```typescript
-function isValidTedarikciName(name: string): boolean {
-  if (!name || name.trim().length < 4) return false;
-  
-  const invalidNames = [
-    'A.Ş.', 'LTD', 'ŞTİ', 'LTD.', 'A.S.', 'ŞTİ.',
-    'öder', 'ÖDER', 'ödeme', 'ÖDEME', 'fatura', 'FATURA'
-  ];
-  
-  if (invalidNames.includes(name.trim())) return false;
-  
-  // Tamamen küçük harf ise muhtemelen hatalı (unvanlar genelde büyük harf)
-  if (name === name.toLowerCase() && name.length < 10) return false;
-  
-  return true;
-}
-
-// Geçersiz isim bulunursa:
-if (!isValidTedarikciName(invoice.tedarikci_adi)) {
-  invoice.tedarikci_adi = `Tedarikçi (${invoice.tedarikci_vkn || 'bilinmiyor'})`;
-  invoice.warnings = [...(invoice.warnings || []), 'Tedarikçi adı otomatik parse edilemedi, lütfen düzeltin'];
+// AI başarısız olduysa veya GROQ_API_KEY yoksa → regex parse
+if (!parsedResult) {
+  try {
+    parsedResult = await parseWithRegex(pdfText); // Mevcut regex parse fonksiyonu
+    console.log('Regex parse kullanıldı');
+  } catch (regexError) {
+    console.error('Regex parse de başarısız:', regexError);
+    // Son çare: minimal bilgi dön
+    parsedResult = {
+      tedarikci_adi: 'Parse edilemedi',
+      fatura_no: fileName || 'Bilinmiyor',
+      tutar: 0,
+      kalemler: [],
+      parseError: 'Fatura otomatik parse edilemedi, lütfen manuel girin'
+    };
+  }
 }
 ```
 
----
+### ADIM 2: Groq API response'u kontrol et
 
-## 4️⃣ Parse Hatası — info@ckbogazici.com.tr
-
-### Sorun
-Bu faturada hâlâ parse hatası var. Tedarikçi adı olarak e-posta adresi çıkmış.
-
-### Yapılacak
-E-posta adresini tedarikçi adı olarak kabul etme:
+API çağrısından önce response'un gerçekten JSON olup olmadığını kontrol et:
 
 ```typescript
-// Tedarikçi adı e-posta mı kontrol et
-if (invoice.tedarikci_adi && invoice.tedarikci_adi.includes('@')) {
-  // E-posta adresinden firma adı çıkar
-  // info@ckbogazici.com.tr → ckbogazici
-  const domain = invoice.tedarikci_adi.split('@')[1]?.split('.')[0] || '';
-  invoice.tedarikci_adi = domain.toUpperCase() || `Tedarikçi (${invoice.tedarikci_vkn})`;
+// invoice-ai-parser.ts ve diğer AI parser dosyalarında:
+
+const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'llama-3.3-70b-versatile',
+    messages: [...],
+    temperature: 0,
+    max_tokens: 4096,
+  }),
+});
+
+// Response kontrolü — JSON olmayabilir!
+if (!response.ok) {
+  const errorText = await response.text(); // .json() DEĞİL .text()!
+  console.error('Groq API HTTP hatası:', response.status, errorText);
+  throw new Error(`Groq API hatası: ${response.status} - ${errorText.substring(0, 200)}`);
+}
+
+// Content-Type kontrolü
+const contentType = response.headers.get('content-type') || '';
+if (!contentType.includes('application/json')) {
+  const rawText = await response.text();
+  console.error('Groq API JSON dönmedi:', rawText.substring(0, 200));
+  throw new Error('Groq API geçersiz yanıt döndü');
+}
+
+const data = await response.json();
+```
+
+### ADIM 3: API Key kontrolü
+
+```typescript
+// API key'in geçerli olup olmadığını kontrol et
+const apiKey = (process.env.GROQ_API_KEY || '').trim();
+
+if (!apiKey || apiKey.length < 10) {
+  console.warn('GROQ_API_KEY geçersiz veya çok kısa, regex parse kullanılacak');
+  // Regex fallback'e düş
 }
 ```
 
-Ayrıca bu fatura parse hatası olmadan da import edilebilmeli. Fatura no otomatik oluşturulmuşsa ("IMP-..."), durum "Parse Hatası" yerine normal durum olsun:
+## 🔍 Kontrol
+- [ ] Canlı ortamda (koklu-erp.vercel.app) gelen fatura yükleme çalışıyor mu?
+- [ ] AI başarısız olunca regex fallback devreye giriyor mu?
+- [ ] GROQ_API_KEY olmadan da faturalar parse ediliyor mu?
+- [ ] Hata mesajı kullanıcı dostu mu?
 
-```typescript
-// Fatura no otomatik oluşturulmuşsa parse hatası YAPMA
-if (invoice.fatura_no && invoice.fatura_no.startsWith('IMP-')) {
-  // Parse hatası çıkarma, uyarı göster
-  invoice.parseError = null;
-  invoice.warnings = [...(invoice.warnings || []), 'Fatura numarası otomatik oluşturuldu'];
-}
-```
-
----
-
-## 🔍 Kontrol Noktaları
-- [ ] Manuel Kategori: 8 → 0 (veya 0-2)?
-- [ ] "Genel Gider" kategorili faturalar artık "Manuel Kategori" değil "Tedarikçi Mevcut" mu?
-- [ ] DELTA BASINÇLI → "Hammadde" kategorisi mi?
-- [ ] NEMACERT → "Belgelendirme" kategorisi mi?
-- [ ] "öder" tedarikçi adı düzeltildi mi?
-- [ ] info@ckbogazici.com.tr parse hatası çözüldü mü?
-- [ ] Parse Hatası: 1 → 0?
-- [ ] Tüm faturalar import edilebilir mi?
+## ⚠️ Teknik Not
+- Bu değişiklik sonrası canlı ortamda AI çalışmazsa regex parse devreye girer
+- Local'de AI çalışıyorsa orada daha iyi sonuç verir, canlıda regex ile kabul edilebilir sonuç
+- Vercel Hobby plan'da serverless function timeout 10 saniye — 30+ PDF'lik ZIP'te AI timeout alabilir

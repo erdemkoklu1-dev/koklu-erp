@@ -1,6 +1,39 @@
 // Groq AI destekli fatura parse modülü
 // pdfjs-dist ile çıkarılan ham text → Groq → yapılandırılmış JSON
 
+type GroqResponse = { choices?: Array<{ message?: { content?: string } }> }
+
+async function callGroqApi(body: object): Promise<GroqResponse> {
+  const groqApiKey = (process.env.GROQ_API_KEY ?? '').trim()
+  if (!groqApiKey || groqApiKey.length < 10) {
+    throw new Error('GROQ_API_KEY geçersiz veya bulunamadı')
+  }
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${groqApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('[groq] API HTTP hatası:', response.status, errorText.slice(0, 300))
+    throw new Error(`Groq API hatası: ${response.status} - ${errorText.slice(0, 100)}`)
+  }
+
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    const rawText = await response.text()
+    console.error('[groq] JSON dışı yanıt:', rawText.slice(0, 200))
+    throw new Error('Groq API geçersiz yanıt döndü (JSON değil)')
+  }
+
+  return response.json() as Promise<GroqResponse>
+}
+
 export interface AiParsedItem {
   sira_no: number
   aciklama: string
@@ -85,42 +118,20 @@ Yukarıdaki text'ten fatura bilgilerini çıkar ve SADECE aşağıdaki JSON form
 }`
 
 export async function parseInvoiceWithAI(pdfText: string): Promise<AiParsedInvoice> {
-  const groqApiKey = process.env.GROQ_API_KEY
-  if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY bulunamadı')
-  }
-
-  // Token aşımını önlemek için metni kırp (~6000 karakter yeterli)
   const truncatedText = pdfText.length > 6000 ? pdfText.slice(0, 6000) + '\n...(metin kısaltıldı)' : pdfText
   const userPrompt = USER_PROMPT_TEMPLATE.replace('{PDF_TEXT}', truncatedText)
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${groqApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0,
-      max_tokens: 4096,
-      response_format: { type: 'json_object' },
-    }),
+  const data = await callGroqApi({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0,
+    max_tokens: 4096,
+    response_format: { type: 'json_object' },
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[groq] API hatası:', response.status, errorText)
-    throw new Error(`Groq API hatası: ${response.status}`)
-  }
-
-  const data = await response.json() as {
-    choices?: Array<{ message?: { content?: string } }>
-  }
   const content = data.choices?.[0]?.message?.content ?? ''
 
   const cleanContent = content
@@ -252,41 +263,20 @@ JSON formatında dön:
 }`
 
 export async function parseGelenFaturaWithAI(pdfText: string): Promise<AiParsedGelenFatura> {
-  const groqApiKey = process.env.GROQ_API_KEY
-  if (!groqApiKey) {
-    throw new Error('GROQ_API_KEY bulunamadı')
-  }
-
   const truncatedText = pdfText.length > 6000 ? pdfText.slice(0, 6000) + '\n...(metin kısaltıldı)' : pdfText
   const userPrompt = GELEN_FATURA_USER_PROMPT.replace('{PDF_TEXT}', truncatedText)
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${groqApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: GELEN_FATURA_SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0,
-      max_tokens: 4096,
-      response_format: { type: 'json_object' },
-    }),
+  const data = await callGroqApi({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      { role: 'system', content: GELEN_FATURA_SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0,
+    max_tokens: 4096,
+    response_format: { type: 'json_object' },
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[groq gelen] API hatası:', response.status, errorText)
-    throw new Error(`Groq API hatası: ${response.status}`)
-  }
-
-  const data = await response.json() as {
-    choices?: Array<{ message?: { content?: string } }>
-  }
   const content = data.choices?.[0]?.message?.content ?? ''
 
   const cleanContent = content

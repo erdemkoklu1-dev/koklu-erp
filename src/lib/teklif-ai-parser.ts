@@ -71,12 +71,11 @@ Metinden teklif bilgilerini çıkar ve SADECE şu JSON formatında dön:
   "genel_toplam": 0.0
 }`
 
-export async function parseTeklifWithGroq(pdfText: string): Promise<TeklifGroqResult> {
-  const groqApiKey = process.env.GROQ_API_KEY
-  if (!groqApiKey) throw new Error('GROQ_API_KEY bulunamadı')
-
-  const truncated = pdfText.length > 7000 ? pdfText.slice(0, 7000) + '\n...(metin kısaltıldı)' : pdfText
-  const userPrompt = USER_PROMPT.replace('{PDF_TEXT}', truncated)
+async function callGroqApi(body: object): Promise<{ choices?: Array<{ message?: { content?: string } }> }> {
+  const groqApiKey = (process.env.GROQ_API_KEY ?? '').trim()
+  if (!groqApiKey || groqApiKey.length < 10) {
+    throw new Error('GROQ_API_KEY geçersiz veya bulunamadı')
+  }
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -84,25 +83,40 @@ export async function parseTeklifWithGroq(pdfText: string): Promise<TeklifGroqRe
       'Authorization': `Bearer ${groqApiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0,
-      max_tokens: 4096,
-      response_format: { type: 'json_object' },
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
-    const errText = await response.text()
-    console.error('[teklif-groq] API hatası:', response.status, errText)
-    throw new Error(`Groq API hatası: ${response.status}`)
+    const errorText = await response.text()
+    console.error('[teklif-groq] API HTTP hatası:', response.status, errorText.slice(0, 300))
+    throw new Error(`Groq API hatası: ${response.status} - ${errorText.slice(0, 100)}`)
   }
 
-  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    const rawText = await response.text()
+    console.error('[teklif-groq] JSON dışı yanıt:', rawText.slice(0, 200))
+    throw new Error('Groq API geçersiz yanıt döndü (JSON değil)')
+  }
+
+  return response.json()
+}
+
+export async function parseTeklifWithGroq(pdfText: string): Promise<TeklifGroqResult> {
+  const truncated = pdfText.length > 7000 ? pdfText.slice(0, 7000) + '\n...(metin kısaltıldı)' : pdfText
+  const userPrompt = USER_PROMPT.replace('{PDF_TEXT}', truncated)
+
+  const data = await callGroqApi({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0,
+    max_tokens: 4096,
+    response_format: { type: 'json_object' },
+  })
+
   const content = data.choices?.[0]?.message?.content ?? ''
 
   let parsed: TeklifGroqResult

@@ -73,8 +73,16 @@ export async function POST(req: NextRequest) {
     })
 
     if (!response.ok) {
-      const err = await response.json()
-      return NextResponse.json({ error: err.error?.message ?? 'AI hatası' }, { status: 500 })
+      const errText = await response.text()
+      console.error('[parse-invoice] Groq HTTP hatası:', response.status, errText.slice(0, 300))
+      return NextResponse.json({ error: `AI hatası: ${response.status}` }, { status: 500 })
+    }
+
+    const contentType = response.headers.get('content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      const rawText = await response.text()
+      console.error('[parse-invoice] JSON dışı yanıt:', rawText.slice(0, 200))
+      return NextResponse.json({ error: 'AI geçersiz yanıt döndü' }, { status: 500 })
     }
 
     const data = await response.json()
