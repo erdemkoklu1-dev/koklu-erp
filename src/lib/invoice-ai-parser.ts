@@ -201,12 +201,16 @@ KURALLAR:
    - "Yakıt / Akaryakıt" → benzin, motorin, akaryakıt, petrol, Opet, Shell, BP
    - "Market / Gıda" → BİM, A101, ŞOK, Migros, market, gıda
    - "Kargo / Nakliye" → kargo, nakliye, Yurtiçi, Aras, MNG, PTT
-   - "Hammadde" → çelik, boru, vana, manometre, toz, köpük, kimyasal
+   - "Hammadde" → çelik, boru, vana, manometre, toz, köpük, kimyasal, basınçlı kap, sac, metal
    - "Araç Gideri" → araç, tamir, lastik, sigorta, muayene, otopark
    - "Vergi / Resmi" → vergi, SGK, bağkur, noter, harç
    - "Ofis / Kırtasiye" → kırtasiye, toner, yazıcı, kağıt
    - "Gaz & Dolum Malzemesi" → azot, karbondioksit, CO2, argon, dolum, gaz dolum
    - "Yangın Tüpü Parça & Malzeme" → yangın tüpü, söndürme, gövde, vana, hortum, manometre
+   - "Belgelendirme" → TSE, ISO, belgelendirme, sertifika, Türkak, NEMACERT, kalibrasyon
+   - "Elektronik / Teknik" → elektronik, sensör, robot, Arduino, devre, yazılım
+   - "Reklam / Tanıtım" → reklam, matbaa, basım, tabela, kartvizit, katalog
+   - "Muhasebe / Denetim" → muhasebe, mali müşavir, SMMM, YMM, denetim, beyanname
    - "Genel Gider" → yukarıdakilerin hiçbirine uymuyorsa
 6. Kalem açıklamalarını tam yaz, özet satırlarını (Toplam, KDV, Ödenecek) kalem olarak EKLEME.
 7. Çok satırlı açıklamaları birleştir.

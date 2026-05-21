@@ -192,6 +192,26 @@ const GIDER_KATEGORILERI: [string, string[], string[]][] = [
     ['GAYRİMENKUL', 'KİRA'],
     ['KİRA BEDELİ', 'KİRA ÖDEMESI'],
   ],
+  [
+    'Belgelendirme',
+    ['NEMACERT', 'TÜRKAK', 'TURKAK', 'TSE ', 'KALIBRASYON', 'KALİBRASYON'],
+    ['SERTİFİKA', 'BELGELENDİRME', 'UYGUNLUK BELGESI', 'ISO ', 'TSE BELGESİ', 'KALİBRASYON'],
+  ],
+  [
+    'Elektronik / Teknik',
+    ['ROBOTZADE', 'ELEKTRONİK', 'ELEKTRONIK', 'ARDUINO'],
+    ['SENSOR', 'SENSÖR', 'ROBOT', 'ELEKTRONİK DEVRE', 'MİKRODENETLEYİCİ'],
+  ],
+  [
+    'Reklam / Tanıtım',
+    ['REKLAM', 'MATBAA', 'TABELA'],
+    ['REKLAM HİZMETİ', 'BASIM', 'KARTVIZIT', 'KATALOG', 'BROŞÜR'],
+  ],
+  [
+    'Muhasebe / Denetim',
+    ['MALİ MÜŞAVİR', 'MALI MUSAVIR', 'SMMM', 'YMM', 'MUHASEBE'],
+    ['MUHASEBECİ', 'DENETİM', 'BEYANNAME', 'VERGİ DANIŞMANLIK'],
+  ],
 ]
 
 // ── Yardımcı fonksiyonlar ────────────────────────────────────────

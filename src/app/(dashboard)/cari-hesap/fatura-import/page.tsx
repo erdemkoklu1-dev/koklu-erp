@@ -1220,6 +1220,10 @@ const GIDER_KATEGORILERI = [
   'Araç Gideri',
   'Vergi / Resmi',
   'Ofis / Kırtasiye',
+  'Belgelendirme',
+  'Elektronik / Teknik',
+  'Reklam / Tanıtım',
+  'Muhasebe / Denetim',
   'Genel Gider',
 ]
 
@@ -1231,13 +1235,18 @@ function suggestIncomingExpenseCategory(supplierName: string | null | undefined)
 
   if (name.includes('migros') || /\bbim\b/.test(name) || name.includes('a101') || /\bsok\b/.test(name) || name.includes('carrefour') || name.includes('market') || name.includes('gida')) return 'Market / Gıda'
   if (name.includes('turknet') || name.includes('ttnet') || name.includes('turk telekom') || name.includes('turkcell') || name.includes('vodafone') || name.includes('superonline') || name.includes('internet')) return 'İnternet / İletişim'
-  if (name.includes('ck bogazici') || name.includes('bogazici elektrik') || name.includes('enerjisa') || /\bedas\b/.test(name) || /\bepas\b/.test(name) || name.includes('ayedas') || name.includes('baskent elektrik')) return 'Elektrik'
+  if (name.includes('ck bogazici') || name.includes('bogazici elektrik') || name.includes('enerjisa') || /\bedas\b/.test(name) || /\bepas\b/.test(name) || name.includes('ayedas') || name.includes('baskent elektrik') || name.includes('ckbogazici')) return 'Elektrik'
   if (name.includes('igdas') || name.includes('gazdas') || name.includes('aksa gaz') || name.includes('erzingaz') || name.includes('bursagaz') || name.includes('dogalgaz')) return 'Doğalgaz'
   if (/\biski\b/.test(name) || /\baski\b/.test(name) || /\beski\b/.test(name) || /\bmeski\b/.test(name)) return 'Su'
   if (name.includes('opet') || name.includes('shell') || /\bbp\b/.test(name) || name.includes('total') || name.includes('petrol') || name.includes('akaryakit') || name.includes('lukoil')) return 'Yakıt / Akaryakıt'
-  if (name.includes('kargo') || name.includes('nakliye') || name.includes('yurtici') || name.includes('aras') || /\bmng\b/.test(name) || /\bptt\b/.test(name) || name.includes('surat') || /\bups\b/.test(name) || name.includes('fedex')) return 'Kargo / Nakliye'
+  if (name.includes('kargo') || name.includes('nakliye') || name.includes('yurtici') || name.includes('aras') || /\bmng\b/.test(name) || /\bptt\b/.test(name) || name.includes('surat') || /\bups\b/.test(name) || name.includes('fedex') || name.includes('hepsijet') || name.includes('d fast') || name.includes('dfast')) return 'Kargo / Nakliye'
   if (name.includes('yangin') || name.includes('sondurme')) return 'Yangın Tüpü Parça & Malzeme'
   if (name.includes('gaz dolum') || name.includes('azot') || name.includes('semihler') || name.includes('demir celik')) return 'Gaz & Dolum Malzemesi'
+  if (name.includes('basinc') || name.includes('delta') || name.includes('celik') || name.includes('metal') || /\bsac\b/.test(name) || name.includes('kaynak')) return 'Hammadde'
+  if (name.includes('nemacert') || name.includes('turkak') || name.includes('kalibrasyon') || name.includes('belgelen') || name.includes('sertifika') || /\btse\b/.test(name) || /\biso\b/.test(name)) return 'Belgelendirme'
+  if (name.includes('robot') || name.includes('elektronik') || name.includes('sensor') || name.includes('arduino') || name.includes('robotzade')) return 'Elektronik / Teknik'
+  if (name.includes('reklam') || name.includes('matbaa') || name.includes('basim') || name.includes('tabela') || name.includes('kartvizit')) return 'Reklam / Tanıtım'
+  if (name.includes('muhasebe') || name.includes('mali musavir') || /\bsmmm\b/.test(name) || /\bymm\b/.test(name) || name.includes('denetim')) return 'Muhasebe / Denetim'
   if (name.includes('enerji')) return 'Enerji Gideri'
   if (name.includes('noter') || name.includes('vergi')) return 'Vergi / Resmi'
   if (name.includes('kira') || name.includes('gayrimenkul')) return 'Kira'
@@ -1676,16 +1685,22 @@ function GelenPdfFaturaImport() {
             : 'existing'
         const categorySuggestion = suggestIncomingExpenseCategory(matchedSupplier?.name ?? name)
         // AI kategorisi önce gelir, yoksa client-side öneri, yoksa varsayılan
-        const aiCategory = inv.gider_kategorisi && inv.gider_kategorisi !== DEFAULT_GIDER_KATEGORI ? inv.gider_kategorisi : null
-        const initialCategory = aiCategory ?? categorySuggestion ?? inv.gider_kategorisi ?? DEFAULT_GIDER_KATEGORI
-        const hasCategory = !!(aiCategory ?? categorySuggestion)
+        // "Genel Gider" da geçerli — kategori her zaman var
+        const aiCategory = inv.gider_kategorisi ?? null
+        const initialCategory = categorySuggestion ?? aiCategory ?? DEFAULT_GIDER_KATEGORI
+        const hasCategory = !!(aiCategory || categorySuggestion)
         const duplicateStatus: GelenDuplicateStatus = duplicateMatch ? 'duplicate' : 'not_duplicate'
         let parseStatus: GelenParseStatus = 'clean'
-        if (ownCompanySupplier || (inv.hata && !isManualWarning && !hasHeaderForManualReview) || !inv.fatura_no || (itemCount === 0 && !hasHeaderForManualReview)) {
+        if (ownCompanySupplier || (inv.hata && !isManualWarning && !hasHeaderForManualReview) || (itemCount === 0 && !hasHeaderForManualReview)) {
           parseStatus = 'critical_error'
-        } else if (isManualWarning || inv.hata || itemCount === 0 || (!hasCategory)) {
+        } else if (!hasCategory) {
+          // Gerçekten kategori yok (ne AI ne öneri var)
+          parseStatus = 'manual_review'
+        } else if ((isManualWarning || inv.hata || itemCount === 0) && !hasHeaderForManualReview) {
+          // Parse kalitesi düşük VE kritik header alanları da eksik
           parseStatus = 'manual_review'
         }
+        // Kategori var + header tam → parse uyarıları olsa bile clean
         const importStatus: GelenImportStatus = duplicateStatus === 'duplicate'
           ? 'skipped_duplicate'
           : parseStatus === 'critical_error'
