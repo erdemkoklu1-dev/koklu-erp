@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { matchExistingSupplier } from '@/lib/gelen-fatura-supplier-matching'
+import { isOwnCompanySupplierName } from '@/lib/gelen-fatura-parser-v2/supplierClassifier'
 
 export type GelenPdfItem = {
   urun_adi: string
@@ -32,29 +34,8 @@ export type GelenPdfRow = {
   sube_id?: string | null
 }
 
-function normalizeName(n: string): string {
-  return n
-    .toLocaleLowerCase('tr-TR')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[ıİ]/g, 'i')
-    .replace(/[şŞ]/g, 's')
-    .replace(/[ğĞ]/g, 'g')
-    .replace(/[üÜ]/g, 'u')
-    .replace(/[öÖ]/g, 'o')
-    .replace(/[çÇ]/g, 'c')
-    .replace(/\b(limited|ltd|sti|stı|sirketi|anonim|as|a s|sanayi|san|ticaret|tic|pazarlama|paz|ithalat|ihracat|insaat|ins|ve|co|corp)\b/g, ' ')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 function normNo(s: string | null | undefined): string {
   return (s ?? '').replace(/\s/g, '').toUpperCase()
-}
-
-function normVkn(v: string | null | undefined): string {
-  return (v ?? '').replace(/\D/g, '')
 }
 
 export async function POST(req: NextRequest) {
@@ -73,18 +54,24 @@ export async function POST(req: NextRequest) {
       .eq('invoice_type', 'alis')
     const existingNos = new Set((existingInvoices ?? []).map(i => normNo(i.invoice_number)))
 
-    // Mevcut tedarikçi isimleri (alis faturalarından)
-    const { data: existingSuppliers } = await supabase
-      .from('invoices')
-      .select('supplier_name, supplier_tax_no')
-      .eq('invoice_type', 'alis')
-      .not('supplier_name', 'is', null)
-    const supplierByName = new Map<string, boolean>()
-    const supplierByTaxNo = new Map<string, boolean>()
-    for (const s of existingSuppliers ?? []) {
-      if (s.supplier_name)    supplierByName.set(normalizeName(s.supplier_name), true)
-      if (s.supplier_tax_no)  supplierByTaxNo.set(normVkn(s.supplier_tax_no), true)
-    }
+    // Mevcut tedarikçi isimleri (alış faturaları + manuel tedarikçiler)
+    const [{ data: existingSuppliers }, { data: manualSuppliers }] = await Promise.all([
+      supabase
+        .from('invoices')
+        .select('id, supplier_name, supplier_tax_no')
+        .eq('invoice_type', 'alis')
+        .not('supplier_name', 'is', null),
+      supabase
+        .from('tedarikciler')
+        .select('id, firma_adi, vergi_no')
+        .eq('aktif', true),
+    ])
+    const suppliersForMatch = [
+      ...((existingSuppliers ?? []) as { id: string; supplier_name: string | null; supplier_tax_no: string | number | null }[])
+        .map(s => ({ id: s.id, name: s.supplier_name, taxNo: s.supplier_tax_no })),
+      ...((manualSuppliers ?? []) as { id: string; firma_adi: string | null; vergi_no: string | number | null }[])
+        .map(s => ({ id: s.id, name: s.firma_adi, taxNo: s.vergi_no })),
+    ]
 
     const createdInvoiceIds: string[] = []
     const results: Array<{
@@ -121,9 +108,15 @@ export async function POST(req: NextRequest) {
         }
 
         // Tedarikçi yeni mi?
-        const vknMatch  = row.satici_vkn && supplierByTaxNo.has(normVkn(row.satici_vkn))
-        const nameMatch = supplierByName.has(normalizeName(row.satici_adi))
-        const tedarikciYeni = !vknMatch && !nameMatch
+        if (isOwnCompanySupplierName(row.satici_adi)) {
+          throw new Error(`Satıcı bizim firma olarak parse edildi, manuel tedarikçi seçimi gerekli (${row.fatura_no})`)
+        }
+        const supplierMatch = matchExistingSupplier(suppliersForMatch, {
+          name: row.satici_adi,
+          taxNo: row.satici_vkn,
+        })
+        const tedarikciYeni = supplierMatch.method === 'none'
+        const supplierName = supplierMatch.supplier?.name ?? row.satici_adi.trim()
 
         // Tutarlar
         const subtotal     = row.kdv_matrahi    ?? 0
@@ -147,7 +140,7 @@ export async function POST(req: NextRequest) {
           .insert({
             invoice_number: row.fatura_no,
             invoice_type:   'alis',
-            supplier_name:  row.satici_adi.trim(),
+            supplier_name:  supplierName,
             supplier_tax_no:   row.satici_vkn || null,
             invoice_date:   row.fatura_tarihi,
             due_date:       row.vade_tarihi || null,
@@ -171,8 +164,7 @@ export async function POST(req: NextRequest) {
 
         createdInvoiceIds.push(inv.id)
         existingNos.add(normalizedInvoiceNo)
-        if (row.satici_adi) supplierByName.set(normalizeName(row.satici_adi), true)
-        if (row.satici_vkn) supplierByTaxNo.set(normVkn(row.satici_vkn), true)
+        suppliersForMatch.push({ id: inv.id, name: supplierName, taxNo: row.satici_vkn ?? null })
 
         // Fatura kalemleri
         const validItems = (row.kalemler ?? []).filter(k => k.urun_adi?.trim())
@@ -199,7 +191,7 @@ export async function POST(req: NextRequest) {
         results.push({
           filename:     row.filename,
           fatura_no:    row.fatura_no,
-          satici_adi:   row.satici_adi,
+          satici_adi:   supplierName,
           status:       'eklendi',
           invoice_id:   inv.id,
           tedarikci_yeni: tedarikciYeni,

@@ -1,3 +1,6 @@
+import { parseIncomingInvoiceV2 } from './gelen-fatura-parser-v2/genericIncomingInvoiceParser'
+import { isOwnCompanySupplierName } from './gelen-fatura-parser-v2/supplierClassifier'
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
 pdfjsLib.GlobalWorkerOptions.workerSrc = ''
@@ -120,26 +123,74 @@ const SATICI_STOP_PREFIXES = [
 
 const GIDER_KATEGORILERI: [string, string[], string[]][] = [
   [
-    'Yiyecek & İçecek',
+    'Market / Gıda',
     ['MİGROS', 'MIGROS', 'BİM', 'BIM', 'A101', 'ŞOK', 'SOK', 'CARREFOUR', 'GIDA', 'MARKET', 'BAKKAL', 'MANAV'],
-    ['EKMEK', 'SÜT', 'SÜTT', 'YOĞURT', 'YOGURT', 'MEYVE', 'SEBZE', 'ET', 'TAVUK', 'GOFRET', 'ÇİKOLATA',
-     'CIKOLATA', 'YAĞ', 'UN ', 'ŞEKER', 'KREMA', 'MANGO', 'ARMUT', 'MUZ', 'DOMATES', 'BİBER', 'BIBER',
-     'HELVA', 'SU ', 'MANTARI', 'TAHINI', 'CEVİZ', 'CEVIZ', 'GIDA', 'İÇECEK', 'ICECEK'],
+    ['EKMEK', 'SÜT', 'YOĞURT', 'YOGURT', 'MEYVE', 'SEBZE', 'TAVUK', 'ÇİKOLATA', 'YAĞ', 'ŞEKER', 'GIDA', 'İÇECEK'],
   ],
   [
     'Yangın Tüpü Parça & Malzeme',
     ['YANGIN', 'SÖNDÜRME', 'SONDURME'],
-    ['YANGIN TÜPÜ', 'YANGIN TUPU', 'GÖVDE', 'GOVDE', 'VANA', 'HORTUM', 'MANOMETRE', 'BOYASIZ', 'TÜPÜ', 'TUPU'],
+    ['YANGIN TÜPÜ', 'YANGIN TUPU', 'GÖVDE', 'GOVDE', 'HORTUM', 'MANOMETRE', 'BOYASIZ'],
   ],
   [
     'Gaz & Dolum Malzemesi',
-    ['GAZ', 'DEMİR ÇELİK', 'DEMIR CELIK', 'SEMİHLER', 'SEMIHLER'],
-    ['AZOT', 'KARBONDİOKSİT', 'KARBONDIOKSIT', 'ARGON', 'CO2', 'DOLUM', 'GAZI', ' GAZ'],
+    ['GAZ DOLUM', 'DEMİR ÇELİK', 'DEMIR CELIK', 'SEMİHLER', 'SEMIHLER'],
+    ['AZOT', 'KARBONDİOKSİT', 'KARBONDIOKSIT', 'ARGON', 'CO2', 'GAZ DOLUM'],
   ],
   [
-    'Hammadde & Sanayi Malzemesi',
+    'Hammadde',
     ['METAL', 'SAC', 'DEMİR', 'DEMIR', 'ÇELİK', 'CELIK', 'PLASTİK', 'PLASTIK', 'AMBALAJ', 'KİMYA', 'KIMYA'],
-    ['SAC', 'BORU', 'PROFİL', 'PROFIL', 'METAL', 'PLASTİK', 'PLASTIK'],
+    ['SAC', 'BORU', 'PROFİL', 'PROFIL', 'KÖPÜK', 'KOPUK', 'VANA', 'MANOMETRE'],
+  ],
+  [
+    'İnternet / İletişim',
+    ['TTNET', 'TURKNET', 'TURK TELEKOM', 'TÜRK TELEKOM', 'VODAFONE', 'TURKCELL', 'SUPERONLINE', 'UYDUNET'],
+    ['İNTERNET', 'INTERNET', 'TELEKOMÜNİKASYON'],
+  ],
+  [
+    'Elektrik',
+    ['ENERJISA', 'EDAŞ', 'EPAŞ', 'AYEDAŞ', 'BAŞKENT ELEKTRIK', 'BAŞKENT EDAŞ', 'CK BOĞAZIÇI', 'CK BOGAZICI'],
+    ['ELEKTRİK TÜKETİMİ', 'ELEKTRİK BEDELİ'],
+  ],
+  [
+    'Doğalgaz',
+    ['İGDAŞ', 'IGDAS', 'GAZDAŞ', 'GAZDAS', 'AKSA GAZ', 'ERZINGAZ', 'BURSAGAZ', 'KIRGAZ'],
+    ['DOĞALGAZ', 'DOGALGAZ'],
+  ],
+  [
+    'Su',
+    ['İSKİ', 'ISKI', 'ASKİ', 'ASKI', 'ESKİ', 'ESKI', 'MESKİ', 'MESKI'],
+    ['SU TÜKETİMİ', 'SU BEDELİ', 'KANALIZASYON'],
+  ],
+  [
+    'Yakıt / Akaryakıt',
+    ['OPET', 'SHELL', 'BP ', 'TOTAL', 'PETROLİS', 'PETROL OFİSİ', 'MOİL', 'LUKOIL'],
+    ['AKARYAKIT', 'BENZİN', 'MOTORİN', 'LPG', 'MAZOT'],
+  ],
+  [
+    'Kargo / Nakliye',
+    ['YURTİÇİ KARGO', 'ARAS KARGO', 'MNG KARGO', 'PTT KARGO', 'SÜRAT KARGO', 'UPS', 'FEDEX', 'DHL', 'NAKLİYE'],
+    ['KARGO BEDELİ', 'NAKLİYE BEDELİ'],
+  ],
+  [
+    'Araç Gideri',
+    ['OTO TAMİR', 'OTOMOBİL', 'SİGORTA'],
+    ['ARAÇ TAMİR', 'LASTİK', 'MUAYENE', 'OTOPARK', 'ARAÇ SİGORTA'],
+  ],
+  [
+    'Vergi / Resmi',
+    ['NOTER', 'VERGİ DAİRESİ', 'SGK', 'BAĞKUR'],
+    ['VERGİ', 'HARÇ', 'DAMGA', 'SGK PRİM'],
+  ],
+  [
+    'Ofis / Kırtasiye',
+    ['KIRTASİYE', 'OFİS DEPOT', 'STAPLES'],
+    ['KIRTASİYE', 'TONER', 'YAZICI', 'KAĞIT', 'KALEM'],
+  ],
+  [
+    'Kira',
+    ['GAYRİMENKUL', 'KİRA'],
+    ['KİRA BEDELİ', 'KİRA ÖDEMESI'],
   ],
 ]
 
@@ -834,7 +885,7 @@ function extractSataciBilgi(text: string): [string | null, string | null] {
       ?? extractNameNearTaxNo(text, saticiVkn)
       ?? (nameParts.length > 0 ? nameParts.join(' ') : null)
   )
-  return [saticiAdi, saticiVkn]
+  return [isOwnCompanySupplierName(saticiAdi) ? null : saticiAdi, saticiVkn]
 }
 
 // ── Bakiye notu ───────────────────────────────────────────────────
@@ -1408,6 +1459,7 @@ export interface ParseResult {
   // gelen mod ek alanları
   satici_adi?: string | null
   satici_vkn?: string | null
+  tedarikci_adres?: string | null
   gider_kategorisi?: string
   bakiye_notu?: string | null
 }
@@ -1622,6 +1674,32 @@ export async function parsePdfBuffer(
       result.hata = `Parse hatası: ${kalite.uyarilar.join(', ')}`
     } else if (kalite.durum === 'manuel_kontrol_gerekli' && !result.hata) {
       result.hata = `Manuel kontrol gerekli: ${kalite.uyarilar.join(', ')}`
+    }
+    if (isGelen) {
+      const gelenV2 = parseIncomingInvoiceV2(text, result.kalemler)
+      const incomingSupplierName = gelenV2.header.supplierName ?? result.satici_adi
+      result.satici_adi = isOwnCompanySupplierName(incomingSupplierName) ? null : incomingSupplierName
+      result.satici_vkn = gelenV2.header.taxNumber ?? result.satici_vkn
+      result.fatura_no = gelenV2.header.invoiceNo ?? result.fatura_no
+      result.fatura_tarihi = gelenV2.header.invoiceDate ?? result.fatura_tarihi
+      result.vade_tarihi = gelenV2.header.dueDate ?? result.vade_tarihi
+      result.mal_hizmet_toplami = gelenV2.header.subtotal ?? result.mal_hizmet_toplami
+      result.kdv_tutari = gelenV2.header.vatTotal ?? result.kdv_tutari
+      result.vergiler_dahil_toplam = gelenV2.header.payableTotal ?? result.vergiler_dahil_toplam
+      result.odenecek_tutar = gelenV2.header.payableTotal ?? result.odenecek_tutar
+      result.parse_durumu = gelenV2.legacyQuality
+      result.parse_uyarilari = [
+        ...gelenV2.warnings,
+        `supplier_template:${gelenV2.header.template}`,
+        ...(gelenV2.templateLineHeaderDetected ? ['template_line_header_detected'] : []),
+      ]
+      if (gelenV2.quality === 'critical_error') {
+        result.hata = `Parse hatası: ${result.parse_uyarilari.join(', ')}`
+      } else if (gelenV2.quality === 'manual_review') {
+        result.hata = `Manuel kontrol gerekli: ${result.parse_uyarilari.join(', ')}`
+      } else if (gelenV2.quality === 'clean') {
+        result.hata = null
+      }
     }
     if (!isGelen && result.fatura_no === 'KOK2024000000408') {
       const ilkKalem = result.kalemler[0]
