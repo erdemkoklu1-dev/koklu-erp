@@ -146,13 +146,17 @@ export default function InvoiceImportPage() {
       fd.append('file', uploadFile)
 
       const res = await fetch('/api/parse-invoice', { method: 'POST', body: fd })
-      const data = await res.json()
-
       if (!res.ok) {
-        setError(data.error ?? 'Hata oluştu')
+        let errorMessage = 'Fatura analiz edilemedi'
+        try {
+          const errorText = await res.text()
+          try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${res.status}` }
+        } catch { errorMessage = `Sunucu hatası: ${res.status}` }
+        setError(errorMessage)
         setStep('upload')
         return
       }
+      const data = await res.json()
 
       setParsed(data)
       const c = data.customer ?? {}

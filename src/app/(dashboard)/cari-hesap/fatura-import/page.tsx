@@ -571,6 +571,11 @@ function PdfFaturaImport() {
       setError('Yalnızca PDF veya ZIP dosyası yükleyebilirsiniz.')
       return
     }
+    const MAX_FILE_SIZE = 4 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`Dosya çok büyük (${(file.size / 1024 / 1024).toFixed(1)}MB). Maksimum 4MB yüklenebilir. Daha küçük ZIP dosyaları deneyin.`)
+      return
+    }
     setStep('parsing')
     setError('')
 
@@ -579,8 +584,15 @@ function PdfFaturaImport() {
       const fd = new FormData()
       fd.append('file', file)
       const res = await fetch('/api/pdf-fatura-parse', { method: 'POST', body: fd })
+      if (!res.ok) {
+        let errorMessage = 'Fatura parse edilemedi'
+        try {
+          const errorText = await res.text()
+          try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${res.status}` }
+        } catch { errorMessage = `Sunucu hatası: ${res.status}` }
+        throw new Error(errorMessage)
+      }
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Parse hatası')
 
       const invoices: ParsedInvoice[] = data.invoices ?? []
       if (invoices.length === 0) {
@@ -714,8 +726,15 @@ function PdfFaturaImport() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: rowsToSend }),
       })
+      if (!res.ok) {
+        let errorMessage = 'Kayıt hatası'
+        try {
+          const errorText = await res.text()
+          try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${res.status}` }
+        } catch { errorMessage = `Sunucu hatası: ${res.status}` }
+        throw new Error(errorMessage)
+      }
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Kayıt hatası')
 
       const dupCount = previewRows.filter(r => r.rowStatus === 'duplicate' || r.rowStatus === 'hata').length
       setImportResult({ ...data, atilandi: (data.atilandi ?? 0) + dupCount })
@@ -1559,6 +1578,11 @@ function GelenPdfFaturaImport() {
       setError('Yalnızca PDF veya ZIP dosyası yükleyebilirsiniz.')
       return
     }
+    const MAX_FILE_SIZE = 4 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`Dosya çok büyük (${(file.size / 1024 / 1024).toFixed(1)}MB). Maksimum 4MB yüklenebilir. Daha küçük ZIP dosyaları deneyin.`)
+      return
+    }
     setStep('parsing')
     setError('')
 
@@ -1566,16 +1590,30 @@ function GelenPdfFaturaImport() {
       const fd = new FormData()
       fd.append('file', file)
       const res = await fetch('/api/gelen-pdf-parse', { method: 'POST', body: fd })
+      if (!res.ok) {
+        let errorMessage = 'Fatura parse edilemedi'
+        try {
+          const errorText = await res.text()
+          try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${res.status}` }
+        } catch { errorMessage = `Sunucu hatası: ${res.status}` }
+        throw new Error(errorMessage)
+      }
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Parse hatası')
 
       const invoices: GelenParsedInvoice[] = data.invoices ?? []
       if (invoices.length === 0) throw new Error('Geçerli fatura bulunamadı.')
 
       // Mevcut alis fatura no ve tedarikçi bilgileri
       const supplierSourceRes = await fetch('/api/gelen-supplier-match-source')
+      if (!supplierSourceRes.ok) {
+        let errorMessage = 'Tedarikçi eşleştirme verisi okunamadı'
+        try {
+          const errorText = await supplierSourceRes.text()
+          try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${supplierSourceRes.status}` }
+        } catch { errorMessage = `Sunucu hatası: ${supplierSourceRes.status}` }
+        throw new Error(errorMessage)
+      }
       const supplierSource: GelenSupplierMatchSourceResponse = await supplierSourceRes.json()
-      if (!supplierSourceRes.ok) throw new Error((supplierSource as { error?: string }).error ?? 'TedarikÃ§i eÅŸleÅŸtirme verisi okunamadÄ±')
 
       const existingInvoices = supplierSource.existingInvoices ?? []
       const suppliersForMatch = supplierSource.suppliers

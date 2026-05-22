@@ -301,8 +301,15 @@ export default function ProformaFormClient({
     try {
       const fd = new FormData(); fd.append('file', file)
       const res = await fetch('/api/parse-teklif', { method: 'POST', body: fd })
+      if (!res.ok) {
+        let errorMessage = 'Dosya analiz edilemedi'
+        try {
+          const errorText = await res.text()
+          try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${res.status}` }
+        } catch { errorMessage = `Sunucu hatası: ${res.status}` }
+        throw new Error(errorMessage)
+      }
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Bilinmeyen hata')
       if (!json.kalemler || !json.kalemler.length) setImportHata('Dosyadan kalem bulunamadı. Önizleme açılıyor.')
       setParsedTeklif(json as ParsedTeklif)
       setShowImportModal(true)
