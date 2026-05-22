@@ -254,13 +254,13 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
       )}
 
       {/* Müşteri tablosu */}
-      <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-x-auto">
         {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
             {search.trim() ? `"${search}" için sonuç bulunamadı.` : 'Bu filtreye uyan müşteri bulunamadı.'}
           </div>
         ) : (
-          <table className="w-full">
+          <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>

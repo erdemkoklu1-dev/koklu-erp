@@ -183,7 +183,7 @@ export default async function GidenFaturalarPage({
       {/* Tablo */}
       <div className="bg-white dark:bg-gray-800 border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
