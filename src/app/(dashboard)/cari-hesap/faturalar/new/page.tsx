@@ -68,7 +68,7 @@ export default function NewFaturaPage() {
     if (!selectedCustomer) { setOnKayitlar([]); setSelectedOnKayitIds(new Set()); setOnKayitEklendi(new Set()); return }
     supabase
       .from('on_kayitlar')
-      .select('id, kayit_tarihi, aciklama, miktar, birim, birim_fiyat, toplam_tutar')
+      .select('id, kayit_tarihi, aciklama, miktar, birim, birim_fiyat, toplam_tutar, kalemler')
       .eq('customer_id', selectedCustomer.id)
       .eq('durum', 'beklemede')
       .order('kayit_tarihi', { ascending: false })
@@ -126,13 +126,25 @@ export default function NewFaturaPage() {
   function importOnKayitlar() {
     const selected = onKayitlar.filter(k => selectedOnKayitIds.has(k.id))
     if (selected.length === 0) return
-    const newItems: LineItem[] = selected.map(k => ({
-      description: k.aciklama,
-      quantity: String(k.miktar),
-      unit: k.birim === 'is' ? 'adet' : (UNITS.includes(k.birim) ? k.birim : 'adet'),
-      unit_price: String(k.birim_fiyat),
-      kdv_rate: '20',
-    }))
+    const newItems: LineItem[] = selected.flatMap(k => {
+      const kArr = Array.isArray(k.kalemler) && k.kalemler.length > 0 ? k.kalemler : null
+      if (kArr) {
+        return kArr.map((kalem: any) => ({
+          description: kalem.aciklama,
+          quantity: String(kalem.miktar),
+          unit: kalem.birim === 'is' ? 'adet' : (UNITS.includes(kalem.birim) ? kalem.birim : 'adet'),
+          unit_price: String(kalem.birim_fiyat),
+          kdv_rate: '20',
+        }))
+      }
+      return [{
+        description: k.aciklama,
+        quantity: String(k.miktar),
+        unit: k.birim === 'is' ? 'adet' : (UNITS.includes(k.birim) ? k.birim : 'adet'),
+        unit_price: String(k.birim_fiyat),
+        kdv_rate: '20',
+      }]
+    })
     setItems(prev => {
       // Boş tek satır varsa kaldır
       const filtered = prev.filter(i => i.description.trim() || i.unit_price.trim())

@@ -32,7 +32,7 @@ export default async function OnKayitlarPage({
   let query = supabase
     .from('on_kayitlar')
     .select(`
-      id, kayit_tarihi, aciklama, miktar, birim, birim_fiyat, toplam_tutar, notlar, durum, invoice_id,
+      id, kayit_tarihi, aciklama, miktar, birim, birim_fiyat, toplam_tutar, notlar, durum, invoice_id, kalemler,
       customers(id, full_name),
       invoices(invoice_number)
     `)
@@ -185,7 +185,9 @@ export default async function OnKayitlarPage({
                         {k.notlar && <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{k.notlar}</div>}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 text-right whitespace-nowrap">
-                        {k.miktar} {BIRIM_LABELS[k.birim] ?? k.birim}
+                        {Array.isArray(k.kalemler) && k.kalemler.length > 1
+                          ? `${k.kalemler.length} kalem`
+                          : `${k.miktar} ${BIRIM_LABELS[k.birim] ?? k.birim}`}
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right whitespace-nowrap">
                         {formatCurrency(k.toplam_tutar)}

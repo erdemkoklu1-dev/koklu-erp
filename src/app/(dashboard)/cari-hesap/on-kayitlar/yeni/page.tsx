@@ -85,18 +85,26 @@ export default function YeniOnKayitPage() {
     setError('')
 
     try {
-      const rows = validKalemler.map(k => ({
-        customer_id:   selectedCustomer.id,
-        kayit_tarihi:  kayitTarihi,
-        aciklama:      k.aciklama.trim(),
-        miktar:        parseFloat(k.miktar) || 1,
-        birim:         k.birim,
-        birim_fiyat:   parseFloat(k.birim_fiyat) || 0,
-        toplam_tutar:  (parseFloat(k.miktar) || 1) * (parseFloat(k.birim_fiyat) || 0),
-        durum:         'beklemede',
+      const kalemlerData = validKalemler.map(k => ({
+        aciklama:    k.aciklama.trim(),
+        miktar:      parseFloat(k.miktar) || 1,
+        birim:       k.birim,
+        birim_fiyat: parseFloat(k.birim_fiyat) || 0,
+        tutar:       (parseFloat(k.miktar) || 1) * (parseFloat(k.birim_fiyat) || 0),
       }))
 
-      const { error: dbErr } = await supabase.from('on_kayitlar').insert(rows)
+      const tek = kalemlerData.length === 1
+      const { error: dbErr } = await supabase.from('on_kayitlar').insert({
+        customer_id:  selectedCustomer.id,
+        kayit_tarihi: kayitTarihi,
+        aciklama:     tek ? kalemlerData[0].aciklama : kalemlerData.map(k => k.aciklama).join(', '),
+        miktar:       tek ? kalemlerData[0].miktar : 1,
+        birim:        tek ? kalemlerData[0].birim : 'adet',
+        birim_fiyat:  tek ? kalemlerData[0].birim_fiyat : 0,
+        toplam_tutar: toplamTutar,
+        kalemler:     kalemlerData,
+        durum:        'beklemede',
+      })
       if (dbErr) throw new Error(dbErr.message)
 
       router.push('/cari-hesap/on-kayitlar')

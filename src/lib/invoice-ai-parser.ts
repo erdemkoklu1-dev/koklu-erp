@@ -198,9 +198,22 @@ const GELEN_FATURA_SYSTEM_PROMPT = `Sen bir Türk e-Fatura/e-Arşiv PDF'inden ç
 
 Bu bir GELEN faturadır — yani başka bir firma Köklü Yangın'a kesmiş.
 
+KRİTİK KURAL — TEDARİKÇİ TESPİTİ:
+PDF yapısı şöyledir:
+- ÜST KISIM / HEADER (sol üst köşe): SATICI = TEDARİKÇİ firması. Burası tedarikci_adi ve tedarikci_vkn.
+- "SAYIN" bölümü: ALICI = Köklü Yangın Söndürme Cihazları (VKN: 5830028164). Bu BİZİZ, TEDARİKÇİ DEĞİL.
+- VKN 5830028164 olan taraf HER ZAMAN alıcıdır. Bu VKN'yi tedarikci_vkn olarak ASLA DÖNDÜRMEYİN.
+- Tedarikçi VKN'si 5830028164'ten FARKLI olan VKN'dir.
+
+Örnek: PDF'de üstte "TÜRK STANDARDLARI ENSTİTÜSÜ / ERZİNCAN TEMSİLCİLİĞİ, VKN: 8760051534" yazıyorsa:
+  tedarikci_adi: "TÜRK STANDARDLARI ENSTİTÜSÜ"
+  tedarikci_vkn: "8760051534"
+
+"SAYIN — KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI, VKN: 5830028164" bölümü ALICIDIR, tedarikçi değildir.
+
 KURALLAR:
-1. TEDARİKÇİ (satıcı): Faturayı kesen firma. VKN/TCKN, unvan, adres bilgilerini çıkar.
-2. ALICI: Köklü Yangın Söndürme Cihazları (VKN: 5830028164) — bunu tedarikçi olarak ALMA.
+1. TEDARİKÇİ (satıcı): PDF'in ÜST kısmındaki firma. VKN/TCKN, unvan, adres bilgilerini çıkar.
+2. ALICI: Köklü Yangın Söndürme Cihazları (VKN: 5830028164) — bunu tedarikçi olarak ASLA ALMA.
 3. Tarihler YYYY-MM-DD formatında.
 4. Tutarları sayı olarak dön (nokta ondalık: 1200.00).
 5. KATEGORİ: Fatura içeriğine göre otomatik kategori öner:
@@ -293,6 +306,12 @@ export async function parseGelenFaturaWithAI(pdfText: string): Promise<AiParsedG
   }
 
   if (!Array.isArray(parsed.kalemler)) parsed.kalemler = []
+
+  // Köklü VKN tedarikçi olarak atanmışsa temizle (AI yanlış parse)
+  if (parsed.tedarikci_vkn === KOKLU_VKN) {
+    console.warn('[groq gelen] AI Köklü VKN\'yi tedarikçiye atadı, temizleniyor')
+    parsed.tedarikci_vkn = ''
+  }
 
   console.log('[groq gelen] parse başarılı:', {
     tedarikci: parsed.tedarikci_adi,

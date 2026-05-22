@@ -1776,7 +1776,9 @@ function GelenPdfFaturaImport() {
             ? 'Tedarikçi normalize unvan ile eşleşti'
             : supplierMatch.method === 'similar_name'
               ? `Tedarikçi benzer unvan ile eşleşti (%${Math.round(supplierMatch.score * 100)})`
-              : name ? 'Yeni Tedarikçi' : 'Manuel tedarikçi seçimi gerekli'
+              : supplierMatch.vknNameMismatch
+                ? `VKN eşleşti ama firma adı uyumsuz — DB kaydı hatalı olabilir (VKN: ${supplierMatch.taxNo})`
+                : name ? 'Yeni Tedarikçi' : 'Manuel tedarikçi seçimi gerekli'
         const supplierMatchStatus: GelenSupplierMatchStatus = supplierMatch.method === 'none'
           ? 'new'
           : supplierMatch.method === 'similar_name'

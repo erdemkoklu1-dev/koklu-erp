@@ -154,7 +154,6 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    `PDF Gelen Fatura${row.senaryo ? `: ${row.senaryo}` : ''}`,
             notes:          notesParts.join(' | ') || null,
-            tedarikci_adres: row.tedarikci_adres || null,
             sube_id:        row.sube_id || null,
           })
           .select('id')
