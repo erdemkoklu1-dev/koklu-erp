@@ -1561,6 +1561,9 @@ function GelenPdfFaturaImport() {
   const [activePreviewFilter, setActivePreviewFilter] = useState<GelenPreviewFilter>(null)
   const [selectedPreviewRows, setSelectedPreviewRows] = useState<Set<number>>(new Set())
   const [bulkCategory, setBulkCategory] = useState(DEFAULT_GIDER_KATEGORI)
+  const [parseProgress, setParseProgress] = useState('')
+  const [parsedCount, setParsedCount] = useState(0)
+  const [totalPdfCount, setTotalPdfCount] = useState(0)
 
   useEffect(() => {
     supabase.from('subeler').select('id, ad').order('ad').then(({ data }: { data: any; error: any }) => {
@@ -1578,31 +1581,89 @@ function GelenPdfFaturaImport() {
       setError('Yalnızca PDF veya ZIP dosyası yükleyebilirsiniz.')
       return
     }
-    const MAX_FILE_SIZE = 4 * 1024 * 1024
-    if (file.size > MAX_FILE_SIZE) {
-      setError(`Dosya çok büyük (${(file.size / 1024 / 1024).toFixed(1)}MB). Maksimum 4MB yüklenebilir. Daha küçük ZIP dosyaları deneyin.`)
+    const MAX_SINGLE_PDF_SIZE = 4 * 1024 * 1024
+    const MAX_ZIP_SIZE = 50 * 1024 * 1024
+    if (lowerName.endsWith('.pdf') && file.size > MAX_SINGLE_PDF_SIZE) {
+      setError(`PDF dosyası çok büyük (${(file.size / 1024 / 1024).toFixed(1)}MB). Maksimum 4MB.`)
+      return
+    }
+    if (lowerName.endsWith('.zip') && file.size > MAX_ZIP_SIZE) {
+      setError(`ZIP dosyası çok büyük (${(file.size / 1024 / 1024).toFixed(1)}MB). Maksimum 50MB.`)
       return
     }
     setStep('parsing')
     setError('')
+    setParseProgress('Dosya hazırlanıyor...')
+    setParsedCount(0)
+    setTotalPdfCount(0)
 
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/gelen-pdf-parse', { method: 'POST', body: fd })
-      if (!res.ok) {
-        let errorMessage = 'Fatura parse edilemedi'
-        try {
-          const errorText = await res.text()
-          try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${res.status}` }
-        } catch { errorMessage = `Sunucu hatası: ${res.status}` }
-        throw new Error(errorMessage)
+      let allInvoices: GelenParsedInvoice[] = []
+
+      if (lowerName.endsWith('.zip')) {
+        // Client-side ZIP extraction — Vercel body limitini aşmaz
+        setParseProgress('ZIP açılıyor...')
+        const JSZip = (await import('jszip')).default
+        const zip = await JSZip.loadAsync(file)
+        const pdfEntries: Array<{ name: string; blob: Blob }> = []
+        for (const [path, entry] of Object.entries(zip.files)) {
+          if (!entry.dir && path.toLowerCase().endsWith('.pdf') && !path.startsWith('__MACOSX')) {
+            const blob = await entry.async('blob')
+            pdfEntries.push({ name: path.split('/').pop() || path, blob })
+          }
+        }
+        if (pdfEntries.length === 0) throw new Error('ZIP içinde PDF dosyası bulunamadı.')
+        setTotalPdfCount(pdfEntries.length)
+        setParseProgress(`${pdfEntries.length} PDF bulundu, parse ediliyor...`)
+
+        const BATCH_SIZE = 5
+        for (let i = 0; i < pdfEntries.length; i += BATCH_SIZE) {
+          const batch = pdfEntries.slice(i, i + BATCH_SIZE)
+          const batchResults = await Promise.all(batch.map(async (pdf) => {
+            const fd = new FormData()
+            fd.append('file', new File([pdf.blob], pdf.name, { type: 'application/pdf' }))
+            try {
+              const res = await fetch('/api/gelen-pdf-parse', { method: 'POST', body: fd })
+              if (!res.ok) {
+                console.error(`[gelen parse] ${pdf.name} hatası: ${res.status}`)
+                return null
+              }
+              const result = await res.json()
+              return result.invoices as GelenParsedInvoice[] | null
+            } catch (err) {
+              console.error(`[gelen parse] ${pdf.name} fetch hatası:`, err)
+              return null
+            }
+          }))
+          for (const result of batchResults) {
+            if (result) allInvoices.push(...result)
+          }
+          const processed = Math.min(i + BATCH_SIZE, pdfEntries.length)
+          setParsedCount(processed)
+          setParseProgress(`Parse ediliyor: ${processed}/${pdfEntries.length}`)
+          if (i + BATCH_SIZE < pdfEntries.length) await new Promise(r => setTimeout(r, 500))
+        }
+      } else {
+        // Tek PDF — doğrudan API'ye gönder
+        setParseProgress('PDF analiz ediliyor...')
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch('/api/gelen-pdf-parse', { method: 'POST', body: fd })
+        if (!res.ok) {
+          let errorMessage = 'Fatura parse edilemedi'
+          try {
+            const errorText = await res.text()
+            try { errorMessage = JSON.parse(errorText).error || errorMessage } catch { errorMessage = errorText.substring(0, 200) || `Sunucu hatası: ${res.status}` }
+          } catch { errorMessage = `Sunucu hatası: ${res.status}` }
+          throw new Error(errorMessage)
+        }
+        const data = await res.json()
+        allInvoices = data.invoices ?? []
       }
-      const data = await res.json()
 
-      const invoices: GelenParsedInvoice[] = data.invoices ?? []
-      if (invoices.length === 0) throw new Error('Geçerli fatura bulunamadı.')
+      if (allInvoices.length === 0) throw new Error('Geçerli fatura bulunamadı.')
 
+      setParseProgress('Tedarikçi bilgileri eşleştiriliyor...')
       // Mevcut alis fatura no ve tedarikçi bilgileri
       const supplierSourceRes = await fetch('/api/gelen-supplier-match-source')
       if (!supplierSourceRes.ok) {
@@ -1618,7 +1679,7 @@ function GelenPdfFaturaImport() {
       const existingInvoices = supplierSource.existingInvoices ?? []
       const suppliersForMatch = supplierSource.suppliers
 
-      const preview: GelenPdfPreviewRow[] = invoices.map(inv => {
+      const preview: GelenPdfPreviewRow[] = allInvoices.map(inv => {
         let rowStatus: GelenPdfRowStatus
         let message = ''
         const invoiceNo = normalizeInvoiceNo(inv.fatura_no)
@@ -1896,6 +1957,9 @@ function GelenPdfFaturaImport() {
     setError('')
     setActivePreviewFilter(null)
     setSelectedPreviewRows(new Set())
+    setParseProgress('')
+    setParsedCount(0)
+    setTotalPdfCount(0)
   }
 
   function applyGlobalSube(subeId: string | null) {
@@ -1958,7 +2022,7 @@ function GelenPdfFaturaImport() {
               </svg>
             </div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">ZIP veya PDF dosyası seçin ya da sürükleyin</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Tek fatura için PDF, çoklu fatura için ZIP</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Tek fatura için PDF (maks. 4MB), çoklu fatura için ZIP (maks. 50MB)</p>
           </div>
         </div>
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>}
@@ -1968,12 +2032,24 @@ function GelenPdfFaturaImport() {
 
   // ── Parse ediliyor ────────────────────────────────────
   if (step === 'parsing') {
+    const pct = totalPdfCount > 0 ? Math.round((parsedCount / totalPdfCount) * 100) : 0
     return (
       <div className="p-6 flex items-center justify-center min-h-64">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 w-full max-w-sm">
           <div className="w-14 h-14 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-gray-700 dark:text-gray-300 font-medium">Gelen fatura PDF'leri analiz ediliyor...</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">Satıcı bilgileri ve ürün kalemleri çıkarılıyor.</p>
+          <p className="text-sm text-[#C8102E] font-medium">{parseProgress}</p>
+          {totalPdfCount > 0 && (
+            <div className="space-y-1">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-[#C8102E] h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{parsedCount} / {totalPdfCount} PDF</p>
+            </div>
+          )}
         </div>
       </div>
     )
