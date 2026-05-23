@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { matchCustomerForImport, type CustomerMatchCandidate } from '@/lib/customer-matching'
 
 type DeviceRow = {
   device_name: string
@@ -34,6 +35,14 @@ type ParsedData = {
 }
 
 type Step = 'upload' | 'processing' | 'review' | 'saving' | 'done'
+type CustomerSaveDecision =
+  | { type: 'new' }
+  | { type: 'existing'; customerId: string }
+
+type CustomerDecisionPopup = {
+  candidates: CustomerMatchCandidate[]
+  message: string
+}
 
 function addYears(dateStr: string | null, years: number): string {
   if (!dateStr) return ''
@@ -84,6 +93,7 @@ export default function InvoiceImportPage() {
   })
   const [devices, setDevices] = useState<DeviceRow[]>([])
   const [savedCustomerId, setSavedCustomerId] = useState<string | null>(null)
+  const [customerDecisionPopup, setCustomerDecisionPopup] = useState<CustomerDecisionPopup | null>(null)
 
   function handleFileSelect(f: File) {
     setFile(f)
@@ -225,7 +235,7 @@ export default function InvoiceImportPage() {
     }))
   }
 
-  async function handleSave() {
+  async function handleSave(decision?: CustomerSaveDecision) {
     if (!customer.full_name.trim()) {
       setError('Müşteri adı zorunludur')
       return
@@ -234,16 +244,34 @@ export default function InvoiceImportPage() {
     setError('')
 
     try {
-      // Check if customer already exists by tax_number
       let customerId: string | null = null
 
-      if (customer.tax_number) {
-        const { data: existing } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('tax_number', customer.tax_number)
-          .single()
-        if (existing) customerId = existing.id
+      if (decision?.type === 'existing') {
+        customerId = decision.customerId
+      } else if (!decision && customer.tax_number) {
+        const taxNo = customer.tax_number.replace(/\D/g, '')
+        if (taxNo.length >= 10) {
+          const { data: existingCustomers, error: matchErr } = await supabase
+            .from('customers')
+            .select('id, full_name, tax_number, tc_kimlik, address')
+            .or(`tax_number.eq.${taxNo},tc_kimlik.eq.${taxNo}`)
+
+          if (matchErr) throw new Error('Müşteri eşleşmesi kontrol edilemedi: ' + matchErr.message)
+
+          const match = matchCustomerForImport((existingCustomers ?? []) as CustomerMatchCandidate[], {
+            name: customer.full_name,
+            taxNo,
+            address: customer.address,
+          })
+
+          if (match.status === 'matched') {
+            customerId = match.customer.id
+          } else if (match.status === 'suspicious') {
+            setCustomerDecisionPopup({ candidates: match.candidates, message: match.message })
+            setStep('review')
+            return
+          }
+        }
       }
 
       if (!customerId) {
@@ -265,6 +293,7 @@ export default function InvoiceImportPage() {
         customerId = newCustomer.id
       }
 
+      setCustomerDecisionPopup(null)
       // Insert devices
       const validDevices = devices.filter(d => d.device_name.trim())
       if (validDevices.length > 0) {
@@ -373,6 +402,53 @@ export default function InvoiceImportPage() {
         <div className="p-4 max-w-4xl mx-auto space-y-4">
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>
+          )}
+
+          {customerDecisionPopup && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b bg-yellow-50 dark:bg-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Müşteri eşleşmesi onayı</h3>
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200 mt-1">
+                    {customerDecisionPopup.message}. Ne yapmak istiyorsunuz?
+                  </p>
+                </div>
+                <div className="p-5 space-y-3">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kayıtlı müşteri adayları</div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {customerDecisionPopup.candidates.map(candidate => (
+                      <div key={candidate.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{candidate.full_name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{candidate.tax_number || candidate.tc_kimlik || 'Vergi no yok'}</div>
+                          {candidate.address && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{candidate.address}</div>}
+                        </div>
+                        <button
+                          onClick={() => handleSave({ type: 'existing', customerId: candidate.id })}
+                          className="shrink-0 text-xs bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700"
+                        >
+                          Bu müşteriye bağla
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-5 py-4 border-t bg-gray-50 dark:bg-gray-700 flex gap-3 justify-end">
+                  <button
+                    onClick={() => setCustomerDecisionPopup(null)}
+                    className="px-4 py-2 text-sm border rounded-lg text-gray-600 dark:text-gray-300 hover:bg-white"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={() => handleSave({ type: 'new' })}
+                    className="px-4 py-2 text-sm bg-[#C8102E] text-white rounded-lg font-semibold hover:bg-[#a50d26]"
+                  >
+                    Yeni müşteri oluştur
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Customer */}
@@ -542,7 +618,7 @@ export default function InvoiceImportPage() {
 
           <div className="flex gap-3 pb-6">
             <button
-              onClick={handleSave}
+              onClick={() => handleSave()}
               className="flex-1 bg-[#C8102E] text-white py-3 rounded-lg font-semibold hover:bg-[#a50d26] transition-colors"
             >
               Kaydet

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { matchCustomerForImport, normalizeCustomerTaxNo } from '@/lib/customer-matching'
 
 export type PdfInvoiceItem = {
   urun_adi: string
@@ -28,6 +29,8 @@ export type PdfInvoiceRow = {
   kalemler: PdfInvoiceItem[]
   banka_bilgileri?: Array<{ iban: string; banka_adi?: string | null }>
   sube_id?: string | null
+  customer_id?: string | null
+  force_new_customer?: boolean
 }
 
 function normalizeName(n: string): string {
@@ -96,26 +99,19 @@ export async function POST(req: NextRequest) {
 
     // ── Mevcut müşteriler ─────────────────────────────────────────
     // tc_kimlik sütunu varsa TCKN ile eşleştirmeyi de destekle
-    type CustomerRow = { id: string; full_name: string; tax_number: string | null; tc_kimlik?: string | null }
+    type CustomerRow = { id: string; full_name: string; tax_number: string | null; tc_kimlik?: string | null; address?: string | null }
     let existingCustomers: CustomerRow[] = []
     {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, full_name, tax_number, tc_kimlik')
+        .select('id, full_name, tax_number, tc_kimlik, address')
       if (error) {
         // tc_kimlik sütunu henüz eklenmemiş — temel sütunlarla devam et
-        const { data: data2 } = await supabase.from('customers').select('id, full_name, tax_number')
+        const { data: data2 } = await supabase.from('customers').select('id, full_name, tax_number, address')
         existingCustomers = data2 ?? []
       } else {
         existingCustomers = data ?? []
       }
-    }
-    const customerByVkn  = new Map<string, string>()
-    const customerByName = new Map<string, string>()
-    for (const c of existingCustomers) {
-      if (c.tax_number) customerByVkn.set(normVkn(c.tax_number), c.id)
-      if (c.tc_kimlik)  customerByVkn.set(normVkn(c.tc_kimlik), c.id)
-      customerByName.set(normalizeName(c.full_name), c.id)
     }
 
     const createdCustomerIds: string[] = []
@@ -153,11 +149,22 @@ export async function POST(req: NextRequest) {
         let customerId: string | undefined
         let musteriYeni = false
 
-        if (row.musteri_vkn) {
-          customerId = customerByVkn.get(normVkn(row.musteri_vkn))
-        }
-        if (!customerId) {
-          customerId = customerByName.get(normalizeName(row.musteri_adi))
+        if (row.customer_id) {
+          const selectedCustomer = existingCustomers.find(c => c.id === row.customer_id)
+          if (!selectedCustomer) throw new Error(`Seçilen müşteri bulunamadı (${row.musteri_adi})`)
+          customerId = selectedCustomer.id
+        } else if (!row.force_new_customer) {
+          const match = matchCustomerForImport(existingCustomers, {
+            name: row.musteri_adi,
+            taxNo: row.musteri_vkn,
+            address: row.musteri_adresi,
+          })
+
+          if (match.status === 'matched') {
+            customerId = match.customer.id
+          } else if (match.status === 'suspicious') {
+            throw new Error(`Şüpheli müşteri eşleşmesi onaylanmadan kaydedilemez (${row.musteri_adi} / ${normalizeCustomerTaxNo(row.musteri_vkn)})`)
+          }
         }
 
         // ── Yeni müşteri oluştur ──────────────────────────────────
@@ -179,8 +186,12 @@ export async function POST(req: NextRequest) {
           if (custErr) throw new Error(`Müşteri oluşturulamadı (${row.musteri_adi}): ${custErr.message}`)
           customerId = newCust.id as string
           createdCustomerIds.push(customerId)
-          customerByName.set(normalizeName(row.musteri_adi), customerId)
-          if (row.musteri_vkn) customerByVkn.set(normVkn(row.musteri_vkn), customerId)
+          existingCustomers.push({
+            id: customerId,
+            full_name: row.musteri_adi.trim(),
+            tax_number: row.musteri_vkn || null,
+            address: row.musteri_adresi || null,
+          })
           musteriYeni = true
         }
 

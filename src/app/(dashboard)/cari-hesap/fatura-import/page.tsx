@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { detectBranch } from '@/lib/invoice-ai-parser'
 import { matchExistingSupplier, normalizeSupplierName, normalizeSupplierTaxNo, type SupplierMatchMethod } from '@/lib/gelen-fatura-supplier-matching'
 import { isOwnCompanySupplierName } from '@/lib/gelen-fatura-parser-v2/supplierClassifier'
+import { matchCustomerForImport, type CustomerMatchCandidate } from '@/lib/customer-matching'
 
 // ---- Yardımcı fonksiyonlar ----
 
@@ -115,7 +116,7 @@ type ParsedInvoice = {
   parse_uyarilari?: string[]
 }
 
-type PdfRowStatus = 'eklenecek' | 'yeni_musteri' | 'duplicate' | 'hata'
+type PdfRowStatus = 'eklenecek' | 'yeni_musteri' | 'supheli_eslesme' | 'duplicate' | 'hata'
 
 type PdfPreviewRow = ParsedInvoice & {
   rowStatus: PdfRowStatus
@@ -127,6 +128,10 @@ type PdfPreviewRow = ParsedInvoice & {
   editedTutar: string
   sube_id: string | null
   expanded: boolean
+  customerMatchMessage?: string
+  customerMatchCandidates?: CustomerMatchCandidate[]
+  selectedCustomerId?: string | null
+  forceNewCustomer?: boolean
 }
 
 function calcItemsSubtotal(items: PdfInvoiceItem[]): number {
@@ -295,7 +300,7 @@ function PdfEditModal({
   row: PdfPreviewRow
   rowIdx: number
   subeler: Sube[]
-  customers: { id: string; full_name: string; tax_number: string | null; address?: string | null }[]
+  customers: CustomerMatchCandidate[]
   onSave: (idx: number, updated: Partial<PdfPreviewRow>) => void
   onClose: () => void
 }) {
@@ -326,11 +331,11 @@ function PdfEditModal({
   }, [items, tutar])
 
   const filteredCust = name.length >= 1
-    ? customers.filter(c => c.full_name.toLowerCase().includes(name.toLowerCase())).slice(0, 8)
+    ? customers.filter(c => (c.full_name ?? '').toLowerCase().includes(name.toLowerCase())).slice(0, 8)
     : []
 
-  function pickCustomer(c: { id: string; full_name: string; tax_number: string | null; address?: string | null }) {
-    setName(c.full_name)
+  function pickCustomer(c: CustomerMatchCandidate) {
+    setName(c.full_name ?? '')
     setVkn(c.tax_number ?? '')
     setAdres(c.address ?? adres)
     setCustDrop(false)
@@ -550,7 +555,7 @@ function PdfFaturaImport() {
   const [subeler, setSubeler] = useState<Sube[]>([])
   const [globalSubeId, setGlobalSubeId] = useState<string | null>(null)
   const [editRowIdx, setEditRowIdx] = useState<number | null>(null)
-  const [customers, setCustomers] = useState<{ id: string; full_name: string; tax_number: string | null; tc_kimlik?: string | null }[]>([])
+  const [customers, setCustomers] = useState<CustomerMatchCandidate[]>([])
 
   // Şubeleri yükle ve Erzincan Merkez'i varsayılan yap
   useEffect(() => {
@@ -602,16 +607,19 @@ function PdfFaturaImport() {
       // ── Mevcut fatura no ve müşteri bilgilerini çek ───────────
       const [{ data: invData }, { data: custData }] = await Promise.all([
         supabase.from('invoices').select('invoice_number, invoice_date, total_amount').eq('invoice_type', 'satis'),
-        supabase.from('customers').select('full_name, tax_number, tc_kimlik'),
+        supabase.from('customers').select('id, full_name, tax_number, tc_kimlik, address'),
       ])
       const KOKLU_VKN = '5830028164'
 
       const existingNos   = new Set((invData ?? []).map((i: any) => normNo(i.invoice_number)))
-      const customersForMatch = (custData ?? []) as { full_name: string; tax_number: string | null; tc_kimlik?: string | null }[]
+      const customersForMatch = (custData ?? []) as CustomerMatchCandidate[]
 
       const preview: PdfPreviewRow[] = invoices.map(inv => {
         let rowStatus: PdfRowStatus
         let message = ''
+        let customerMatchCandidates: CustomerMatchCandidate[] = []
+        let selectedCustomerId: string | null = null
+        let forceNewCustomer = false
         const invoiceNo = normNo(inv.fatura_no)
         const itemCount = inv.kalemler?.length ?? 0
         const isManualWarning = !!inv.hata && /manuel kontrol gerekli/i.test(inv.hata)
@@ -630,19 +638,30 @@ function PdfFaturaImport() {
         } else {
           const name    = inv.musteri_adi ?? ''
           const vkn     = normVkn(inv.musteri_vkn)
-          // VKN veya TCKN ile eşleştir — tc_kimlik kolonunu da kontrol et
-          const vknMatch  = vkn.length >= 10 && vkn !== KOKLU_VKN
-            ? customersForMatch.find(c => normVkn(c.tax_number) === vkn || normVkn(c.tc_kimlik) === vkn)
-            : undefined
-          const nameMatch = !vknMatch ? findByName(customersForMatch, name) : undefined
-          const matchMethod = vknMatch ? 'vkn' : nameMatch ? 'unvan' : 'bulunamadı'
-          console.log('[giden eşleştirme] VKN:', vkn, 'vknMatch:', vknMatch, 'name:', name, 'nameMatch:', nameMatch)
-          rowStatus = (vknMatch || nameMatch) ? 'eklenecek' : 'yeni_musteri'
-          message = isManualWarning ? inv.hata! : vknMatch
-            ? 'Müşteri VKN ile eşleştirildi'
-            : nameMatch
-              ? 'Müşteri unvan ile eşleştirildi'
-              : name ? 'Yeni Müşteri' : 'Müşteri adı parse edilemedi, manuel kontrol gerekli'
+          const customerMatch = vkn === KOKLU_VKN
+            ? { status: 'new' as const, candidates: [], message: 'Yeni müşteri oluşturulacak' }
+            : matchCustomerForImport(customersForMatch, {
+                name,
+                taxNo: vkn,
+                address: inv.musteri_adresi,
+              })
+          customerMatchCandidates = customerMatch.candidates
+          const matchMethod = customerMatch.status === 'matched'
+            ? 'güçlü'
+            : customerMatch.status === 'suspicious'
+              ? 'şüpheli'
+              : 'bulunamadı'
+          console.log('[giden eşleştirme] VKN:', vkn, 'match:', customerMatch.status, 'name:', name)
+          if (customerMatch.status === 'matched') {
+            rowStatus = 'eklenecek'
+            selectedCustomerId = customerMatch.customer.id
+          } else if (customerMatch.status === 'suspicious') {
+            rowStatus = 'supheli_eslesme'
+          } else {
+            rowStatus = 'yeni_musteri'
+            forceNewCustomer = true
+          }
+          message = isManualWarning ? inv.hata! : customerMatch.message
           console.log('[giden import]', {
             musteri: name || null,
             vkn: vkn || null,
@@ -678,6 +697,10 @@ function PdfFaturaImport() {
           ...inv,
           hata: finalHata,
           rowStatus,
+          customerMatchMessage: message,
+          customerMatchCandidates,
+          selectedCustomerId,
+          forceNewCustomer,
           editedName: inv.musteri_adi ?? '',
           editedVkn: inv.musteri_vkn ?? '',
           editedFaturaNo: inv.fatura_no ?? '',
@@ -699,6 +722,11 @@ function PdfFaturaImport() {
   }
 
   async function handleImport() {
+    if (previewRows.some(r => r.rowStatus === 'supheli_eslesme')) {
+      setError('Şüpheli müşteri eşleşmeleri var. Lütfen her satır için yeni müşteri veya mevcut müşteri seçimi yapın.')
+      setStep('preview')
+      return
+    }
     setStep('importing')
     setError('')
     try {
@@ -719,6 +747,8 @@ function PdfFaturaImport() {
           kalemler:       r.kalemler ?? [],
           banka_bilgileri: r.banka_bilgileri ?? [],
           sube_id:        r.sube_id ?? null,
+          customer_id:     r.selectedCustomerId ?? null,
+          force_new_customer: r.forceNewCustomer || r.rowStatus === 'yeni_musteri',
         }))
 
       const res = await fetch('/api/pdf-fatura-save', {
@@ -766,6 +796,28 @@ function PdfFaturaImport() {
     setPreviewRows(prev => prev.map(r => ({ ...r, sube_id: subeId })))
   }
 
+  function chooseExistingCustomer(idx: number, customer: CustomerMatchCandidate) {
+    setPreviewRows(prev => prev.map((row, i) => i === idx ? {
+      ...row,
+      rowStatus: 'eklenecek',
+      selectedCustomerId: customer.id,
+      forceNewCustomer: false,
+      customerMatchMessage: `Mevcut müşteri seçildi: ${customer.full_name ?? 'İsimsiz müşteri'}`,
+      hata: null,
+    } : row))
+  }
+
+  function chooseNewCustomer(idx: number) {
+    setPreviewRows(prev => prev.map((row, i) => i === idx ? {
+      ...row,
+      rowStatus: 'yeni_musteri',
+      selectedCustomerId: null,
+      forceNewCustomer: true,
+      customerMatchMessage: 'Yeni müşteri olarak eklenecek',
+      hata: null,
+    } : row))
+  }
+
   function saveEdit(idx: number, updated: Partial<PdfPreviewRow>) {
     setPreviewRows(prev => prev.map((r, i) => {
       if (i !== idx) return r
@@ -775,10 +827,38 @@ function PdfFaturaImport() {
         const vkn  = normVkn(merged.editedVkn)
         const name = merged.editedName.trim()
         const hasRequired = !!name && !!merged.editedFaturaNo.trim() && !!merged.editedTutar && (merged.kalemler?.length ?? 0) > 0
-        const vknMatch  = vkn.length >= 10 && customers.some(c => normVkn(c.tax_number) === vkn || normVkn(c.tc_kimlik) === vkn)
-        const nameMatch = !!name && customers.some(c => namesMatch(c.full_name, name))
-        merged.rowStatus = hasRequired ? (vknMatch || nameMatch ? 'eklenecek' : 'yeni_musteri') : 'hata'
-        merged.hata = hasRequired ? null : 'Eksik veri var, manuel kontrol gerekli'
+        const customerMatch = matchCustomerForImport(customers, {
+          name,
+          taxNo: vkn,
+          address: merged.musteri_adresi,
+        })
+        if (!hasRequired) {
+          merged.rowStatus = 'hata'
+          merged.hata = 'Eksik veri var, manuel kontrol gerekli'
+          merged.selectedCustomerId = null
+          merged.forceNewCustomer = false
+        } else if (customerMatch.status === 'matched') {
+          merged.rowStatus = 'eklenecek'
+          merged.hata = null
+          merged.customerMatchMessage = customerMatch.message
+          merged.customerMatchCandidates = customerMatch.candidates
+          merged.selectedCustomerId = customerMatch.customer.id
+          merged.forceNewCustomer = false
+        } else if (customerMatch.status === 'suspicious') {
+          merged.rowStatus = 'supheli_eslesme'
+          merged.hata = null
+          merged.customerMatchMessage = customerMatch.message
+          merged.customerMatchCandidates = customerMatch.candidates
+          merged.selectedCustomerId = null
+          merged.forceNewCustomer = false
+        } else {
+          merged.rowStatus = 'yeni_musteri'
+          merged.hata = null
+          merged.customerMatchMessage = customerMatch.message
+          merged.customerMatchCandidates = []
+          merged.selectedCustomerId = null
+          merged.forceNewCustomer = true
+        }
       }
       return merged
     }))
@@ -835,6 +915,7 @@ function PdfFaturaImport() {
   if (step === 'preview') {
     const eklenecek   = previewRows.filter(r => r.rowStatus === 'eklenecek').length
     const yeniMusteri = previewRows.filter(r => r.rowStatus === 'yeni_musteri').length
+    const supheli     = previewRows.filter(r => r.rowStatus === 'supheli_eslesme').length
     const duplicate   = previewRows.filter(r => r.rowStatus === 'duplicate').length
     const hatali      = previewRows.filter(r => r.rowStatus === 'hata').length
     const toplamTutar = previewRows
@@ -864,7 +945,7 @@ function PdfFaturaImport() {
         </div>
 
         {/* Özet */}
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-6 gap-3">
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
             <div className="text-xs text-green-600 font-medium">Müşteri Mevcut</div>
             <div className="text-2xl font-bold text-green-700">{eklenecek}</div>
@@ -874,6 +955,11 @@ function PdfFaturaImport() {
             <div className="text-xs text-yellow-700 font-medium">Yeni Müşteri</div>
             <div className="text-2xl font-bold text-yellow-700">{yeniMusteri}</div>
             <div className="text-xs text-yellow-600">oluşturulacak</div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <div className="text-xs text-orange-700 font-medium">Şüpheli Eşleşme</div>
+            <div className="text-2xl font-bold text-orange-700">{supheli}</div>
+            <div className="text-xs text-orange-600">karar bekliyor</div>
           </div>
           <div className="bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
             <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Duplicate</div>
@@ -953,10 +1039,12 @@ function PdfFaturaImport() {
               {previewRows.map((row, idx) => {
                 const isDup  = row.rowStatus === 'duplicate'
                 const isYeni = row.rowStatus === 'yeni_musteri'
+                const isSupheli = row.rowStatus === 'supheli_eslesme'
                 const isHata = row.rowStatus === 'hata'
 
                 const rowBg = isDup  ? 'bg-gray-50 dark:bg-gray-700 opacity-60'
                   : isYeni ? 'bg-yellow-50'
+                  : isSupheli ? 'bg-orange-50'
                   : isHata ? 'bg-red-50'
                   : 'bg-white dark:bg-gray-800'
 
@@ -964,6 +1052,8 @@ function PdfFaturaImport() {
                   ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600 dark:text-gray-300">Duplicate</span>
                   : isYeni
                   ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Yeni Müşteri</span>
+                  : isSupheli
+                  ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">Şüpheli Eşleşme</span>
                   : isHata
                   ? <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">Parse Hatası</span>
                   : <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Eklenecek</span>
@@ -980,6 +1070,31 @@ function PdfFaturaImport() {
                         </span>
                         {(row.editedVkn || row.musteri_vkn) && (
                           <div className="text-xs text-gray-400 dark:text-gray-500 font-mono">{row.editedVkn || row.musteri_vkn}</div>
+                        )}
+                        {row.customerMatchMessage && !isDup && !isHata && (
+                          <div className={`text-xs mt-0.5 ${isSupheli ? 'text-orange-700' : isYeni ? 'text-yellow-700' : 'text-green-700'}`}>
+                            {row.customerMatchMessage}
+                          </div>
+                        )}
+                        {isSupheli && (
+                          <div className="mt-2 space-y-1">
+                            <button
+                              onClick={() => chooseNewCustomer(idx)}
+                              className="text-xs bg-[#C8102E] text-white px-2 py-1 rounded-md hover:bg-[#a50d26] mr-2"
+                            >
+                              Yeni müşteri
+                            </button>
+                            {(row.customerMatchCandidates ?? []).map(candidate => (
+                              <button
+                                key={candidate.id}
+                                onClick={() => chooseExistingCustomer(idx, candidate)}
+                                className="text-xs bg-white border border-orange-300 text-orange-800 px-2 py-1 rounded-md hover:bg-orange-100 mr-2"
+                                title={candidate.address ?? undefined}
+                              >
+                                Bağla: {candidate.full_name}
+                              </button>
+                            ))}
+                          </div>
                         )}
                         {isDup && <div className="text-xs text-gray-500 mt-0.5">Bu fatura sistemde zaten mevcut</div>}
                         {isHata && row.hata && <div className="text-xs text-red-600 mt-0.5">{row.hata}</div>}
