@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
-import { formatTRDate } from '@/lib/finance/formatters'
+import { EmanetlerClient, type EmanetRow } from './EmanetlerClient'
 
 export default async function EmanetlerPage({ searchParams }: { searchParams: Promise<{ sube?: string }> }) {
   const { sube } = await searchParams
@@ -13,17 +13,38 @@ export default async function EmanetlerPage({ searchParams }: { searchParams: Pr
   if (sube) query = query.eq('sube_id', sube)
   const { data } = await query
 
+  const rows: EmanetRow[] = (data ?? []).map(row => ({
+    id: row.id as string,
+    teslimat_id: (row.teslimatlar as any)?.id ?? '',
+    teslimat_no: (row.teslimatlar as any)?.teslimat_no ?? '-',
+    customer_name: (row.customers as any)?.full_name ?? '-',
+    urun_ad: (row.urunler as any)?.ad ?? '-',
+    sube_ad: (row.subeler as any)?.ad ?? 'Genel',
+    miktar: Number(row.miktar ?? 0),
+    geri_alinan_miktar: Number(row.geri_alinan_miktar ?? 0),
+    hedef_tarih: row.hedef_tarih ?? null,
+    durum: row.durum ?? 'acik',
+  }))
+  const today = new Date().toISOString().slice(0, 10)
+  const gecikenCount = rows.filter(row => row.hedef_tarih && row.hedef_tarih < today).length
+
   return (
     <div className="space-y-5 p-6">
-      <h1 className="text-xl font-bold">Açık emanetler</h1>
-      <div className="overflow-x-auto rounded-lg border bg-white dark:border-gray-700 dark:bg-gray-800">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700"><tr><th className="px-4 py-3 text-left">Teslimat</th><th className="px-4 py-3 text-left">Müşteri</th><th className="px-4 py-3 text-left">Ürün</th><th className="px-4 py-3 text-left">Şube</th><th className="px-4 py-3 text-right">Miktar</th><th className="px-4 py-3 text-left">Hedef</th><th className="px-4 py-3 text-left">Durum</th></tr></thead>
-          <tbody className="divide-y dark:divide-gray-700">
-            {(data ?? []).map(row => <tr key={row.id}><td className="px-4 py-3"><Link className="text-[#C8102E]" href={`/teslimatlar/${(row.teslimatlar as any)?.id}`}>{(row.teslimatlar as any)?.teslimat_no}</Link></td><td className="px-4 py-3">{(row.customers as any)?.full_name}</td><td className="px-4 py-3">{(row.urunler as any)?.ad ?? '-'}</td><td className="px-4 py-3">{(row.subeler as any)?.ad ?? 'Genel'}</td><td className="px-4 py-3 text-right">{row.geri_alinan_miktar}/{row.miktar}</td><td className="px-4 py-3">{formatTRDate(row.hedef_tarih)}</td><td className="px-4 py-3">{row.durum}</td></tr>)}
-          </tbody>
-        </table>
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-sm">
+          <Link href="/teslimatlar" className="flex items-center gap-1 text-[#C8102E] hover:underline">
+            ← Teslimatlar
+          </Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-600 dark:text-gray-400">Açık Emanetler</span>
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Açık emanetler</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {rows.length} açık kayıt
+          {gecikenCount > 0 && <span className="ml-2 font-semibold text-red-600">· {gecikenCount} gecikmiş ⚠</span>}
+        </p>
       </div>
+      <EmanetlerClient rows={rows} />
     </div>
   )
 }

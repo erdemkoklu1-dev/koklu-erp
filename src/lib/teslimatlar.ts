@@ -45,6 +45,20 @@ export const MUSTERI_ENVANTER_TIPLERI = new Set<HareketTipi>([
   'yedek_parca_teslim',
 ])
 
+export const GERI_TIPLERI_ACIKLAMA: Record<HareketTipi, string> = {
+  yeni_cihaz_teslim:    'Stoktan düşülür, müşteri cihaz listesine eklenir. Ön kayda dahil edilir.',
+  dolumlu_teslim:       'Dolumu yapılan cihaz müşteriye teslim edilir. Müşteri envanterine eklenir.',
+  yenilenmis_teslim:    'Yenilenmiş cihaz teslim edilir, stoktan düşülür.',
+  yedek_parca_teslim:   'Yedek parça teslim edilir, stoktan düşülür.',
+  emanet_teslim:        'Cihaz geçici olarak müşteriye bırakılır. Geri alınması takip edilir.',
+  dolum_icin_alindi:    'Dolum için müşteriden cihaz alınır. Dolumdan sonra geri teslim edilecek.',
+  bakim_icin_alindi:    'Bakım için müşteriden cihaz alınır. Bakımdan sonra geri teslim edilecek.',
+  yenileme_icin_alindi: 'Yenileme için müşteriden cihaz alınır.',
+  emanet_geri_alindi:   'Daha önce bırakılan emanet cihaz geri alınır. Emanet takibi kapatılır.',
+  hurda_icin_alindi:    'Hurda cihaz müşteriden alınır.',
+  diger:                'Diğer işlem türü. Ayarları manuel belirleyin.',
+}
+
 export const GERI_TESLIM_GEREKTIREN_TIPLER = new Set<HareketTipi>([
   'dolum_icin_alindi',
   'bakim_icin_alindi',

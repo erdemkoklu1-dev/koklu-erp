@@ -23,6 +23,16 @@ CREATE TABLE IF NOT EXISTS public.teslimatlar (
   updated_at            timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.teslimatlar
+  ADD COLUMN IF NOT EXISTS teslim_form_no text,
+  ADD COLUMN IF NOT EXISTS teslim_form_pdf_url text,
+  ADD COLUMN IF NOT EXISTS musteri_imza_data text,
+  ADD COLUMN IF NOT EXISTS imza_atan_ad_soyad text,
+  ADD COLUMN IF NOT EXISTS imza_atan_unvan text,
+  ADD COLUMN IF NOT EXISTS imza_tarihi timestamptz,
+  ADD COLUMN IF NOT EXISTS teslim_form_mail_gonderildi boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS teslim_form_mail_tarihi timestamptz;
+
 CREATE TABLE IF NOT EXISTS public.teslimat_kalemleri (
   id                            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   teslimat_id                   uuid NOT NULL REFERENCES public.teslimatlar(id) ON DELETE CASCADE,

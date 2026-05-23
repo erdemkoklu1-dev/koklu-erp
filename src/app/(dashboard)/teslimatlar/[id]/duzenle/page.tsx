@@ -20,9 +20,9 @@ export default async function TeslimatDuzenlePage({ params }: { params: Promise<
   return (
     <div className="space-y-5 p-6">
       <div className="flex items-center gap-3">
-        <Link href="/teslimatlar/liste" className="text-sm text-gray-500 hover:text-gray-700">Teslimatlar</Link>
+        <Link href={`/teslimatlar/${id}`} className="text-sm text-[#C8102E] hover:underline">← Teslimat Detayı</Link>
         <span className="text-gray-300">/</span>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Teslimat düzenle</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Düzenle</h1>
       </div>
       <TeslimatForm
         customers={(customers ?? []).map(c => ({ id: c.id, label: c.full_name, meta: c.tax_number }))}

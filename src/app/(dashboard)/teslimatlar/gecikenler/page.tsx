@@ -1,31 +1,68 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
-import { daysSince, gecikmeDurumu } from '@/lib/teslimatlar'
-import { formatTRDate } from '@/lib/finance/formatters'
+import { GecikenlerClient, type GecikenRow } from './GecikenlerClient'
+
+function daysLate(date: string | null | undefined) {
+  if (!date) return 0
+  const today = new Date().toISOString().slice(0, 10)
+  return Math.max(Math.ceil((new Date(today).getTime() - new Date(date).getTime()) / 86400000), 0)
+}
 
 export default async function GecikenlerPage() {
   const supabase = createServiceClient()
-  const cutoff = new Date(Date.now() - 10 * 86400000).toISOString()
+  const today = new Date().toISOString().slice(0, 10)
   const [{ data: geri }, { data: emanet }] = await Promise.all([
-    supabase.from('geri_teslim_takipleri').select('*, teslimatlar(id, teslimat_no), customers(full_name), urunler(ad)').in('durum', ['bekliyor', 'kismi_teslim']).lt('created_at', cutoff),
-    supabase.from('emanet_takipleri').select('*, teslimatlar(id, teslimat_no), customers(full_name), urunler(ad)').in('durum', ['acik', 'kismi_kapandi']).lt('created_at', cutoff),
+    supabase
+      .from('geri_teslim_takipleri')
+      .select('*, teslimatlar(id, teslimat_no), customers(full_name), urunler(ad)')
+      .in('durum', ['bekliyor', 'kismi_teslim'])
+      .lt('hedef_tarih', today),
+    supabase
+      .from('emanet_takipleri')
+      .select('*, teslimatlar(id, teslimat_no), customers(full_name), urunler(ad)')
+      .in('durum', ['acik', 'kismi_kapandi'])
+      .lt('hedef_tarih', today),
   ])
-  const rows = [
-    ...(geri ?? []).map(r => ({ ...r, tip: 'Geri teslim' })),
-    ...(emanet ?? []).map(r => ({ ...r, tip: 'Emanet' })),
-  ]
+
+  const rows: GecikenRow[] = [
+    ...(geri ?? []).map(row => ({
+      id: row.id as string,
+      tip: 'Geri teslim' as const,
+      teslimat_id: (row.teslimatlar as any)?.id ?? '',
+      teslimat_no: (row.teslimatlar as any)?.teslimat_no ?? '-',
+      customer_name: (row.customers as any)?.full_name ?? '-',
+      urun_ad: (row.urunler as any)?.ad ?? '-',
+      hedef_tarih: row.hedef_tarih ?? null,
+      created_at: row.created_at ?? '',
+      gun: daysLate(row.hedef_tarih),
+    })),
+    ...(emanet ?? []).map(row => ({
+      id: row.id as string,
+      tip: 'Emanet' as const,
+      teslimat_id: (row.teslimatlar as any)?.id ?? '',
+      teslimat_no: (row.teslimatlar as any)?.teslimat_no ?? '-',
+      customer_name: (row.customers as any)?.full_name ?? '-',
+      urun_ad: (row.urunler as any)?.ad ?? '-',
+      hedef_tarih: row.hedef_tarih ?? null,
+      created_at: row.created_at ?? '',
+      gun: daysLate(row.hedef_tarih),
+    })),
+  ].sort((a, b) => b.gun - a.gun)
 
   return (
     <div className="space-y-5 p-6">
-      <h1 className="text-xl font-bold">Gecikenler</h1>
-      <div className="overflow-x-auto rounded-lg border bg-white dark:border-gray-700 dark:bg-gray-800">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700"><tr><th className="px-4 py-3 text-left">Tip</th><th className="px-4 py-3 text-left">Teslimat</th><th className="px-4 py-3 text-left">Müşteri</th><th className="px-4 py-3 text-left">Ürün</th><th className="px-4 py-3 text-left">Hedef</th><th className="px-4 py-3 text-right">Gün</th><th className="px-4 py-3 text-left">Seviye</th></tr></thead>
-          <tbody className="divide-y dark:divide-gray-700">
-            {rows.map(row => <tr key={`${row.tip}-${row.id}`}><td className="px-4 py-3">{row.tip}</td><td className="px-4 py-3"><Link href={`/teslimatlar/${(row.teslimatlar as any)?.id}`} className="text-[#C8102E]">{(row.teslimatlar as any)?.teslimat_no}</Link></td><td className="px-4 py-3">{(row.customers as any)?.full_name}</td><td className="px-4 py-3">{(row.urunler as any)?.ad ?? '-'}</td><td className="px-4 py-3">{formatTRDate(row.hedef_tarih)}</td><td className="px-4 py-3 text-right">{daysSince(row.created_at)}</td><td className="px-4 py-3">{gecikmeDurumu(row.created_at)}</td></tr>)}
-          </tbody>
-        </table>
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-sm">
+          <Link href="/teslimatlar" className="flex items-center gap-1 text-[#C8102E] hover:underline">
+            ← Teslimatlar
+          </Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-600 dark:text-gray-400">Gecikenler</span>
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Gecikenler</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{rows.length} geciken kayıt</p>
       </div>
+      <GecikenlerClient rows={rows} />
     </div>
   )
 }

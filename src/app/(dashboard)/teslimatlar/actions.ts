@@ -1,9 +1,15 @@
 'use server'
 
+import { createElement } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { renderToBuffer } from '@react-pdf/renderer'
+import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
 import { createOnKayitFromTeslimatKalem, createTeslimat, deleteTeslimat, normalizeTeslimatInput, syncTeslimatSideEffects, updateTeslimat } from '@/lib/teslimatlar'
+import { getSetting } from '@/lib/settings'
+import { getTeslimFormData, teslimFormFileName } from '@/lib/teslim-form-data'
+import { TeslimFormPdfDocument } from '@/lib/teslim-form-pdf'
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message
@@ -126,6 +132,179 @@ export async function updateTeslimatDurumAction(formData: FormData) {
   revalidatePath('/teslimatlar/liste')
   revalidatePath('/teslimatlar/on-kayda-aktar')
   revalidatePath(`/teslimatlar/${id}`)
+}
+
+export async function geriTeslimYapAction(takipId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, message: 'Oturum gerekli.' }
+
+  const { data: takip, error: fetchError } = await supabase
+    .from('geri_teslim_takipleri')
+    .select('id, miktar')
+    .eq('id', takipId)
+    .single()
+  if (fetchError || !takip) return { ok: false, message: 'Kayıt bulunamadı.' }
+
+  const { error } = await supabase
+    .from('geri_teslim_takipleri')
+    .update({
+      teslim_edilen_miktar: takip.miktar,
+      durum: 'teslim_edildi',
+      kapandi_at: new Date().toISOString(),
+    })
+    .eq('id', takipId)
+
+  if (error) return { ok: false, message: error.message }
+
+  revalidatePath('/teslimatlar/bekleyenler')
+  revalidatePath('/teslimatlar/gecikenler')
+  revalidatePath('/teslimatlar')
+  return { ok: true, message: 'Teslim edildi olarak işaretlendi.' }
+}
+
+export async function emanetGeriAlAction(takipId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, message: 'Oturum gerekli.' }
+
+  const { data: takip, error: fetchError } = await supabase
+    .from('emanet_takipleri')
+    .select('id, miktar')
+    .eq('id', takipId)
+    .single()
+  if (fetchError || !takip) return { ok: false, message: 'Kayıt bulunamadı.' }
+
+  const { error } = await supabase
+    .from('emanet_takipleri')
+    .update({
+      geri_alinan_miktar: takip.miktar,
+      durum: 'kapandi',
+      kapandi_at: new Date().toISOString(),
+    })
+    .eq('id', takipId)
+
+  if (error) return { ok: false, message: error.message }
+
+  revalidatePath('/teslimatlar/emanetler')
+  revalidatePath('/teslimatlar/gecikenler')
+  revalidatePath('/teslimatlar')
+  return { ok: true, message: 'Emanet geri alındı olarak işaretlendi.' }
+}
+
+export async function saveTeslimImzaAction(teslimatId: string, payload: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, message: 'Oturum gerekli.' }
+
+  try {
+    const raw = JSON.parse(payload) as Record<string, unknown>
+    const imzaData = String(raw.imza_data ?? '')
+    if (!imzaData.startsWith('data:image/png;base64,')) {
+      return { ok: false, message: 'İmza verisi geçersiz.' }
+    }
+
+    const { error } = await supabase
+      .from('teslimatlar')
+      .update({
+        musteri_imza_data: imzaData,
+        imza_atan_ad_soyad: raw.imza_atan_ad_soyad ? String(raw.imza_atan_ad_soyad).trim() : null,
+        imza_atan_unvan: raw.imza_atan_unvan ? String(raw.imza_atan_unvan).trim() : null,
+        imza_tarihi: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', teslimatId)
+
+    if (error) return { ok: false, message: error.message }
+    revalidatePath(`/teslimatlar/${teslimatId}`)
+    return { ok: true, message: 'Müşteri imzası kaydedildi.' }
+  } catch (error) {
+    return { ok: false, message: errorMessage(error, 'İmza kaydedilemedi.') }
+  }
+}
+
+export async function teslimFormMailGonderAction(teslimatId: string, payload: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, message: 'Oturum gerekli.' }
+
+  const apiKey = await getSetting('resend_api_key', 'RESEND_API_KEY')
+  if (!apiKey) return { ok: false, message: 'Resend API Key tanımlanmamış.' }
+
+  try {
+    const raw = JSON.parse(payload) as Record<string, unknown>
+    const to = String(raw.to ?? '').trim()
+    const subject = String(raw.subject ?? '').trim()
+    const text = String(raw.text ?? '').trim()
+    if (!to || !subject || !text) {
+      return { ok: false, message: 'Alıcı, konu ve mail metni zorunlu.' }
+    }
+
+    const data = await getTeslimFormData(teslimatId)
+    const pdfBuffer = await renderToBuffer(createElement(TeslimFormPdfDocument, { data }) as any)
+    const resend = new Resend(apiKey)
+    const result = await resend.emails.send({
+      from: 'Köklü Yangın Söndürme <bilgi@koklu.com.tr>',
+      to: [to],
+      subject,
+      text,
+      attachments: [{
+        filename: teslimFormFileName(data.teslimat.teslimat_no),
+        content: pdfBuffer.toString('base64'),
+      }],
+    })
+
+    if (result.error) return { ok: false, message: result.error.message }
+
+    const { error } = await supabase
+      .from('teslimatlar')
+      .update({
+        teslim_form_mail_gonderildi: true,
+        teslim_form_mail_tarihi: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', teslimatId)
+    if (error) return { ok: false, message: error.message }
+
+    revalidatePath(`/teslimatlar/${teslimatId}`)
+    return { ok: true, message: 'Teslim formu müşteriye mail olarak gönderildi.' }
+  } catch (error) {
+    return { ok: false, message: errorMessage(error, 'Mail gönderilemedi.') }
+  }
+}
+
+export async function topluOnKaydaAktarAction(kalemIds: string[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, message: 'Oturum gerekli.' }
+
+  const results: Array<{ ok: boolean; kalemId: string }> = []
+  for (const kalemId of kalemIds) {
+    try {
+      const kalem = await supabase
+        .from('teslimat_kalemleri')
+        .select('id, aciklama, miktar, birim, birim_fiyat, toplam_tutar, teslimatlar(id, teslimat_no, teslimat_tarihi, durum, customer_id)')
+        .eq('id', kalemId)
+        .single()
+      if (kalem.error || !kalem.data) { results.push({ ok: false, kalemId }); continue }
+      const raw = kalem.data
+      await createOnKayitFromTeslimatKalem(kalemId, {
+        aciklama: String(raw.aciklama ?? ''),
+        miktar: Number(raw.miktar ?? 1),
+        birim_fiyat: Number(raw.birim_fiyat ?? 0),
+        toplam_tutar: Number(raw.toplam_tutar ?? 0),
+        notlar: null,
+      })
+      results.push({ ok: true, kalemId })
+    } catch {
+      results.push({ ok: false, kalemId })
+    }
+  }
+
+  revalidatePath('/teslimatlar/on-kayda-aktar')
+  revalidatePath('/cari-hesap/on-kayitlar')
+  const basarili = results.filter(r => r.ok).length
+  return { ok: basarili > 0, message: `${basarili}/${kalemIds.length} kalem ön kayda aktarıldı.` }
 }
 
 export async function manuelOnKaydaAktarAction(kalemId: string, payload: string) {

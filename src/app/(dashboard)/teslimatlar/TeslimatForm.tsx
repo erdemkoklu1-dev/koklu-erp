@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createTeslimatAction, updateTeslimatAction } from './actions'
 import {
+  GERI_TIPLERI_ACIKLAMA,
   GERI_TESLIM_GEREKTIREN_TIPLER,
   HAREKET_TIPI_LABELS,
   HAREKET_TIPLERI,
@@ -99,6 +100,7 @@ export default function TeslimatForm({
   const [onKayitSecimi, setOnKayitSecimi] = useState<'olusturulsun' | 'mevcut_kayda_eklensin' | 'olusturulmasin'>(initialValue?.on_kayit_secimi ?? 'olusturulmasin')
   const [aciklama, setAciklama] = useState(initialValue?.aciklama ?? '')
   const [notlar, setNotlar] = useState(initialValue?.notlar ?? '')
+  const [gelismisAcik, setGelismisAcik] = useState<Set<number>>(new Set())
   const [kalemler, setKalemler] = useState<KalemState[]>(() => {
     if (!initialValue?.kalemler?.length) return [emptyKalem()]
     return initialValue.kalemler.map(k => ({
@@ -133,6 +135,13 @@ export default function TeslimatForm({
     const hareket_yonu: HareketYonu = ['dolum_icin_alindi', 'bakim_icin_alindi', 'yenileme_icin_alindi', 'emanet_geri_alindi', 'hurda_icin_alindi'].includes(hareket_tipi)
       ? 'gelen'
       : 'giden'
+    const faturalanirMi = hareket_yonu === 'giden' && hareket_tipi !== 'emanet_teslim'
+    if (faturalanirMi && onKayitSecimi === 'olusturulmasin') {
+      setOnKayitSecimi('olusturulsun')
+    }
+    if (hareket_tipi === 'emanet_teslim' || hareket_tipi === 'emanet_geri_alindi') {
+      setOnKayitSecimi('olusturulmasin')
+    }
     updateKalem(index, {
       hareket_tipi,
       hareket_yonu,
@@ -140,7 +149,7 @@ export default function TeslimatForm({
       musteri_envanterine_isler_mi: hareket_yonu === 'giden' && MUSTERI_ENVANTER_TIPLERI.has(hareket_tipi),
       emanet_mi: hareket_tipi === 'emanet_teslim',
       geri_alinmasi_gerekir_mi: GERI_TESLIM_GEREKTIREN_TIPLER.has(hareket_tipi),
-      faturalanir_mi: hareket_yonu === 'giden' && hareket_tipi !== 'emanet_teslim',
+      faturalanir_mi: faturalanirMi,
     })
   }
 
@@ -337,13 +346,43 @@ export default function TeslimatForm({
                 </>
               )}
               </div>
-              <div className="flex flex-wrap gap-x-5 gap-y-2 border-t pt-3 text-xs dark:border-gray-700">
-                <label className="flex items-center gap-2"><input type="checkbox" checked={item.tutarli_gir} onChange={e => updateKalem(index, { tutarli_gir: e.target.checked })} /> Fiyatlı işlem olarak gir</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={item.stoktan_duser_mi} onChange={e => updateKalem(index, { stoktan_duser_mi: e.target.checked })} /> Şube stokundan düş</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={item.musteri_envanterine_isler_mi} onChange={e => updateKalem(index, { musteri_envanterine_isler_mi: e.target.checked })} /> Müşteri cihaz listesine ekle</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={item.emanet_mi} onChange={e => updateKalem(index, { emanet_mi: e.target.checked })} /> Emanet cihaz olarak bırakıldı</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={item.geri_alinmasi_gerekir_mi} onChange={e => updateKalem(index, { geri_alinmasi_gerekir_mi: e.target.checked })} /> Bu işlem sonrası müşteriye geri teslim yapılacak</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={item.faturalanir_mi} onChange={e => updateKalem(index, { faturalanir_mi: e.target.checked })} /> Ön kayda / faturaya dahil edilsin</label>
+              {/* Tip açıklama paneli */}
+              <div className="rounded-lg bg-blue-50 p-3 text-xs dark:bg-blue-900/20">
+                <div className="font-semibold text-blue-800 dark:text-blue-300">{HAREKET_TIPI_LABELS[item.hareket_tipi]}</div>
+                <p className="mt-1 text-blue-700 dark:text-blue-400">{GERI_TIPLERI_ACIKLAMA[item.hareket_tipi]}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {item.stoktan_duser_mi && <span className="rounded bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-800 dark:text-blue-200">📦 Stoktan düşülecek</span>}
+                  {item.musteri_envanterine_isler_mi && <span className="rounded bg-green-100 px-2 py-0.5 text-green-700 dark:bg-green-800 dark:text-green-200">👤 Cihaz listesine eklenecek</span>}
+                  {item.emanet_mi && <span className="rounded bg-orange-100 px-2 py-0.5 text-orange-700 dark:bg-orange-800 dark:text-orange-200">🔄 Emanet olarak kaydedilecek</span>}
+                  {item.geri_alinmasi_gerekir_mi && <span className="rounded bg-yellow-100 px-2 py-0.5 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200">⏳ Geri teslim takibi açılacak</span>}
+                  {item.faturalanir_mi && <span className="rounded bg-purple-100 px-2 py-0.5 text-purple-700 dark:bg-purple-800 dark:text-purple-200">📋 Ön kayda dahil</span>}
+                  {item.tutarli_gir && <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-600 dark:bg-gray-700 dark:text-gray-300">💰 Fiyatlı işlem</span>}
+                </div>
+              </div>
+
+              {/* Gelişmiş ayarlar (checkbox'lar) */}
+              <div className="border-t pt-2 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setGelismisAcik(prev => {
+                    const next = new Set(prev)
+                    next.has(index) ? next.delete(index) : next.add(index)
+                    return next
+                  })}
+                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  {gelismisAcik.has(index) ? '▲ Gelişmiş ayarları gizle' : '▼ Gelişmiş ayarları göster'}
+                </button>
+                {gelismisAcik.has(index) && (
+                  <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={item.tutarli_gir} onChange={e => updateKalem(index, { tutarli_gir: e.target.checked })} /> Fiyatlı işlem olarak gir</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={item.stoktan_duser_mi} onChange={e => updateKalem(index, { stoktan_duser_mi: e.target.checked })} /> Şube stokundan düş</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={item.musteri_envanterine_isler_mi} onChange={e => updateKalem(index, { musteri_envanterine_isler_mi: e.target.checked })} /> Müşteri cihaz listesine ekle</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={item.emanet_mi} onChange={e => updateKalem(index, { emanet_mi: e.target.checked })} /> Emanet cihaz olarak bırakıldı</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={item.geri_alinmasi_gerekir_mi} onChange={e => updateKalem(index, { geri_alinmasi_gerekir_mi: e.target.checked })} /> Bu işlem sonrası geri teslim yapılacak</label>
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={item.faturalanir_mi} onChange={e => updateKalem(index, { faturalanir_mi: e.target.checked })} /> Ön kayda / faturaya dahil edilsin</label>
+                  </div>
+                )}
               </div>
                 {kalemler.length > 1 && (
                   <div className="flex justify-end">

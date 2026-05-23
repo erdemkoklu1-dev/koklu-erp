@@ -32,7 +32,16 @@ export default async function HareketGecmisiPage({ searchParams }: { searchParam
 
   return (
     <div className="space-y-5 p-6">
-      <h1 className="text-xl font-bold">Hareket geçmişi</h1>
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-sm">
+          <Link href="/teslimatlar" className="flex items-center gap-1 text-[#C8102E] hover:underline">
+            ← Teslimatlar
+          </Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-gray-600 dark:text-gray-400">Hareket Geçmişi</span>
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Hareket geçmişi</h1>
+      </div>
       <form className="grid gap-3 rounded-lg border bg-white p-4 text-sm dark:border-gray-700 dark:bg-gray-800 md:grid-cols-5">
         <select name="customer" defaultValue={params.customer ?? ''} className="rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-900"><option value="">Tüm müşteriler</option>{(customers ?? []).map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}</select>
         <select name="urun" defaultValue={params.urun ?? ''} className="rounded border px-3 py-2 dark:border-gray-700 dark:bg-gray-900"><option value="">Tüm ürünler</option>{(urunler ?? []).map(u => <option key={u.id} value={u.id}>{u.ad}</option>)}</select>

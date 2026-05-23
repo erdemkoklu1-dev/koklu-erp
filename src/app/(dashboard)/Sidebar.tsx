@@ -75,7 +75,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       }`}
     >
       <item.icon size={20} className="flex-shrink-0" />
-      {item.label}
+      <span className="sidebar-label">{item.label}</span>
     </Link>
   )
 }
@@ -187,7 +187,7 @@ export default function Sidebar() {
         <div className="w-10 h-10 bg-[#C8102E] rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-sm">
           K
         </div>
-        <div>
+        <div className="sidebar-logo-text">
           <p className="font-bold text-gray-900 dark:text-white text-base leading-tight tracking-wide">KÖKLÜ ERP</p>
           <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight mt-0.5">Yangın Yönetim</p>
         </div>

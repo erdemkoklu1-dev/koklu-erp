@@ -66,7 +66,13 @@ export default async function OnKaydaAktarPage() {
     <div className="space-y-5 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/teslimatlar" className="text-sm text-gray-500 hover:text-gray-700">← Teslimatlara dön</Link>
+          <div className="mb-2 flex items-center gap-2 text-sm">
+            <Link href="/teslimatlar" className="flex items-center gap-1 text-[#C8102E] hover:underline">
+              ← Teslimatlar
+            </Link>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-600 dark:text-gray-400">Ön Kayda Aktarılacaklar</span>
+          </div>
           <h1 className="mt-1 text-xl font-bold">Ön kayda aktarılacaklar</h1>
           <p className="text-sm text-gray-500">Kontrol edilip düzenlenebilen ve manuel ön kayda aktarılabilen teslimat kalemleri.</p>
         </div>
