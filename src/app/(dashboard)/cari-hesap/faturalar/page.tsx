@@ -326,8 +326,8 @@ export default async function FaturalarPage({
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                 <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Müşteri / Tedarikçi</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri / Tedarikçi</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Şube</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
@@ -335,7 +335,7 @@ export default async function FaturalarPage({
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kalan</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
-                  <th className="px-4 py-3" />
+                  <th className="px-4 py-3 sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]" />
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -364,15 +364,15 @@ export default async function FaturalarPage({
                   }
 
                   return (
-                    <tr key={inv.id} className={`hover:bg-gray-50 transition-colors ${isMahsup ? 'bg-violet-50/30' : ''}`}>
+                    <tr key={inv.id} className={`group hover:bg-gray-50 transition-colors ${isMahsup ? 'bg-violet-50/30' : ''}`}>
+                      <td className="px-4 py-3 text-sm font-medium sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
+                        {customer?.full_name ?? inv.supplier_name ?? '—'}
+                      </td>
                       <td className="px-4 py-3">
                         <Link href={`/cari-hesap/faturalar/${inv.id}`}
                           className="text-sm font-semibold text-[#C8102E] hover:underline">
                           {inv.invoice_number}
                         </Link>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
-                        {customer?.full_name ?? inv.supplier_name ?? '—'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{TYPE_LABELS[inv.invoice_type] ?? inv.invoice_type}</td>
                       <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{invSube?.ad ?? '—'}</td>
@@ -392,7 +392,7 @@ export default async function FaturalarPage({
                           {statusConf.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                         <Link href={`/cari-hesap/faturalar/${inv.id}`}
                           className="text-xs text-[#C8102E] font-medium hover:underline">
                           Detay →

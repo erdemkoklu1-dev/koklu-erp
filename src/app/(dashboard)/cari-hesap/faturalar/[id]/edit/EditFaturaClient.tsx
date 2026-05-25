@@ -1,10 +1,10 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { calculateInvoiceTotals } from '@/lib/finance/calculations'
 import { formatCurrency } from '@/lib/finance/formatters'
+import { updateInvoiceAction } from './actions'
 
 type LineItem = {
   id?: string
@@ -37,7 +37,6 @@ const UNITS = ['adet', 'saat', 'kg', 'm', 'set', 'paket']
 
 export default function EditFaturaClient({ invoiceId, invoice, initialItems, customers, allBrokers, initialBrokers, subeler, kaynak }: Props) {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -139,7 +138,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
     setLoading(true); setError('')
 
     try {
-      const { error: invErr } = await supabase.from('invoices').update({
+      const invoiceData = {
         invoice_type: form.invoice_type,
         customer_id: form.customer_id || null,
         supplier_name: form.supplier_name || null,
@@ -153,73 +152,55 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
         total_amount: totals.total_amount,
         description: form.description || null,
         notes: form.notes || null,
-        musteri_adres: (form.invoice_type === 'satis' || form.invoice_type === 'iade_satis') ? (form.adres || null) : null,
-        tedarikci_adres: (form.invoice_type === 'alis' || form.invoice_type === 'iade_alis') ? (form.adres || null) : null,
         sube_id: form.sube_id || null,
-      }).eq('id', invoiceId)
-      if (invErr) throw new Error(invErr.message)
-
-      // Silinen kalemleri sil
-      const deleted = items.filter(i => i._deleted && i.id)
-      for (const item of deleted) {
-        await supabase.from('invoice_items').delete().eq('id', item.id!)
       }
-      // Mevcut kalemleri güncelle
+
+      const deleted = items.filter(i => i._deleted && i.id)
       const updated = items.filter(i => !i._deleted && i.id)
-      for (const item of updated) {
-        await supabase.from('invoice_items').update({
+      const newItems = items.filter(i => !i._deleted && !i.id && i.description.trim())
+
+      const deletedBrokers = brokerLines.filter(b => b._deleted && b.id)
+      const updatedBrokers = brokerLines.filter(b => !b._deleted && b.id)
+      const newBrokers = brokerLines.filter(b => !b._deleted && !b.id && b.broker_id)
+
+      const result = await updateInvoiceAction(
+        invoiceId,
+        invoiceData,
+        deleted.map(i => i.id!),
+        updated.map(i => ({
+          id: i.id!,
+          description: i.description,
+          quantity: parseFloat(i.quantity) || 1,
+          unit: i.unit,
+          unit_price: parseFloat(i.unit_price) || 0,
+          kdv_rate: parseFloat(i.kdv_rate) || 20,
+        })),
+        newItems.map((item, idx) => ({
+          line_order: updated.length + idx + 1,
           description: item.description,
           quantity: parseFloat(item.quantity) || 1,
           unit: item.unit,
           unit_price: parseFloat(item.unit_price) || 0,
           kdv_rate: parseFloat(item.kdv_rate) || 20,
-        }).eq('id', item.id!)
-      }
-      // Yeni kalemleri ekle
-      const newItems = items.filter(i => !i._deleted && !i.id && i.description.trim())
-      if (newItems.length > 0) {
-        await supabase.from('invoice_items').insert(
-          newItems.map((item, idx) => ({
-            invoice_id: invoiceId,
-            line_order: updated.length + idx + 1,
-            description: item.description,
-            quantity: parseFloat(item.quantity) || 1,
-            unit: item.unit,
-            unit_price: parseFloat(item.unit_price) || 0,
-            kdv_rate: parseFloat(item.kdv_rate) || 20,
-          }))
-        )
-      }
-
-      // Silinen aracıları sil
-      const deletedBrokers = brokerLines.filter(b => b._deleted && b.id)
-      for (const b of deletedBrokers) {
-        await supabase.from('invoice_brokers').delete().eq('id', b.id!)
-      }
-      // Mevcut aracıları güncelle
-      const updatedBrokers = brokerLines.filter(b => !b._deleted && b.id)
-      for (const b of updatedBrokers) {
-        await supabase.from('invoice_brokers').update({
+        })),
+        deletedBrokers.map(b => b.id!),
+        updatedBrokers.map(b => ({
+          id: b.id!,
           commission_rate: parseFloat(b.commission_rate) || 0,
           commission_amount: parseFloat(b.commission_amount) || 0,
-        }).eq('id', b.id!)
-      }
-      // Yeni aracıları ekle
-      const newBrokers = brokerLines.filter(b => !b._deleted && !b.id && b.broker_id)
-      if (newBrokers.length > 0) {
-        await supabase.from('invoice_brokers').insert(
-          newBrokers.map(b => ({
-            invoice_id: invoiceId,
-            broker_id: b.broker_id,
-            commission_rate: parseFloat(b.commission_rate) || 0,
-            commission_amount: parseFloat(b.commission_amount) || 0,
-            is_paid: false,
-          }))
-        )
+        })),
+        newBrokers.map(b => ({
+          broker_id: b.broker_id,
+          commission_rate: parseFloat(b.commission_rate) || 0,
+          commission_amount: parseFloat(b.commission_amount) || 0,
+        }))
+      )
+
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
       router.push(`/cari-hesap/faturalar/${invoiceId}${kaynak ? `?kaynak=${kaynak}` : ''}`)
-      router.refresh()
     } catch (e: any) {
       setError(e.message); setLoading(false)
     }
@@ -294,9 +275,10 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
                     <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredCustomers.slice(0, 15).map(c => (
                         <button key={c.id} type="button"
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                          onClick={() => { setSelectedCustomer(c); setForm(p => ({ ...p, customer_id: c.id })); setCustomerSearch(''); setShowDropdown(false) }}>
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                          onMouseDown={e => { e.preventDefault(); setSelectedCustomer(c); setForm(p => ({ ...p, customer_id: c.id })); setCustomerSearch(''); setShowDropdown(false) }}>
                           {c.full_name}
+                          {c.tax_number && <span className="text-xs text-gray-400 ml-2">{c.tax_number}</span>}
                         </button>
                       ))}
                     </div>
@@ -307,7 +289,7 @@ export default function EditFaturaClient({ invoiceId, invoice, initialItems, cus
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tedarikçi Adı</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Firma / Tedarikçi Adı</label>
                 <input value={form.supplier_name} onChange={e => setForm(p => ({ ...p, supplier_name: e.target.value }))}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]" />
               </div>

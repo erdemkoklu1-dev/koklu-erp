@@ -125,24 +125,24 @@ export default async function ProformaListesiPage({
           <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">MÜŞTERİ</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">PROFORMA NO</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TARİH</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">MÜŞTERİ</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">ARA TOPLAM</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">KDV</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TOPLAM</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">DURUM</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">İŞLEM</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">İŞLEM</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {proformalar && proformalar.length > 0 ? proformalar.map((p) => {
                 const conf = DURUM_CONFIG[p.durum] ?? DURUM_CONFIG.taslak
                 return (
-                  <tr key={p.id} className="hover:bg-gray-50">
+                  <tr key={p.id} className="group hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">{p.musteri_unvan || '-'}</td>
                     <td className="px-4 py-3 text-sm font-mono font-medium text-[#C8102E]">{p.proforma_no}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatTRDate(p.tarih)}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{p.musteri_unvan || '-'}</td>
                     <td className="px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{fmtTutar(p.ara_toplam ?? 0, p.para_birimi)}</td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-300">{fmtTutar(p.kdv_tutari ?? 0, p.para_birimi)}</td>
                     <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{fmtTutar(p.toplam_tutar ?? 0, p.para_birimi)}</td>
@@ -151,7 +151,7 @@ export default async function ProformaListesiPage({
                         {conf.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                       <div className="flex items-center gap-3">
                         <Link href={`/fiyat-teklifleri/proforma/${p.id}`}
                           className="text-blue-600 text-sm font-medium hover:underline">

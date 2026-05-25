@@ -263,20 +263,20 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
           <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Müşteri</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Şehir</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tür</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Telefon</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kontrol Durumu</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">İşlem</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">İşlem</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filtered.map(c => {
                 const sc = statusConfig[c.controlStatus]
                 return (
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
+                  <tr key={c.id} className="group hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                       <div className="font-medium text-gray-900 dark:text-gray-100">{c.full_name}</div>
                       {c.email && <div className="text-xs text-gray-400 dark:text-gray-500">{c.email}</div>}
                     </td>
@@ -305,7 +305,7 @@ export default function CustomersClient({ customers }: { customers: CustomerRow[
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                       <div className="flex items-center gap-3">
                         <Link href={`/customers/${c.id}`} className="text-[#C8102E] text-sm font-medium hover:underline">
                           Detay →

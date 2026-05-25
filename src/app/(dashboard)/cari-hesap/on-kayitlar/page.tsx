@@ -154,14 +154,14 @@ export default async function OnKayitlarPage({
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700 border-b">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Müşteri</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Müşteri</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Açıklama</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Miktar</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Durum</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura</th>
-                  <th className="px-4 py-3" />
+                  <th className="px-4 py-3 sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]" />
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -170,10 +170,10 @@ export default async function OnKayitlarPage({
                   const invoice = k.invoices as any
                   const durumConf = DURUM_CONFIG[k.durum] ?? DURUM_CONFIG['beklemede']
                   return (
-                    <tr key={k.id} className={`hover:bg-gray-50 transition-colors ${k.durum === 'beklemede' ? '' : 'opacity-70'}`}>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <tr key={k.id} className={`group hover:bg-gray-50 transition-colors ${k.durum === 'beklemede' ? '' : 'opacity-70'}`}>
+                      <td className="px-4 py-3 text-sm font-medium sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                         <Link href={`/customers/${customer?.id}`}
-                          className="hover:text-[#C8102E] hover:underline">
+                          className="hover:text-[#C8102E] hover:underline text-gray-900 dark:text-gray-100">
                           {customer?.full_name ?? '—'}
                         </Link>
                       </td>
@@ -207,7 +207,7 @@ export default async function OnKayitlarPage({
                           <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                         <Link href={`/cari-hesap/on-kayitlar/${k.id}/edit`}
                           className="text-xs text-gray-400 dark:text-gray-500 hover:text-[#C8102E] font-medium">
                           Düzenle

@@ -227,15 +227,15 @@ export default async function FiyatTeklifleriPage({
           <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b">
               <tr>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">MÜŞTERİ</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TEKLİF NO</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">MÜŞTERİ</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">ŞEHİR</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TARİH</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">TUTAR</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">PARA</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">KDV</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">DURUM</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400">İŞLEM</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">İŞLEM</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -245,9 +245,9 @@ export default async function FiyatTeklifleriPage({
                 const musteriAdi = (Array.isArray(customer) ? customer[0]?.full_name : customer?.full_name) ?? t.musteri_adi
                 const kdvLabel = t.kdv_durumu === 'dahil' ? 'KDV Dahil' : t.kdv_durumu === 'haric' ? 'KDV Hariç' : 'KDV Yok'
                 return (
-                  <tr key={t.id} className="hover:bg-gray-50">
+                  <tr key={t.id} className="group hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">{musteriAdi || '-'}</td>
                     <td className="px-4 py-3 text-sm font-mono font-medium text-[#C8102E]">{t.teklif_no}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{musteriAdi || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{t.musteri_sehir || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{formatTRDate(t.tarih)}</td>
                     <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">
@@ -260,7 +260,7 @@ export default async function FiyatTeklifleriPage({
                         {conf.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
                       <div className="flex items-center gap-3">
                         <Link href={`/fiyat-teklifleri/${t.id}`}
                           className="text-[#C8102E] text-sm font-medium hover:underline">

@@ -77,8 +77,8 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
         const sube = inv.subeler as any
 
         return (
-          <tr key={inv.id} className={`${rowBg} hover:bg-gray-50 transition-colors`}>
-            <td className="px-4 py-3">
+          <tr key={inv.id} className={`group ${rowBg} hover:bg-gray-50 transition-colors`}>
+            <td className="px-4 py-3 sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
               <Link
                 href={`/cari-hesap/tedarikciler/${encodeURIComponent(inv.supplier_name ?? '')}`}
                 className="font-medium text-gray-900 dark:text-gray-100 hover:text-[#C8102E] hover:underline"
@@ -128,7 +128,7 @@ export default function GelenFaturaTable({ invoices, today }: Props) {
                 </span>
               )}
             </td>
-            <td className="px-4 py-3 text-right">
+            <td className="px-4 py-3 text-right sticky right-0 z-10 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] transition-colors">
               <div className="flex gap-2 justify-end">
                 <Link
                   href={`/cari-hesap/faturalar/${inv.id}?kaynak=gelen`}
