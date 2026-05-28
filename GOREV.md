@@ -1,17 +1,27 @@
 # GÖREV
 
-Aracılar modülünü Aracı Cari yapısına dönüştürme işi tamamlandı.
+Operasyon modülünü tek menü ve sekmeli yapı altında toplama işi tamamlandı.
 
-## Kalan Opsiyonel Notlar
+## Tamamlananlar
 
-- PDF/Excel cari ekstre dışa aktarımı ayrıca ele alınabilir.
-- Manuel ödeme girildiğinde belirli bir alacak hareketini otomatik kısmi/tam ödendi durumuna bağlama daha sonra ayrı bir eşleştirme alanıyla genişletilebilir.
+- Sol navigasyonda operasyon tek menü haline getirildi.
+- Operasyon sayfasında üst sekmeler eklendi:
+  - Operasyon Özeti
+  - Teslimatlar
+  - Talepler
+  - İş Planları
+- Ortak operasyon üst alanı, hızlı aksiyonlar ve Yazdır butonu eklendi.
+- Operasyon özeti şube/tarih filtresi, özet kartları, şube bazlı açık işler ve son aktivitelerle güncellendi.
+- Teslimatlar operasyon çatısı içine alındı ve yazdırılabilir liste olarak düzenlendi.
+- Talepler listesi, detay sayfası ve yeni talep formu düzenlendi.
+- İş planları listesi, detay sayfası ve yeni iş planı formu düzenlendi.
+- Şube bilgisi talepler, iş planları ve teslimatlar listelerinde net gösterildi.
+- Yazdırma görünümü için A4 uyumlu print CSS iyileştirildi.
+- Operasyon migration dosyası Türkçe seçeneklerle güncellendi.
+- Türkçe UI metinleri karakter açısından kontrol edildi.
+- `npm run build` başarılı geçti.
 
-## Kontrol
+## Kalan Opsiyonel Genişletmeler
 
-- `araci_cari_hareketleri` tablosu migration dosyası eklendi.
-- Mevcut bağlı faturalar için güvenli komisyon hareketi backfill’i eklendi.
-- Yeni fatura-komisyon bağlarında duplicate korumalı cari hareket sync trigger’ı eklendi.
-- Aracı detayında cari hareketler ve finansal özetler eklendi.
-- Aracılar listesinde finansal özetler ve filtreler eklendi.
-- Build kontrolü yapıldı.
+- Toplu PDF indirme ve toplu mail gönderim altyapısı ileride ayrıca eklenebilir.
+- Talep / iş planı durum geçmişi için ayrı audit tablosu eklenebilir.

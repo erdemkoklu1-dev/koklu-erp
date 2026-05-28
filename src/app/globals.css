@@ -67,10 +67,15 @@ body {
   }
 
   aside, nav, .no-print, button { display: none !important; }
-  .print-only { display: block !important; }
-  @page { margin: 1cm; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 11px; }
-  .print-header { display: block !important; font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+  .print-only, .print-title, .print-header { display: block !important; }
+  @page { size: A4; margin: 12mm; }
+  body { background: #fff !important; color: #111827 !important; }
+  main { overflow: visible !important; }
+  table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 10px; vertical-align: top; }
+  .print-header { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+  .print-title { margin-bottom: 12px; }
   a { color: inherit !important; text-decoration: none !important; }
 }

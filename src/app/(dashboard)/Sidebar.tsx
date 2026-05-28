@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, Shield, ClipboardList, FileUp, Wallet,
   Handshake, FileDown, FileInput, AlertTriangle, BarChart2, FileText,
-  Bell, Factory, Settings, Building2, UserSquare2, Truck
+  Bell, Factory, Settings, Building2, UserSquare2, BriefcaseBusiness
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -14,30 +14,30 @@ import { createClient } from '@/lib/supabase/client'
 type NavItem = { href: string; label: string; icon: LucideIcon; modul?: string; adminOnly?: boolean }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard',                  label: 'Anasayfa',           icon: LayoutDashboard },
-  { href: '/customers',                  label: 'Müşteriler',         icon: Users,         modul: 'musteriler' },
-  { href: '/cihazlar',                   label: 'Cihazlar',           icon: Shield,        modul: 'cihazlar' },
-  { href: '/service-forms',              label: 'Servis Formları',    icon: ClipboardList, modul: 'servis_formlari' },
-  { href: '/fabrika',                    label: 'Fabrika',            icon: Factory,       modul: 'fabrika' },
-  { href: '/teslimatlar',                label: 'Teslimatlar',        icon: Truck,         modul: 'teslimatlar' },
-  { href: '/hatirlatmalar',              label: 'Hatırlatmalar',      icon: Bell,          modul: 'hatirlatmalar' },
-  { href: '/fiyat-teklifleri',           label: 'Fiyat Teklifleri',   icon: FileText,      modul: 'fiyat_teklifleri' },
-  { href: '/fiyat-teklifleri/proforma', label: 'Proforma Fatura',    icon: FileText,      modul: 'fiyat_teklifleri' },
-  { href: '/cari-hesap',                 label: 'Cari Hesap',         icon: Wallet,        modul: 'cari_hesap' },
-  { href: '/araclar',                    label: 'Aracılar',           icon: Handshake,     modul: 'aracilar' },
-  { href: '/subeler',                    label: 'Şubeler',            icon: Building2,     modul: 'subeler' },
-  { href: '/personel',                   label: 'Personel',           icon: UserSquare2,   modul: 'personel' },
-  { href: '/invoice-import',             label: 'Müşteri İçe Aktar',  icon: FileUp,        modul: 'musteriler' },
-  { href: '/cari-hesap/fatura-import',   label: 'Fatura Yükle',       icon: FileDown,      modul: 'faturalar' },
-  { href: '/cari-hesap/giden-faturalar', label: 'Giden Faturalar',    icon: FileUp,        modul: 'faturalar' },
-  { href: '/cari-hesap/gelen-faturalar', label: 'Gelen Faturalar',    icon: FileInput,     modul: 'faturalar' },
-  { href: '/cari-hesap/gecikis',         label: 'Gecikmiş Borçlar',   icon: AlertTriangle, modul: 'cari_hesap' },
-  { href: '/cari-hesap/gider-raporu',    label: 'Gider Raporu',       icon: BarChart2,     modul: 'cari_hesap' },
-  { href: '/yonetim',                    label: 'Yönetim',            icon: Settings,      modul: 'yonetim', adminOnly: true },
+  { href: '/dashboard',                  label: 'Anasayfa',          icon: LayoutDashboard },
+  { href: '/customers',                  label: 'Müşteriler',        icon: Users,         modul: 'musteriler' },
+  { href: '/cihazlar',                   label: 'Cihazlar',          icon: Shield,        modul: 'cihazlar' },
+  { href: '/service-forms',              label: 'Servis Formları',   icon: ClipboardList, modul: 'servis_formlari' },
+  { href: '/fabrika',                    label: 'Fabrika',           icon: Factory,       modul: 'fabrika' },
+  { href: '/operasyon',                  label: 'Operasyon',         icon: BriefcaseBusiness },
+  { href: '/hatirlatmalar',              label: 'Hatırlatmalar',     icon: Bell,          modul: 'hatirlatmalar' },
+  { href: '/fiyat-teklifleri',           label: 'Fiyat Teklifleri',  icon: FileText,      modul: 'fiyat_teklifleri' },
+  { href: '/fiyat-teklifleri/proforma',  label: 'Proforma Fatura',   icon: FileText,      modul: 'fiyat_teklifleri' },
+  { href: '/cari-hesap',                 label: 'Cari Hesap',        icon: Wallet,        modul: 'cari_hesap' },
+  { href: '/araclar',                    label: 'Aracılar',          icon: Handshake,     modul: 'aracilar' },
+  { href: '/subeler',                    label: 'Şubeler',           icon: Building2,     modul: 'subeler' },
+  { href: '/personel',                   label: 'Personel',          icon: UserSquare2,   modul: 'personel' },
+  { href: '/invoice-import',             label: 'Müşteri İçe Aktar', icon: FileUp,        modul: 'musteriler' },
+  { href: '/cari-hesap/fatura-import',   label: 'Fatura Yükle',      icon: FileDown,      modul: 'faturalar' },
+  { href: '/cari-hesap/giden-faturalar', label: 'Giden Faturalar',   icon: FileUp,        modul: 'faturalar' },
+  { href: '/cari-hesap/gelen-faturalar', label: 'Gelen Faturalar',   icon: FileInput,     modul: 'faturalar' },
+  { href: '/cari-hesap/gecikis',         label: 'Gecikmiş Borçlar',  icon: AlertTriangle, modul: 'cari_hesap' },
+  { href: '/cari-hesap/gider-raporu',    label: 'Gider Raporu',      icon: BarChart2,     modul: 'cari_hesap' },
+  { href: '/yonetim',                    label: 'Yönetim',           icon: Settings,      modul: 'yonetim', adminOnly: true },
 ]
 
 const CACHE_KEY = 'koklu_sidebar_perms_v1'
-const CACHE_TTL = 5 * 60 * 1000 // 5 dakika
+const CACHE_TTL = 5 * 60 * 1000
 
 type PermsCache = {
   isAdmin: boolean
@@ -99,7 +99,6 @@ export default function Sidebar() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Cache'den anlık oku — flash'ı önler
     const cached = readCache()
     if (cached) {
       setIsAdmin(cached.isAdmin)
@@ -126,7 +125,6 @@ export default function Sidebar() {
         if (cancelled) return
 
         if (!profil) {
-          // Profil yoksa admin gibi davran (geriye dönük uyumluluk)
           setIsAdmin(true)
           setIsBackupManager(true)
           writeCache({ isAdmin: true, isBackupManager: true, modulIzinleri: {} })
@@ -161,7 +159,7 @@ export default function Sidebar() {
           }
         }
       } catch {
-        // Hata olursa varsayılan gösterim devam eder
+        // Hata olursa varsayılan gösterim devam eder.
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -173,7 +171,7 @@ export default function Sidebar() {
 
   function canSee(item: NavItem): boolean {
     if (!item.modul) return true
-    if (loading) return false   // Yüklenirken skeleton göster
+    if (loading) return false
     if (isAdmin) return true
     if (item.href === '/yonetim' && isBackupManager) return true
     if (item.adminOnly) return false
@@ -182,7 +180,6 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex-shrink-0 flex flex-col h-full">
-      {/* Logo */}
       <div className="px-5 py-5 border-b dark:border-gray-700 flex items-center gap-3">
         <div className="w-10 h-10 bg-[#C8102E] rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-sm">
           K
@@ -193,7 +190,6 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto">
         {loading ? (
           <NavSkeleton />
@@ -203,7 +199,10 @@ export default function Sidebar() {
               const active =
                 item.href === '/dashboard'
                   ? pathname === '/dashboard'
-                  : pathname.startsWith(item.href)
+                  : item.href === '/operasyon'
+                    ? pathname.startsWith('/operasyon')
+                    : pathname.startsWith(item.href)
+
               return <NavLink key={item.href} item={item} active={active} />
             })}
           </div>
