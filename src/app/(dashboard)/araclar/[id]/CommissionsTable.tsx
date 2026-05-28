@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { formatCurrency, formatTRDate } from '@/lib/finance/formatters'
 
 type CommissionRow = {
@@ -36,6 +37,7 @@ type Props = {
 
 export default function CommissionsTable({ brokerId, initialRows, totalJobs }: Props) {
   const supabase = createClient()
+  const router = useRouter()
   const [rows, setRows] = useState(initialRows)
   const [invoiceOptions, setInvoiceOptions] = useState<InvoiceOption[]>([])
 
@@ -85,6 +87,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
     if (!error) {
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, is_paid: true, paid_date: payDate } : r))
       setPayingId(null)
+      router.refresh()
     }
     setSaving(false)
   }
@@ -97,6 +100,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
       .eq('id', row.id)
     if (!error) {
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, is_paid: false, paid_date: null } : r))
+      router.refresh()
     }
     setSaving(false)
   }
@@ -131,6 +135,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
         ? { ...r, commission_rate: parseFloat(editRate) || 0, commission_amount: parseFloat(editAmount) || 0 }
         : r))
       setEditingId(null)
+      router.refresh()
     }
     setSaving(false)
   }
@@ -183,6 +188,7 @@ export default function CommissionsTable({ brokerId, initialRows, totalJobs }: P
     setAddRate('')
     setAddAmount('')
     setAddSaving(false)
+    router.refresh()
   }
 
   return (
