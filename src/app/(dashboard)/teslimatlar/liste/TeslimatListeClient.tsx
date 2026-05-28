@@ -20,10 +20,10 @@ export type TeslimatRow = {
 type Sube = { id: string; ad: string }
 
 const DURUM_BADGE: Record<string, { label: string; icon: string; cls: string }> = {
-  taslak:     { label: 'Taslak',     icon: '',   cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
-  sevkte:     { label: 'Sevkte',     icon: '🚚', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  tamamlandi: { label: 'Tamamlandı', icon: '✅', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  iptal:      { label: 'İptal',      icon: '❌', cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+  taslak:     { label: 'Taslak',     icon: '', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
+  sevkte:     { label: 'Sevkte',     icon: '', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  tamamlandi: { label: 'Tamamlandı', icon: '', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  iptal:      { label: 'İptal',      icon: '', cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
 }
 
 function formatDate(v: string | null) {
@@ -50,6 +50,7 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
 
   const filtered = useMemo(() => {
     return rows.filter(row => {
+      if (!durum && row.durum === 'iptal') return false
       if (q) {
         const qL = q.toLocaleLowerCase('tr-TR')
         const name = (row.customers?.full_name ?? '').toLocaleLowerCase('tr-TR')
@@ -66,9 +67,18 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
     })
   }, [rows, q, durum, subeId, baslangic, bitis, sadeceGeciken, sadeceBugun])
 
+  function clearFilters() {
+    setQ('')
+    setDurum('')
+    setSubeId('')
+    setBaslangic('')
+    setBitis('')
+    setSadeceGeciken(false)
+    setSadeceBugun(false)
+  }
+
   return (
     <div className="space-y-4">
-      {/* Filtre çubuğu */}
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
         <input
           type="text"
@@ -103,7 +113,7 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
             onChange={e => setBaslangic(e.target.value)}
             className="rounded-md border px-2 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
           />
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400">-</span>
           <input
             type="date"
             value={bitis}
@@ -132,15 +142,14 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
         {hasFilter && (
           <button
             type="button"
-            onClick={() => { setQ(''); setDurum(''); setSubeId(''); setBaslangic(''); setBitis(''); setSadeceGeciken(false); setSadeceBugun(false) }}
+            onClick={clearFilters}
             className="rounded-md border px-3 py-2 text-xs text-gray-500 hover:text-red-600 dark:border-gray-600 dark:text-gray-400"
           >
-            Temizle ✕
+            Temizle
           </button>
         )}
       </div>
 
-      {/* Tablo */}
       <div className="overflow-x-auto rounded-lg border bg-white dark:border-gray-700 dark:bg-gray-800">
         <table className="w-full min-w-[920px] text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700 dark:text-gray-400">
@@ -182,7 +191,7 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
                   <td className="px-4 py-3">
                     <span className={geciken ? 'font-semibold text-red-600' : 'text-gray-600 dark:text-gray-300'}>
                       {formatDate(row.hedef_tarih)}
-                      {geciken && <span className="ml-1">⚠️</span>}
+                      {geciken && <span className="ml-1">!</span>}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -205,14 +214,13 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-12 text-center">
-                  <div className="mb-2 text-3xl">🔍</div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     {hasFilter ? 'Filtreyle eşleşen teslimat bulunamadı.' : 'Henüz teslimat kaydı yok.'}
                   </div>
                   {hasFilter ? (
                     <button
                       type="button"
-                      onClick={() => { setQ(''); setDurum(''); setSubeId(''); setBaslangic(''); setBitis(''); setSadeceGeciken(false); setSadeceBugun(false) }}
+                      onClick={clearFilters}
                       className="mt-2 text-sm text-[#C8102E] hover:underline"
                     >
                       Filtreleri temizle

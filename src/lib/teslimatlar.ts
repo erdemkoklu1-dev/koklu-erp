@@ -121,6 +121,52 @@ function dbErrorMessage(step: string, error: unknown) {
   return `${step}: Bilinmeyen hata`
 }
 
+type TeslimatDeleteMode = 'auto' | 'physical' | 'soft'
+
+type TeslimatDeleteAnalysis = {
+  teslimat: {
+    id: string
+    teslimat_no: string
+    durum: string
+    on_kayit_olusturuldu?: boolean | null
+  }
+  counts: {
+    kalemler: number
+    stokEtkiliKalemler: number
+    durumGecmisi: number
+    emanetTakipleri: number
+    geriTeslimTakipleri: number
+    onKayitlar: number
+  }
+  physicalSafe: boolean
+  reasons: string[]
+}
+
+export class TeslimatDeleteError extends Error {
+  code: 'NOT_FOUND' | 'SOFT_DELETE_REQUIRED' | 'UNSAFE_PHYSICAL_DELETE' | 'DB_ERROR'
+  cause?: unknown
+  analysis?: TeslimatDeleteAnalysis
+
+  constructor(
+    message: string,
+    code: TeslimatDeleteError['code'],
+    options: { cause?: unknown; analysis?: TeslimatDeleteAnalysis } = {},
+  ) {
+    super(message)
+    this.name = 'TeslimatDeleteError'
+    this.code = code
+    this.cause = options.cause
+    this.analysis = options.analysis
+  }
+}
+
+function logTeslimatDeleteError(step: string, error: unknown, context?: Record<string, unknown>) {
+  console.error('[teslimat-delete]', step, {
+    context,
+    error,
+  })
+}
+
 export async function nextTeslimatNo() {
   const supabase = createServiceClient()
   const year = new Date().getFullYear()
@@ -707,19 +753,187 @@ export async function updateTeslimat(id: string, input: TeslimatInput, userId?: 
   return teslimat
 }
 
-export async function deleteTeslimat(id: string) {
+async function countRows(
+  supabase: ReturnType<typeof createServiceClient>,
+  table: string,
+  column: string,
+  value: string,
+  context: Record<string, unknown>,
+) {
+  const { count, error } = await supabase
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+    .eq(column, value)
+
+  if (error) {
+    logTeslimatDeleteError(`${table} sayısı alınamadı`, error, context)
+    throw new TeslimatDeleteError('Teslimata bağlı kayıtlar kontrol edilemedi.', 'DB_ERROR', { cause: error })
+  }
+
+  return count ?? 0
+}
+
+async function analyzeTeslimatDelete(id: string): Promise<TeslimatDeleteAnalysis> {
   const supabase = createServiceClient()
   const { data: teslimat, error: teslimatError } = await supabase
     .from('teslimatlar')
-    .select('id, teslimat_no')
+    .select('id, teslimat_no, durum, on_kayit_olusturuldu')
     .eq('id', id)
     .single()
-  if (teslimatError) throw teslimatError
 
-  await reverseExistingStock(id, teslimat.teslimat_no)
+  if (teslimatError || !teslimat) {
+    logTeslimatDeleteError('teslimat kaydı alınamadı', teslimatError, { id })
+    throw new TeslimatDeleteError(
+      'Teslimat kaydı bulunamadı veya daha önce silinmiş.',
+      'NOT_FOUND',
+      { cause: teslimatError },
+    )
+  }
 
-  const { error } = await supabase.from('teslimatlar').delete().eq('id', id)
-  if (error) throw error
+  const context = { id, teslimatNo: teslimat.teslimat_no }
+  const { data: kalemler, error: kalemError } = await supabase
+    .from('teslimat_kalemleri')
+    .select('id, stoktan_duser_mi')
+    .eq('teslimat_id', id)
+
+  if (kalemError) {
+    logTeslimatDeleteError('teslimat kalemleri alınamadı', kalemError, context)
+    throw new TeslimatDeleteError('Teslimata bağlı kalemler kontrol edilemedi.', 'DB_ERROR', { cause: kalemError })
+  }
+
+  const onKayitPattern = `%Teslimat: ${teslimat.teslimat_no}%`
+  const { count: onKayitlar, error: onKayitError } = await supabase
+    .from('on_kayitlar')
+    .select('id', { count: 'exact', head: true })
+    .ilike('notlar', onKayitPattern)
+
+  if (onKayitError) {
+    logTeslimatDeleteError('ön kayıt bağlantıları alınamadı', onKayitError, context)
+    throw new TeslimatDeleteError('Teslimata bağlı ön kayıtlar kontrol edilemedi.', 'DB_ERROR', { cause: onKayitError })
+  }
+
+  const counts = {
+    kalemler: kalemler?.length ?? 0,
+    stokEtkiliKalemler: (kalemler ?? []).filter(k => Boolean(k.stoktan_duser_mi)).length,
+    durumGecmisi: await countRows(supabase, 'teslimat_durum_gecmisi', 'teslimat_id', id, context),
+    emanetTakipleri: await countRows(supabase, 'emanet_takipleri', 'teslimat_id', id, context),
+    geriTeslimTakipleri: await countRows(supabase, 'geri_teslim_takipleri', 'teslimat_id', id, context),
+    onKayitlar: onKayitlar ?? 0,
+  }
+
+  const reasons: string[] = []
+  if (teslimat.durum !== 'taslak') reasons.push(`durum ${teslimat.durum}`)
+  if (counts.stokEtkiliKalemler > 0) reasons.push('stok etkisi var')
+  if (counts.emanetTakipleri > 0) reasons.push('emanet takibi var')
+  if (counts.geriTeslimTakipleri > 0) reasons.push('geri teslim takibi var')
+  if (teslimat.on_kayit_olusturuldu || counts.onKayitlar > 0) reasons.push('ön kayıt bağlantısı var')
+
+  return {
+    teslimat,
+    counts,
+    physicalSafe: reasons.length === 0,
+    reasons,
+  }
+}
+
+async function physicallyDeleteTeslimat(id: string, analysis: TeslimatDeleteAnalysis) {
+  const supabase = createServiceClient()
+  const context = { id, teslimatNo: analysis.teslimat.teslimat_no, mode: 'physical' }
+  const steps = [
+    { table: 'emanet_takipleri', column: 'teslimat_id' },
+    { table: 'geri_teslim_takipleri', column: 'teslimat_id' },
+    { table: 'teslimat_durum_gecmisi', column: 'teslimat_id' },
+    { table: 'teslimat_kalemleri', column: 'teslimat_id' },
+    { table: 'teslimatlar', column: 'id' },
+  ]
+
+  for (const step of steps) {
+    const { error } = await supabase.from(step.table).delete().eq(step.column, id)
+    if (error) {
+      logTeslimatDeleteError(`${step.table} silinemedi`, error, context)
+      throw new TeslimatDeleteError(
+        'Teslimat silinirken bağlı kayıtlar temizlenemedi. Gerçek hata server loglarına yazıldı.',
+        'DB_ERROR',
+        { cause: error, analysis },
+      )
+    }
+  }
+}
+
+async function softDeleteTeslimat(id: string, analysis: TeslimatDeleteAnalysis, userId?: string | null) {
+  const supabase = createServiceClient()
+  const context = { id, teslimatNo: analysis.teslimat.teslimat_no, mode: 'soft' }
+  const now = new Date().toISOString()
+
+  const { error: teslimatError } = await supabase
+    .from('teslimatlar')
+    .update({ durum: 'iptal', updated_at: now })
+    .eq('id', id)
+
+  if (teslimatError) {
+    logTeslimatDeleteError('teslimat iptal durumuna alınamadı', teslimatError, context)
+    throw new TeslimatDeleteError('Teslimat iptal durumuna alınamadı.', 'DB_ERROR', { cause: teslimatError, analysis })
+  }
+
+  const { error: historyError } = await supabase.from('teslimat_durum_gecmisi').insert({
+    teslimat_id: id,
+    eski_durum: analysis.teslimat.durum,
+    yeni_durum: 'iptal',
+    aciklama: 'Silme isteğiyle iptal edildi',
+    created_by: userId ?? null,
+  })
+
+  if (historyError) {
+    logTeslimatDeleteError('iptal durum geçmişi yazılamadı', historyError, context)
+    throw new TeslimatDeleteError('Teslimat iptal edildi ancak durum geçmişi yazılamadı.', 'DB_ERROR', { cause: historyError, analysis })
+  }
+
+  const { error: emanetError } = await supabase
+    .from('emanet_takipleri')
+    .update({ durum: 'iptal', kapandi_at: now })
+    .eq('teslimat_id', id)
+    .in('durum', ['acik', 'kismi_kapandi'])
+
+  if (emanetError) {
+    logTeslimatDeleteError('emanet takipleri iptal edilemedi', emanetError, context)
+    throw new TeslimatDeleteError('Teslimata bağlı emanet takipleri iptal edilemedi.', 'DB_ERROR', { cause: emanetError, analysis })
+  }
+
+  const { error: geriError } = await supabase
+    .from('geri_teslim_takipleri')
+    .update({ durum: 'iptal', kapandi_at: now })
+    .eq('teslimat_id', id)
+    .in('durum', ['acik', 'kismi_kapandi'])
+
+  if (geriError) {
+    logTeslimatDeleteError('geri teslim takipleri iptal edilemedi', geriError, context)
+    throw new TeslimatDeleteError('Teslimata bağlı geri teslim takipleri iptal edilemedi.', 'DB_ERROR', { cause: geriError, analysis })
+  }
+}
+
+export async function deleteTeslimat(
+  id: string,
+  options: { mode?: TeslimatDeleteMode; userId?: string | null } = {},
+) {
+  const mode = options.mode ?? 'auto'
+  const analysis = await analyzeTeslimatDelete(id)
+
+  if (mode === 'soft') {
+    await softDeleteTeslimat(id, analysis, options.userId)
+    return { mode: 'soft' as const, analysis }
+  }
+
+  if (!analysis.physicalSafe) {
+    const message = `Bu teslimat işlem görmüş görünüyor (${analysis.reasons.join(', ')}). Fiziksel silmek yerine iptal edildi olarak işaretleyebilirsiniz.`
+    throw new TeslimatDeleteError(
+      message,
+      mode === 'physical' ? 'UNSAFE_PHYSICAL_DELETE' : 'SOFT_DELETE_REQUIRED',
+      { analysis },
+    )
+  }
+
+  await physicallyDeleteTeslimat(id, analysis)
+  return { mode: 'physical' as const, analysis }
 }
 
 export function normalizeTeslimatInput(raw: unknown): TeslimatInput {

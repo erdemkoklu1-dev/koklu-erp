@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { deleteTeslimatAction } from './actions'
+import { deleteTeslimatAction, softDeleteTeslimatAction } from './actions'
 
 export function TeslimatSilButton({ id, teslimatNo }: { id: string; teslimatNo: string }) {
   const router = useRouter()
@@ -10,16 +10,38 @@ export function TeslimatSilButton({ id, teslimatNo }: { id: string; teslimatNo: 
   const [isPending, startTransition] = useTransition()
 
   function handleClick() {
-    const confirmed = window.confirm(`${teslimatNo} numaralı teslimat silinecek. Devam etmek istiyor musunuz?`)
+    const confirmed = window.confirm(
+      `${teslimatNo} numaralı teslimat silinecek. Teslimata bağlı kalemler, emanet/geri teslim kayıtları ve ön kayıt bağlantıları etkilenebilir. Devam etmek istiyor musunuz?`,
+    )
     if (!confirmed) return
 
     setError('')
     startTransition(async () => {
       const result = await deleteTeslimatAction(id)
       if (!result.ok) {
+        if (result.code === 'SOFT_DELETE_REQUIRED') {
+          const softConfirmed = window.confirm(
+            `${result.message}\n\nBu teslimatı iptal edildi olarak işaretlemek ister misiniz?`,
+          )
+          if (!softConfirmed) {
+            setError(result.message)
+            return
+          }
+
+          const softResult = await softDeleteTeslimatAction(id)
+          if (!softResult.ok) {
+            setError(softResult.message)
+            return
+          }
+
+          router.refresh()
+          return
+        }
+
         setError(result.message)
         return
       }
+
       router.refresh()
     })
   }
