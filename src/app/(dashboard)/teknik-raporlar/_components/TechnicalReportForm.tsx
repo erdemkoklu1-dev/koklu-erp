@@ -49,6 +49,14 @@ type ExistingDeviceState = {
   aciklama: string
 }
 
+function capacityOptionsFor(type: string) {
+  if (type.includes('Köpüklü')) return ['12 Kg', '25 Kg', '50 Kg']
+  if (type.includes('CO2')) return ['2 Kg', '5 Kg', '10 Kg']
+  if (type.includes('Arabalı')) return ['25 Kg', '50 Kg']
+  if (type.includes('Battaniye') || type.includes('Sistem')) return ['Set']
+  return ['2 Kg', '5 Kg', '6 Kg', '12 Kg', '25 Kg', '50 Kg']
+}
+
 const reportCards: Array<{ type: TechnicalReportType; text: string }> = [
   { type: 'yangin_alarm_ihtiyac', text: 'Oda, kat, alan ve kullanım tipine göre dedektör, buton, siren ve panel ihtiyacını hesaplar.' },
   { type: 'genel_ihtiyac_raporu', text: 'Binanın mevcut yangın güvenliği durumuna göre eksik sistem ve malzeme ihtiyacını listeler.' },
@@ -589,11 +597,15 @@ function GeneralFields({ inputData }: { inputData: any }) {
             {devices.map(device => (
               <tr key={device.id}>
                 <td className="px-2 py-2">
-                  <select name={`cihaz_tipi_${device.id}`} value={device.cihaz_tipi} onChange={e => updateDevice(device.id, { cihaz_tipi: e.target.value })} className={inputCls()}>
+                  <select name={`cihaz_tipi_${device.id}`} value={device.cihaz_tipi} onChange={e => updateDevice(device.id, { cihaz_tipi: e.target.value, kapasite: capacityOptionsFor(e.target.value)[0] })} className={inputCls()}>
                     {['KKT Yangın Söndürme Cihazı', 'CO2 Yangın Söndürme Cihazı', 'Köpüklü Yangın Söndürme Cihazı', 'Arabalı KKT Yangın Söndürme Cihazı', 'Yangın Battaniyesi', 'Davlumbaz Söndürme Sistemi', 'Gazlı Söndürme Sistemi', 'Pano İçi Aerosol Söndürme Sistemi'].map(type => <option key={type}>{type}</option>)}
                   </select>
                 </td>
-                <td className="px-2 py-2"><input name={`kapasite_${device.id}`} value={device.kapasite} onChange={e => updateDevice(device.id, { kapasite: e.target.value })} placeholder="6 Kg, 5 Kg, 6 Lt..." className={inputCls()} /></td>
+                <td className="px-2 py-2">
+                  <select name={`kapasite_${device.id}`} value={device.kapasite} onChange={e => updateDevice(device.id, { kapasite: e.target.value })} className={inputCls()}>
+                    {capacityOptionsFor(device.cihaz_tipi).map(capacity => <option key={capacity}>{capacity}</option>)}
+                  </select>
+                </td>
                 <td className="px-2 py-2"><input name={`cihaz_adet_${device.id}`} type="number" min="0" value={device.adet} onChange={e => updateDevice(device.id, { adet: e.target.value ? Number(e.target.value) : '' })} className="w-24 rounded-md border px-3 py-2 text-sm dark:border-gray-600" /></td>
                 <td className="px-2 py-2">
                   <select name={`cihaz_durum_${device.id}`} value={device.durum} onChange={e => updateDevice(device.id, { durum: e.target.value })} className={inputCls()}>

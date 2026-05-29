@@ -1,5 +1,5 @@
 # GÖREV
 
-Teknik Hesap & Raporlar modülünde yangın alarm buton/siren hesabı, genel keşif yangın söndürme cihazı ihtiyaç hesabı ve mevcut cihaz tablo girişi tamamlandı.
+Genel Keşif ve İhtiyaç Listesi Raporunda PDF giriş verileri kompaktlaştırıldı, köpüklü cihaz iş kuralı güncellendi ve 6 Lt köpüklü yazdırma normalizasyonu tamamlandı.
 
 Tamamlanan kapsam GOREV.md içinden temizlendi.

@@ -11,17 +11,41 @@ function KV({ label, value }: { label: string; value: any }) {
   )
 }
 
-function CompactRows({ rows }: { rows: Array<{ label: string; value: string }> }) {
+function CompactReportInfoGrid({ rows }: { rows: Array<{ label: string; value: string }> }) {
   return (
-    <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
+    <div className="grid overflow-hidden rounded-md border text-[10px] md:grid-cols-4">
       {rows.map(row => (
-        <div key={row.label} className="grid grid-cols-[150px_1fr] border-b border-gray-200 py-1 text-sm">
-          <div className="font-medium text-gray-600">{row.label}</div>
-          <div className="text-gray-900">{row.value}</div>
+        <div key={row.label} className="grid grid-cols-[72px_1fr] gap-1 border-b border-r border-gray-200 px-1.5 py-1">
+          <div className="font-semibold text-gray-600">{shortLabel(row.label)}</div>
+          <div className="font-medium text-gray-900">{row.value}</div>
         </div>
       ))}
     </div>
   )
+}
+
+function shortLabel(label: string) {
+  const map: Record<string, string> = {
+    'Toplam Alan': 'Alan',
+    'Kat Sayısı': 'Kat',
+    'Oda Sayısı': 'Oda',
+    'Çalışan Sayısı': 'Çalışan',
+    'Ziyaretçi Yoğunluğu': 'Ziyaretçi',
+    'Elektrik Pano Odası': 'Pano Odası',
+    'Server Odası': 'Server',
+    'Üretim Alanı': 'Üretim',
+  }
+  return map[label] ?? label
+}
+
+function normalizeFoamName(value: string) {
+  return value.replace(/6\s*(Lt|LT|lt|Kg|KG|kg)/g, '12 Kg')
+}
+
+function normalizedMaterial(item: TechnicalReportRow['material_list'][number]) {
+  const urunAdi = normalizeFoamName(item.urun_adi)
+  const aciklama = normalizeFoamName(item.aciklama ?? '')
+  return { ...item, urun_adi: urunAdi, aciklama }
 }
 
 export default function TechnicalReportPrintView({ report }: { report: TechnicalReportRow }) {
@@ -51,11 +75,9 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
       </section>
 
       {compactInputRows.length > 0 && (
-        <section className="mt-4">
-          <h2 className="mb-2 text-sm font-bold">Giriş Verileri</h2>
-          <div className="rounded-lg border p-3">
-            <CompactRows rows={compactInputRows} />
-          </div>
+        <section className="mt-3">
+          <h2 className="mb-1 text-sm font-bold">Giriş Verileri</h2>
+          <CompactReportInfoGrid rows={compactInputRows} />
         </section>
       )}
 
@@ -74,11 +96,11 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
       )}
 
       {Array.isArray(result.oneriler) && (
-        <section className="mt-4">
-          <h2 className="mb-2 text-sm font-bold">Eksik / Önerilen Sistemler</h2>
-          <table className="w-full text-sm">
+        <section className="mt-3">
+          <h2 className="mb-1 text-sm font-bold">Eksik / Önerilen Sistemler</h2>
+          <table className="w-full text-xs">
             <thead><tr><th>Öneri</th><th>Öncelik</th><th>Açıklama</th></tr></thead>
-            <tbody>{result.oneriler.map((row: any, i: number) => <tr key={i}><td>{row.baslik}</td><td>{row.oncelik}</td><td>{row.aciklama}</td></tr>)}</tbody>
+            <tbody>{result.oneriler.map((row: any, i: number) => <tr key={i}><td>{normalizeFoamName(row.baslik ?? '')}</td><td>{row.oncelik}</td><td>{normalizeFoamName(row.aciklama ?? '')}</td></tr>)}</tbody>
           </table>
         </section>
       )}
@@ -94,14 +116,15 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
         </section>
       )}
 
-      <section className="mt-4">
-        <h2 className="mb-2 text-sm font-bold">Teklife Aktarılabilir İhtiyaç Listesi</h2>
-        <table className="w-full text-sm">
+      <section className="mt-3">
+        <h2 className="mb-1 text-sm font-bold">Teklife Aktarılabilir İhtiyaç Listesi</h2>
+        <table className="w-full text-xs">
           <thead><tr><th>Ürün Adı</th><th>Kategori</th><th>Miktar</th><th>Birim</th><th>Açıklama</th></tr></thead>
           <tbody>
-            {(report.material_list ?? []).map(item => (
-              <tr key={item.id}><td>{item.urun_adi}</td><td>{item.kategori}</td><td>{item.miktar}</td><td>{item.birim}</td><td>{item.aciklama}</td></tr>
-            ))}
+            {(report.material_list ?? []).map(item => {
+              const normalized = normalizedMaterial(item)
+              return <tr key={item.id}><td>{normalized.urun_adi}</td><td>{normalized.kategori}</td><td>{normalized.miktar}</td><td>{normalized.birim}</td><td>{normalized.aciklama}</td></tr>
+            })}
           </tbody>
         </table>
       </section>

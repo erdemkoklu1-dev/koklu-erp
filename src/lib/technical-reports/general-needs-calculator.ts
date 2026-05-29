@@ -59,7 +59,7 @@ function matchesProduct(device: ExistingDeviceInput, productName: string) {
   const product = normalizeProduct(productName)
   if (product.includes('kkt')) return haystack.includes('kkt') && (product.includes('6 kg') ? haystack.includes('6') : product.includes('12 kg') ? haystack.includes('12') : true)
   if (product.includes('co2')) return haystack.includes('co2') && (product.includes('5 kg') ? haystack.includes('5') : true)
-  if (product.includes('kopuk')) return haystack.includes('kopuk') || haystack.includes('foam')
+  if (product.includes('kopuk')) return (haystack.includes('kopuk') || haystack.includes('foam')) && (product.includes('12 kg') ? haystack.includes('12') : true)
   if (product.includes('battaniye')) return haystack.includes('battaniye')
   if (product.includes('davlumbaz')) return haystack.includes('davlumbaz')
   if (product.includes('gazli')) return haystack.includes('gazli') || haystack.includes('fm') || haystack.includes('novec')
@@ -91,7 +91,7 @@ function addNeed(
   suggestions.push({
     baslik: productName,
     oncelik: priority,
-    aciklama: `${reason} Geçerli mevcut cihaz düşüldükten sonra önerilen eksik adet: ${missing}.`,
+    aciklama: `${reason}. Eksik: ${missing} ${unit}.`,
   })
   materials.push(materialItem('genel_ihtiyac_raporu', productName, category, missing, unit, reason))
 }
@@ -113,44 +113,45 @@ export function calculateGeneralNeeds(input: GeneralNeedsInput, settings: Techni
     addNeed(materials, suggestions, existingDevices, '6 Kg KKT Yangın Söndürme Cihazı', 'Taşınabilir Söndürme', 1, 'Önemli', 'Depo alanı için ilave KKT cihazı')
   }
   if (input.uretim_alani_var) {
-    addNeed(materials, suggestions, existingDevices, '6 Kg KKT Yangın Söndürme Cihazı', 'Taşınabilir Söndürme', Math.max(2, Math.ceil(area / 500)), 'Önemli', 'Üretim alanı için ilave KKT cihazları')
-    if (area >= 750) addNeed(materials, suggestions, existingDevices, '50 Kg KKT Arabalı Yangın Söndürme Cihazı', 'Arabalı Söndürme', 1, 'Önerilir', 'Geniş üretim/saha alanı için arabalı cihaz önerisi')
+    addNeed(materials, suggestions, existingDevices, '6 Kg KKT Yangın Söndürme Cihazı', 'Taşınabilir Söndürme', Math.max(2, Math.ceil(area / 500)), 'Önemli', 'Üretim alanı ilave KKT')
+    addNeed(materials, suggestions, existingDevices, '12 Kg Köpüklü Yangın Söndürme Cihazı', 'Taşınabilir Söndürme', 1, 'Önerilir', 'Üretim/sıvı riskleri için köpüklü cihaz')
+    if (area >= 750) addNeed(materials, suggestions, existingDevices, '50 Kg KKT Arabalı Yangın Söndürme Cihazı', 'Arabalı Söndürme', 1, 'Önerilir', 'Geniş saha için arabalı cihaz')
   }
   if (input.mutfak_var) {
-    addNeed(materials, suggestions, existingDevices, '6 Lt Köpüklü Yangın Söndürme Cihazı', 'Taşınabilir Söndürme', 1, 'Önemli', 'Mutfak ve sıvı kaynaklı riskler için köpüklü cihaz')
-    addNeed(materials, suggestions, existingDevices, 'Yangın Battaniyesi', 'Mutfak Güvenliği', 1, 'Önemli', 'Mutfak ilk müdahale ihtiyacı')
-    addNeed(materials, suggestions, existingDevices, 'Davlumbaz Söndürme Sistemi', 'Özel Sistem', systems.davlumbaz_sondurme ? 0 : 1, 'Kritik', 'Davlumbaz hattı için otomatik söndürme değerlendirmesi', 'set')
+    addNeed(materials, suggestions, existingDevices, '5 Kg CO2 Yangın Söndürme Cihazı', 'Elektrik Yangınları', 1, 'Önemli', 'Mutfak ilk müdahale CO2')
+    addNeed(materials, suggestions, existingDevices, 'Yangın Battaniyesi', 'Mutfak Güvenliği', 1, 'Önemli', 'Mutfak ilk müdahale')
+    addNeed(materials, suggestions, existingDevices, 'Davlumbaz Söndürme Sistemi Keşif Kalemi', 'Özel Sistem', systems.davlumbaz_sondurme ? 0 : 1, 'Kritik', 'Davlumbaz hattı keşfi', 'set')
   }
   if (input.elektrik_pano_odasi_var) {
-    addNeed(materials, suggestions, existingDevices, '5 Kg CO2 Yangın Söndürme Cihazı', 'Elektrik Yangınları', 1, 'Kritik', 'Elektrik pano odası için CO2 cihazı')
-    addNeed(materials, suggestions, existingDevices, 'Pano İçi Aerosol Söndürme Sistemi', 'Özel Sistem', systems.pano_sondurme ? 0 : 1, 'Önerilir', 'Elektrik panosu lokal söndürme önerisi', 'set')
+    addNeed(materials, suggestions, existingDevices, '5 Kg CO2 Yangın Söndürme Cihazı', 'Elektrik Yangınları', 1, 'Kritik', 'Pano odası CO2')
+    addNeed(materials, suggestions, existingDevices, 'Pano İçi Aerosol Söndürme Sistemi', 'Özel Sistem', systems.pano_sondurme ? 0 : 1, 'Önerilir', 'Pano içi lokal söndürme', 'set')
   }
   if (input.server_odasi_var) {
-    addNeed(materials, suggestions, existingDevices, '5 Kg CO2 Yangın Söndürme Cihazı', 'Elektrik Yangınları', 1, 'Kritik', 'Server odası için CO2 cihazı')
-    addNeed(materials, suggestions, existingDevices, 'Gazlı Söndürme Sistemi Keşif Kalemi', 'Gazlı Söndürme', systems.gazli_sondurme ? 0 : 1, 'Önemli', 'Server odası için gazlı söndürme ve oda sızdırmazlık değerlendirmesi', 'set')
+    addNeed(materials, suggestions, existingDevices, '5 Kg CO2 Yangın Söndürme Cihazı', 'Elektrik Yangınları', 1, 'Kritik', 'Server odası CO2')
+    addNeed(materials, suggestions, existingDevices, 'Gazlı Söndürme Sistemi Keşif Kalemi', 'Gazlı Söndürme', systems.gazli_sondurme ? 0 : 1, 'Önemli', 'Server odası gazlı sistem keşfi', 'set')
   }
   if (input.otopark_var) {
-    addNeed(materials, suggestions, existingDevices, '6 Kg KKT Yangın Söndürme Cihazı', 'Taşınabilir Söndürme', Math.max(2, Math.ceil(area / 600)), 'Önemli', 'Otopark alanı için ilave KKT cihazları')
+    addNeed(materials, suggestions, existingDevices, '6 Kg KKT Yangın Söndürme Cihazı', 'Taşınabilir Söndürme', Math.max(2, Math.ceil(area / 600)), 'Önemli', 'Otopark ilave KKT')
   }
 
   if (!systems.yangin_alarm) {
-    suggestions.push({ baslik: 'Yangın alarm sistemi ihtiyacı', oncelik: 'Kritik', aciklama: 'Bina kullanımına göre alarm algılama sistemi keşfi önerilir.' })
+    suggestions.push({ baslik: 'Yangın alarm sistemi ihtiyacı', oncelik: 'Kritik', aciklama: 'Alarm sistemi keşfi önerilir.' })
     materials.push(materialItem('genel_ihtiyac_raporu', 'Yangın Alarm Sistemi Keşif Kalemi', 'Alarm', 1, 'set'))
   }
   if (!systems.yangin_dolabi && area > 500) {
-    suggestions.push({ baslik: 'Yangın dolabı ihtiyacı', oncelik: 'Önemli', aciklama: 'Kat ve risk durumuna göre yangın dolabı değerlendirilmelidir.' })
+    suggestions.push({ baslik: 'Yangın dolabı ihtiyacı', oncelik: 'Önemli', aciklama: 'Kat/risk durumuna göre değerlendirilmelidir.' })
     materials.push(materialItem('genel_ihtiyac_raporu', 'Yangın Dolabı', 'Sulu Söndürme', floors))
   }
   if (!systems.acil_aydinlatma) {
-    suggestions.push({ baslik: 'Acil aydınlatma ihtiyacı', oncelik: 'Önemli', aciklama: 'Kaçış yolları ve ortak alanlarda acil aydınlatma önerilir.' })
+    suggestions.push({ baslik: 'Acil aydınlatma ihtiyacı', oncelik: 'Önemli', aciklama: 'Kaçış yolları için önerilir.' })
     materials.push(materialItem('genel_ihtiyac_raporu', 'Acil Aydınlatma Armatürü', 'Acil Aydınlatma', Math.max(floors, Math.ceil(area / 200))))
   }
   if (!systems.yonlendirme_levhasi) {
-    suggestions.push({ baslik: 'Yönlendirme levhası ihtiyacı', oncelik: 'Önemli', aciklama: 'Çıkış ve kaçış yönlendirmeleri gözden geçirilmelidir.' })
+    suggestions.push({ baslik: 'Yönlendirme levhası ihtiyacı', oncelik: 'Önemli', aciklama: 'Çıkış yönlendirmeleri tamamlanmalı.' })
     materials.push(materialItem('genel_ihtiyac_raporu', 'Acil Çıkış Yönlendirme Levhası', 'Levha', Math.max(floors * 2, 2)))
   }
   if (!systems.periyodik_bakim) {
-    suggestions.push({ baslik: 'Periyodik bakım ihtiyacı', oncelik: 'Önemli', aciklama: 'Mevcut sistemlerin periyodik bakım planına alınması önerilir. Bakım gereken veya tarihi geçmiş cihazlar ihtiyaçtan düşülmedi.' })
+    suggestions.push({ baslik: 'Periyodik bakım ihtiyacı', oncelik: 'Önemli', aciklama: 'Bakım gereken/geçmiş cihazlar ihtiyaçtan düşülmedi.' })
   }
 
   return {
