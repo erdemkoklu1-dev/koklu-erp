@@ -3,9 +3,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { SORT_OPTIONS, PERIOD_OPTIONS } from '../_components/FaturaFiltrePaneli'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
-import { createClient } from '@/lib/supabase/client'
 
-function GelenFiltrePaneli() {
+type Props = {
+  subeler: { id: string; ad: string }[]
+  lockedSubeId?: string | null
+}
+
+function GelenFiltrePaneli({ subeler, lockedSubeId = null }: Props) {
   const sp = useSearchParams()
   const router = useRouter()
 
@@ -18,13 +22,7 @@ function GelenFiltrePaneli() {
   const [vade, setVade]         = useState(sp.get('vade_durumu') ?? 'tumu')
   const [kategori, setKategori] = useState(sp.get('kategori') ?? 'tumu')
   const [sehir, setSehir]       = useState(sp.get('sehir') ?? '')
-  const [sube, setSube]         = useState(sp.get('sube') ?? '')
-  const [subeler, setSubeler]   = useState<{ id: string; ad: string }[]>([])
-
-  useEffect(() => {
-    createClient().from('subeler').select('id, ad').order('ad')
-      .then(({ data }: { data: { id: string; ad: string }[] | null }) => setSubeler(data ?? []))
-  }, [])
+  const [sube, setSube]         = useState(lockedSubeId ?? sp.get('sube') ?? '')
 
   // State refs for debounce effect to read latest values
   const stateRef = useRef({ q, period, from, to, sort, odeme, vade, kategori, sehir, sube })
@@ -42,8 +40,8 @@ function GelenFiltrePaneli() {
     setVade(sp.get('vade_durumu') ?? 'tumu')
     setKategori(sp.get('kategori') ?? 'tumu')
     setSehir(sp.get('sehir') ?? '')
-    setSube(sp.get('sube') ?? '')
-  }, [sp])
+    setSube(lockedSubeId ?? sp.get('sube') ?? '')
+  }, [sp, lockedSubeId])
 
   // Auto-trigger search on q change (min 2 chars or cleared)
   const isFirstRender = useRef(true)
@@ -62,7 +60,7 @@ function GelenFiltrePaneli() {
       if (s.vade !== 'tumu')             p.set('vade_durumu', s.vade)
       if (s.kategori !== 'tumu')         p.set('kategori', s.kategori)
       if (s.sehir)                       p.set('sehir', s.sehir)
-      if (s.sube)                        p.set('sube', s.sube)
+      if (lockedSubeId || s.sube)        p.set('sube', lockedSubeId ?? s.sube)
       router.push(`/cari-hesap/gelen-faturalar?${p.toString()}`)
     }, 600)
     return () => clearTimeout(timer)
@@ -80,7 +78,7 @@ function GelenFiltrePaneli() {
     if (vade !== 'tumu')           p.set('vade_durumu', vade)
     if (kategori !== 'tumu')       p.set('kategori', kategori)
     if (sehir)                     p.set('sehir', sehir)
-    if (sube)                      p.set('sube', sube)
+    if (lockedSubeId || sube)      p.set('sube', lockedSubeId ?? sube)
     router.push(`/cari-hesap/gelen-faturalar?${p.toString()}`)
   }
 
@@ -144,7 +142,7 @@ function GelenFiltrePaneli() {
         </div>
         <div>
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Şube</label>
-          <select value={sube} onChange={e => setSube(e.target.value)} className={`${inputCls} min-w-40`}>
+          <select value={sube} onChange={e => setSube(e.target.value)} disabled={!!lockedSubeId} className={`${inputCls} min-w-40 disabled:bg-gray-100`}>
             <option value="">Tüm Şubeler</option>
             {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
           </select>
@@ -191,10 +189,10 @@ function GelenFiltrePaneli() {
   )
 }
 
-export default function GelenFiltresi() {
+export default function GelenFiltresi(props: Props) {
   return (
     <Suspense fallback={<div className="bg-white dark:bg-gray-800 border rounded-xl p-4 h-24" />}>
-      <GelenFiltrePaneli />
+      <GelenFiltrePaneli {...props} />
     </Suspense>
   )
 }

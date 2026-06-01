@@ -33,6 +33,7 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
   const [yeniRenk, setYeniRenk] = useState('#607D8B')
   const [kaydediliyor, setKaydediliyor] = useState(false)
   const [hata, setHata] = useState('')
+  const [kayitMesaji, setKayitMesaji] = useState('')
 
   const seciliRol = roller.find(r => r.id === seciliRolId)
   const isAdmin = seciliRol?.ad === 'Admin' || seciliRol?.ad === 'Super Admin'
@@ -56,6 +57,9 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
       yeni[alan] = !yeni[alan]
     }
 
+    const oncekiIzinMap = izinMap
+    setHata('')
+    setKayitMesaji('')
     setIzinMap(prev => ({
       ...prev,
       [rolId]: {
@@ -64,17 +68,27 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
       },
     }))
 
-    if (mevcut?.id) {
-      await supabase.from('modul_izinleri').update(yeni).eq('id', mevcut.id)
-    } else {
-      const { data } = await supabase.from('modul_izinleri').insert({ rol_id: rolId, modul_adi: modul, ...yeni }).select().single()
-      if (data) {
-        setIzinMap(prev => ({
-          ...prev,
-          [rolId]: { ...prev[rolId], [modul]: data as Izin },
-        }))
-      }
+    const res = await fetch('/api/yonetim/role-permissions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rol_id: rolId, modul_adi: modul, ...yeni }),
+    })
+    const data = await res.json()
+
+    if (!res.ok) {
+      setIzinMap(oncekiIzinMap)
+      setHata(data.error ?? 'Yetki kaydedilemedi')
+      return
     }
+
+    setIzinMap(prev => ({
+      ...prev,
+      [rolId]: { ...prev[rolId], [modul]: data as Izin },
+    }))
+    try {
+      sessionStorage.removeItem('koklu_sidebar_perms_v2')
+    } catch {}
+    setKayitMesaji('Yetki kaydedildi.')
   }
 
   async function handleYeniRol() {
@@ -123,6 +137,8 @@ export default function RollerClient({ roller: initialRoller, izinler: initialIz
             <div className="flex items-center gap-3 border-b px-5 py-3">
               <span className="h-4 w-4 rounded-full" style={{ backgroundColor: seciliRol.renk }} />
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">{seciliRol.ad}</h3>
+              {hata && <span className="ml-auto rounded bg-red-50 px-2 py-1 text-xs font-medium text-red-700">{hata}</span>}
+              {kayitMesaji && !hata && <span className="ml-auto rounded bg-green-50 px-2 py-1 text-xs font-medium text-green-700">{kayitMesaji}</span>}
               {isAdmin && <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-400 dark:bg-gray-700">Değiştirilemez</span>}
             </div>
             <table className="w-full">

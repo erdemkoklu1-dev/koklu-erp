@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { matchExistingSupplier } from '@/lib/gelen-fatura-supplier-matching'
 import { isOwnCompanySupplierName } from '@/lib/gelen-fatura-parser-v2/supplierClassifier'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { EMPTY_BRANCH_ID, resolveBranchFilter } from '@/lib/auth/branch-scope'
 
 export type GelenPdfItem = {
   urun_adi: string
@@ -46,6 +48,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const access = await getCurrentAccess()
+
+    function incomingBranchId(requested?: string | null) {
+      const branchId = resolveBranchFilter(access, requested)
+      if (branchId === EMPTY_BRANCH_ID) throw new Error('Gelen fatura için yetkili şube bulunamadı')
+      if (!access?.isAdmin && !branchId) throw new Error('Gelen fatura için şube seçimi zorunlu')
+      return branchId
+    }
 
     // Mevcut alis fatura numaraları
     const { data: existingInvoices } = await supabase
@@ -154,7 +164,7 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    `PDF Gelen Fatura${row.senaryo ? `: ${row.senaryo}` : ''}`,
             notes:          notesParts.join(' | ') || null,
-            sube_id:        row.sube_id || null,
+            sube_id:        incomingBranchId(row.sube_id),
           })
           .select('id')
           .single()

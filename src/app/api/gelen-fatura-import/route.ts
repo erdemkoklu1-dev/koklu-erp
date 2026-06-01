@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { EMPTY_BRANCH_ID, resolveBranchFilter } from '@/lib/auth/branch-scope'
 
 export type GelenImportRow = {
   alici_adi: string
@@ -9,6 +11,7 @@ export type GelenImportRow = {
   senaryo: string         // TICARIFATURA | TEMELFATURA
   durum: string
   tutar: number
+  sube_id?: string | null
 }
 
 function normalizeSupplierName(name: string): string {
@@ -42,6 +45,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const access = await getCurrentAccess()
+
+    function incomingBranchId(requested?: string | null) {
+      const branchId = resolveBranchFilter(access, requested)
+      if (branchId === EMPTY_BRANCH_ID) throw new Error('Gelen fatura için yetkili şube bulunamadı')
+      if (!access?.isAdmin && !branchId) throw new Error('Gelen fatura için şube seçimi zorunlu')
+      return branchId
+    }
 
     const [{ data: existingInvoices }, { data: existingSuppliers }] = await Promise.all([
       supabase.from('invoices').select('invoice_number').eq('invoice_type', 'alis'),
@@ -97,6 +108,7 @@ export async function POST(req: NextRequest) {
             status,
             description:    `e-Fatura Gelen: ${row.senaryo}`,
             notes,
+            sube_id:        incomingBranchId(row.sube_id),
           })
           .select('id')
           .single()

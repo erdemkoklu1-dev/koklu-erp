@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
-import { moduleKeysWithAliases, type AppModuleKey } from './modules'
+import { APP_MODULES, moduleKeysWithAliases, type AppModuleKey } from './modules'
 import { redirect } from 'next/navigation'
 
 export type PermissionLevel = 'okuma' | 'yazma' | 'silme'
@@ -9,6 +9,7 @@ export type CurrentAccess = {
   userId: string
   email: string
   role: string | null
+  roleId: string | null
   isAdmin: boolean
   branchIds: string[]
   singleBranchId: string | null
@@ -47,6 +48,7 @@ export async function getCurrentAccess(): Promise<CurrentAccess | null> {
     userId: user.id,
     email: user.email ?? '',
     role,
+    roleId: profil?.rol_id ?? null,
     isAdmin,
     branchIds,
     singleBranchId: !isAdmin && branchIds.length === 1 ? branchIds[0] : null,
@@ -64,11 +66,35 @@ export async function hasModulePermission(module: AppModuleKey | string, level: 
     .from('modul_izinleri')
     .select(level)
     .in('modul_adi', keys)
-    .eq('rol_id', (await getProfileRoleId(access.userId)) ?? '')
+    .eq('rol_id', access.roleId ?? '')
     .eq(level, true)
     .limit(1)
 
   return (data?.length ?? 0) > 0
+}
+
+export async function getModulePermissionMap(access: CurrentAccess | null, level: PermissionLevel = 'okuma') {
+  const keys = new Set(APP_MODULES.flatMap(module => moduleKeysWithAliases(module.key)))
+  if (!access) return new Map<string, boolean>()
+  if (access.isAdmin) return new Map(Array.from(keys).map(key => [key, true]))
+  if (!access.roleId) return new Map<string, boolean>()
+
+  const svc = createServiceClient()
+  const { data } = await svc
+    .from('modul_izinleri')
+    .select(`modul_adi, ${level}`)
+    .eq('rol_id', access.roleId)
+    .eq(level, true)
+
+  const map = new Map<string, boolean>()
+  for (const row of data ?? []) {
+    if (keys.has(row.modul_adi)) map.set(row.modul_adi, true)
+  }
+  return map
+}
+
+export function canReadModule(permissionMap: Map<string, boolean>, module: AppModuleKey | string) {
+  return moduleKeysWithAliases(module).some(key => permissionMap.get(key) === true)
 }
 
 async function getProfileRoleId(userId: string) {

@@ -1681,13 +1681,34 @@ function GelenPdfFaturaImport() {
   const [totalPdfCount, setTotalPdfCount] = useState(0)
 
   useEffect(() => {
-    supabase.from('subeler').select('id, ad').order('ad').then(({ data }: { data: any; error: any }) => {
-      if (data) {
-        setSubeler(data as Sube[])
-        const erzincan = (data as Sube[]).find(s => s.ad === 'Erzincan Merkez')
-        if (erzincan) setGlobalSubeId(erzincan.id)
-      }
-    })
+    async function loadBranches() {
+      const { data: { user } } = await supabase.auth.getUser()
+      const [{ data: allBranches }, { data: profile }, { data: branchPermissions }] = await Promise.all([
+        supabase.from('subeler').select('id, ad').order('ad'),
+        user
+          ? supabase.from('kullanici_profiller').select('sube_id, roller(ad)').eq('id', user.id).single()
+          : Promise.resolve({ data: null }),
+        user
+          ? supabase.from('kullanici_sube_yetkileri').select('sube_id').eq('kullanici_id', user.id)
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const roleName = (profile?.roller as { ad?: string } | null)?.ad ?? null
+      const isAdmin = roleName === 'Admin' || roleName === 'Super Admin' || roleName === 'Genel Admin'
+      const branchPermissionRows = (branchPermissions ?? []) as { sube_id: string | null }[]
+      const allowedIds = Array.from(new Set([
+        ...(branchPermissionRows.map(row => row.sube_id).filter(Boolean) as string[]),
+        ...(profile?.sube_id ? [profile.sube_id as string] : []),
+      ]))
+      const visible = isAdmin
+        ? ((allBranches ?? []) as Sube[])
+        : ((allBranches ?? []) as Sube[]).filter(branch => allowedIds.includes(branch.id))
+
+      setSubeler(visible)
+      setGlobalSubeId(visible.length === 1 ? visible[0].id : null)
+    }
+
+    loadBranches()
   }, [])
 
   async function handleFile(file: File) {

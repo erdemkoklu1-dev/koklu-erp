@@ -4,6 +4,8 @@ import { formatCurrency } from '@/lib/finance/formatters'
 import GelenFaturaTable from './GelenFaturaTable'
 import GelenFiltresi from './GelenFiltresi'
 import PrintButton from '@/components/PrintButton'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
 
 function computeDateRange(period?: string, from?: string, to?: string) {
   const today = new Date()
@@ -38,6 +40,7 @@ export default async function GelenFaturalarPage({
 }) {
   const params = await searchParams
   const supabase = createServiceClient()
+  const access = await getCurrentAccess()
   const today = new Date().toISOString().split('T')[0]
   const in7 = new Date(); in7.setDate(in7.getDate() + 7)
   const in7Str = in7.toISOString().split('T')[0]
@@ -48,6 +51,13 @@ export default async function GelenFaturalarPage({
     : params.sort === 'amount_desc' || params.sort === 'amount_asc' ? 'total_amount'
     : 'invoice_date'
   const dbAsc = params.sort === 'date_asc' || params.sort === 'amount_asc'
+  const { data: branchRows } = await supabase
+    .from('subeler')
+    .select('id, ad')
+    .eq('aktif', true)
+    .order('ad')
+  const visibleBranches = filterVisibleBranches((branchRows ?? []) as { id: string; ad: string }[], access)
+  const lockedBranchId = getLockedBranchId(access)
 
   // İl filtresi: önce bu ildeki tedarikçilerin firma adlarını bul
   let supplierFilter: string[] | null = null
@@ -92,7 +102,7 @@ export default async function GelenFaturalarPage({
     if (supplierFilter !== null && supplierFilter.length > 0) {
       query = query.in('supplier_name', supplierFilter)
     }
-    if (params.sube) query = query.eq('sube_id', params.sube)
+    query = applyBranchScope(query, access, params.sube)
 
     const { data } = await query
     invoices = data ?? []
@@ -167,7 +177,7 @@ export default async function GelenFaturalarPage({
       </div>
 
       {/* Filtreler */}
-      <GelenFiltresi />
+      <GelenFiltresi subeler={visibleBranches} lockedSubeId={lockedBranchId} />
 
       {/* Sonuç sayısı */}
       <div className="text-sm text-gray-500 dark:text-gray-400 px-1">
