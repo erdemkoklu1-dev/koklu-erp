@@ -5,6 +5,7 @@ export type TechnicalReportType =
   | 'genel_ihtiyac_raporu'
   | 'oda_sizdirmazlik_testi'
   | 'yangin_dolabi_hidrant_pompa'
+  | 'sulu_sistem_hidrolik_hesap'
 
 export type TechnicalReportStatus =
   | 'Taslak'

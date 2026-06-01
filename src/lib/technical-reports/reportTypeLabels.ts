@@ -21,6 +21,11 @@ export const technicalReportTypeLabels = {
     subtitle: 'Sulu yangın söndürme sistemi ön keşif, debi, basınç ve ihtiyaç listesi raporu',
     prefix: 'YSP',
   },
+  sulu_sistem_hidrolik_hesap: {
+    title: 'Sulu Sistem Hidrolik Hesap ve Ön Keşif Raporu',
+    subtitle: 'Yangın dolabı, hidrant, sprinkler, pompa, boru çapı ve yangın su deposu ön hesabı',
+    prefix: 'SSH',
+  },
 } satisfies Record<TechnicalReportType, { title: string; subtitle: string; prefix: string }>
 
 export function getTechnicalReportTypeLabel(type: TechnicalReportType) {

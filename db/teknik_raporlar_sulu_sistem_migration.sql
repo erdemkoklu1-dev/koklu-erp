@@ -7,7 +7,8 @@ alter table public.teknik_raporlar add constraint teknik_raporlar_rapor_turu_che
   'yangin_alarm_ihtiyac',
   'genel_ihtiyac_raporu',
   'oda_sizdirmazlik_testi',
-  'yangin_dolabi_hidrant_pompa'
+  'yangin_dolabi_hidrant_pompa',
+  'sulu_sistem_hidrolik_hesap'
 ));
 
 alter table public.teknik_hesap_ayarlari add column if not exists value_type text default 'text';
@@ -36,6 +37,17 @@ insert into public.teknik_hesap_ayarlari (ayar_grubu, ayar_adi, ayar_degeri, bir
 ('yangin_sulu_sistem', 'hidrant_hat_hiz_limit', '4', 'm/s', 'Hidrant ana hattı için varsayılan maksimum su hızı', 'number', 170),
 ('yangin_sulu_sistem', 'hazen_williams_c_degeri', '120', 'C', 'Çelik boru için varsayılan Hazen-Williams C değeri', 'number', 180),
 ('yangin_sulu_sistem', 'yangin_suyu_suresi', '60', 'dk', 'Ön keşif için varsayılan yangın suyu süresi', 'number', 190)
+on conflict (ayar_grubu, ayar_adi) do nothing;
+
+insert into public.teknik_hesap_ayarlari (ayar_grubu, ayar_adi, ayar_degeri, birim, aciklama, value_type, sort_order) values
+('yangin_hidrolik', 'sprinkler_varsayilan_k_faktoru', '80', 'K', 'Sprinkler varsayılan K faktörü metrik', 'number', 10),
+('yangin_hidrolik', 'sprinkler_min_akma_basinci', '0.56', 'bar', 'Sprinkler minimum akma basıncı', 'number', 20),
+('yangin_hidrolik', 'duvar_tipi_sprinkler_min_basinci', '1', 'bar', 'Duvar tipi sprinkler için minimum basınç', 'number', 30),
+('yangin_hidrolik', 'sprinkler_koruma_alani', '12', 'm²', 'Bir sprinkler için varsayılan koruma alanı', 'number', 40),
+('yangin_hidrolik', 'sprinkler_mudahale_suresi', '60', 'dk', 'Sprinkler sistemi yangın suyu süresi', 'number', 50),
+('yangin_hidrolik', 'su_deposu_emniyet_katsayisi', '1.1', 'katsayı', 'Yangın su deposu için emniyet katsayısı', 'number', 60),
+('yangin_hidrolik', 'varsayilan_hazen_williams_c', '120', 'C', 'Siyah çelik boru için varsayılan C katsayısı', 'number', 70),
+('yangin_hidrolik', 'hidrostatik_basinc_katsayisi', '0.098', 'bar/m', 'Yükseklik kaynaklı basınç kaybı katsayısı', 'number', 80)
 on conflict (ayar_grubu, ayar_adi) do nothing;
 
 drop policy if exists "teknik_hesap_ayarlari_auth_all" on public.teknik_hesap_ayarlari;

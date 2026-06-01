@@ -137,6 +137,69 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
         </section>
       )}
 
+      {report.rapor_turu === 'sulu_sistem_hidrolik_hesap' && (
+        <section className="mt-4">
+          <h2 className="mb-2 text-sm font-bold">Sulu Sistem Hidrolik Hesap Sonuçları</h2>
+          <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-3">
+            <KV label="Tasarım Debisi" value={`${result.designFlowLpm ?? 0} l/dak / ${result.designFlowM3h ?? 0} m³/h`} />
+            <KV label="Pompa Basıncı" value={`${result.pump?.requiredPressureBar ?? 0} bar / ${result.pump?.requiredPressureMSS ?? 0} mSS`} />
+            <KV label="Pompa Gücü" value={`${result.pump?.selectedMotorPowerKw ?? 0} kW`} />
+            <KV label="Yangın Suyu" value={`${result.waterTank?.requiredVolumeWithSafetyM3 ?? 0} m³ / ${result.waterTank?.requiredVolumeWithSafetyTon ?? 0} ton`} />
+            <KV label="Ana Boru" value={result.pipeSummary?.segments?.[0]?.selectedDN ?? '-'} />
+            <KV label="Toplam Metraj" value={`${result.pipeSummary?.totalPipeLengthM ?? 0} m`} />
+          </div>
+          {result.sprinkler && (
+            <section className="mt-3">
+              <h3 className="mb-1 text-xs font-bold">Sprinkler Hesabı</h3>
+              <table className="w-full text-[10px]">
+                <tbody>
+                  <tr><th>Tasarım Alanı</th><td>{result.sprinkler.designAreaM2 ?? 0} m²</td><th>Koruma Alanı</th><td>{result.sprinkler.sprinklerCoverageAreaM2 ?? 0} m²/adet</td></tr>
+                  <tr><th>Sprinkler Adedi</th><td>{result.sprinkler.selectedSprinklerCount ?? 0} adet</td><th>K Faktörü</th><td>K{result.sprinkler.kFactorMetric ?? 0}</td></tr>
+                  <tr><th>Sprinkler Debisi</th><td>{result.sprinkler.requiredFlowLpm ?? 0} l/dak</td><th>Akma Basıncı</th><td>{result.sprinkler.selectedPressureBar ?? 0} bar</td></tr>
+                  <tr><th>Sprinkler Başına Debi</th><td>{result.sprinkler.flowPerSprinklerLpm ?? 0} l/dak</td><th>Müdahale Süresi</th><td>{result.sprinkler.interventionDurationMin ?? 0} dk</td></tr>
+                </tbody>
+              </table>
+            </section>
+          )}
+          {result.waterTank && (
+            <section className="mt-3">
+              <h3 className="mb-1 text-xs font-bold">Yangın Su Deposu m³ / Ton Hesabı</h3>
+              <table className="w-full text-[10px]">
+                <tbody>
+                  <tr><th>Depo Süresi</th><td>{result.waterTank.durationMin ?? 0} dk</td><th>Tasarım Debisi</th><td>{result.waterTank.designFlowLpm ?? 0} l/dak</td></tr>
+                  <tr><th>Net Hacim</th><td>{result.waterTank.requiredVolumeM3 ?? 0} m³</td><th>Net Ton</th><td>{result.waterTank.requiredVolumeTon ?? 0} ton</td></tr>
+                  <tr><th>Emniyetli Hacim</th><td>{result.waterTank.requiredVolumeWithSafetyM3 ?? 0} m³</td><th>Emniyetli Ton</th><td>{result.waterTank.requiredVolumeWithSafetyTon ?? 0} ton</td></tr>
+                  <tr><th>Mevcut Hacim</th><td>{result.waterTank.existingVolumeM3 ?? 0} m³ / {result.waterTank.existingVolumeTon ?? 0} ton</td><th>Eksik Hacim</th><td>{result.waterTank.missingVolumeM3 ?? 0} m³ / {result.waterTank.missingVolumeTon ?? 0} ton</td></tr>
+                </tbody>
+              </table>
+            </section>
+          )}
+          {result.sketchPlan?.svg && (
+            <div className="mt-3 rounded-md border p-2">
+              <div dangerouslySetInnerHTML={{ __html: result.sketchPlan.svg }} />
+              <p className="mt-1 text-xs text-gray-600">{result.sketchPlan.summary}</p>
+            </div>
+          )}
+          {Array.isArray(result.pipeSummary?.segments) && result.pipeSummary.segments.length > 0 && (
+            <>
+              <h3 className="mt-3 text-xs font-bold">Hidrolik Hat Bilgileri</h3>
+              <table className="w-full text-[10px]">
+                <thead><tr><th>No</th><th>Hat</th><th>Debi</th><th>DN</th><th>İç Çap</th><th>Hız</th><th>Uzunluk</th><th>Eşdeğer</th></tr></thead>
+                <tbody>{result.pipeSummary.segments.map((s: any, i: number) => <tr key={s.id}><td>{i + 1}</td><td>{s.label}</td><td>{s.flowLpm}</td><td>{s.selectedDN}</td><td>{s.innerDiameterMm}</td><td>{s.velocityMs}</td><td>{s.lengthM}</td><td>{s.totalEquivalentLengthM}</td></tr>)}</tbody>
+              </table>
+              <h3 className="mt-3 text-xs font-bold">Basınç Kayıpları</h3>
+              <table className="w-full text-[10px]">
+                <thead><tr><th>No</th><th>Sürtünme bar/m</th><th>Boru Kaybı</th><th>Yükseklik</th><th>Önceki</th><th>Son</th></tr></thead>
+                <tbody>{result.pipeSummary.segments.map((s: any, i: number) => <tr key={s.id}><td>{i + 1}</td><td>{s.frictionLossBarPerM}</td><td>{s.pipeLossBar}</td><td>{s.heightLossBar}</td><td>{s.previousPressureLossBar}</td><td>{s.finalPressureLossBar}</td></tr>)}</tbody>
+              </table>
+            </>
+          )}
+          <section className="mt-3 rounded-lg border border-yellow-300 bg-yellow-50 p-2 text-xs">
+            {(Array.isArray(result.warnings) && result.warnings[0]) || 'Bu hesap ön keşif, teklif ve yaklaşık teknik değerlendirme amacıyla hazırlanmıştır.'}
+          </section>
+        </section>
+      )}
+
       <section className="mt-3">
         <h2 className="mb-1 text-sm font-bold">Teklife Aktarılabilir İhtiyaç Listesi</h2>
         <table className="w-full text-xs">

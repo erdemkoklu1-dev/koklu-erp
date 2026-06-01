@@ -8,6 +8,8 @@ import { calculateAlarmNeeds, type AlarmInput } from '@/lib/technical-reports/al
 import { calculateGeneralNeeds, type ExistingDeviceInput, type GeneralNeedsInput } from '@/lib/technical-reports/general-needs-calculator'
 import { calculateRoomIntegrity, type RoomIntegrityInput } from '@/lib/technical-reports/room-integrity-calculator'
 import { calculateWaterSystem, WATER_SYSTEM_WARNING, type WaterSystemInput, type WaterRiskClass } from '@/lib/technical-reports/water-system-calculator'
+import { calculateWaterHydraulicReport, WATER_HYDRAULIC_WARNING } from '@/lib/technical-reports/water-hydraulic-calculator'
+import type { HydraulicPipeSegment, WaterCalculationMode, WaterHydraulicInput } from '@/lib/technical-reports/water-hydraulic-types'
 import { createReportNo } from '@/lib/technical-reports/report-utils'
 import { REPORT_TYPE_LABELS, type MaterialListItem, type TechnicalReportRow, type TechnicalReportType, type TechnicalSetting } from '@/lib/technical-reports/types'
 import MaterialListEditor from './MaterialListEditor'
@@ -21,6 +23,7 @@ type Props = {
   settings: TechnicalSetting[]
   initialType?: TechnicalReportType
   report?: TechnicalReportRow
+  defaultReportDate?: string
 }
 
 type AlarmRoomState = {
@@ -62,7 +65,7 @@ const reportCards: Array<{ type: TechnicalReportType; text: string }> = [
   { type: 'yangin_alarm_ihtiyac', text: 'Oda, kat, alan ve kullanım tipine göre dedektör, buton, siren ve panel ihtiyacını hesaplar.' },
   { type: 'genel_ihtiyac_raporu', text: 'Binanın mevcut yangın güvenliği durumuna göre eksik sistem ve malzeme ihtiyacını listeler.' },
   { type: 'oda_sizdirmazlik_testi', text: 'Gazlı söndürme sistemleri için oda hacmi, test ölçümleri ve kaçak değerlendirme raporu oluşturur.' },
-  { type: 'yangin_dolabi_hidrant_pompa', text: 'Yangın dolabı, hidrant, boru çapı, pompa gücü ve yangın suyu deposu için ön keşif hesabı yapar.' },
+  { type: 'sulu_sistem_hidrolik_hesap', text: 'Dolap, hidrant, sprinkler, hidrolik boru, pompa, depo ve kroki hesabını birlikte üretir.' },
 ]
 
 const sectionTemplates = ['Ofis', 'Oda', 'Koridor', 'Depo', 'Mutfak', 'Elektrik Pano Odası', 'Server Odası', 'Kazan Dairesi', 'Üretim Alanı', 'Diğer']
@@ -80,13 +83,15 @@ function num(form: FormData, key: string) {
   return Number.isFinite(value) ? value : 0
 }
 
-function nextId() {
-  return crypto.randomUUID()
+function nextIndexedId(prefix: string, existingIds: string[] = []) {
+  const used = new Set(existingIds)
+  let index = existingIds.length + 1
+  while (used.has(`${prefix}-${index}`)) index += 1
+  return `${prefix}-${index}`
 }
 
-function makeRoom(kat = 1, patch: Partial<AlarmRoomState> = {}): AlarmRoomState {
+function makeRoom(kat = 1, patch: Partial<AlarmRoomState> = {}, fallbackId = 'room-1'): AlarmRoomState {
   return {
-    id: nextId(),
     kat,
     bolum_adi: '',
     bolum_tipi: 'Ofis',
@@ -101,12 +106,12 @@ function makeRoom(kat = 1, patch: Partial<AlarmRoomState> = {}): AlarmRoomState 
     manuel_not: '',
     detailsOpen: false,
     ...patch,
+    id: patch.id ?? fallbackId,
   }
 }
 
-function makeExistingDevice(patch: Partial<ExistingDeviceState> = {}): ExistingDeviceState {
+function makeExistingDevice(patch: Partial<ExistingDeviceState> = {}, fallbackId = 'device-1'): ExistingDeviceState {
   return {
-    id: nextId(),
     cihaz_tipi: 'KKT Yangın Söndürme Cihazı',
     kapasite: '6 Kg',
     adet: '',
@@ -114,12 +119,14 @@ function makeExistingDevice(patch: Partial<ExistingDeviceState> = {}): ExistingD
     son_kontrol_tarihi: '',
     aciklama: '',
     ...patch,
+    id: patch.id ?? fallbackId,
   }
 }
 
-export default function TechnicalReportForm({ customers, subeler, personeller, settings, initialType, report }: Props) {
+export default function TechnicalReportForm({ customers, subeler, personeller, settings, initialType, report, defaultReportDate }: Props) {
   const router = useRouter()
   const defaultSubeId = subeler.find(s => s.ad === 'Erzincan Merkez')?.id ?? subeler[0]?.id ?? ''
+  const stableReportDate = report?.rapor_tarihi ?? defaultReportDate ?? ''
   const [reportType, setReportType] = useState<TechnicalReportType>(report?.rapor_turu ?? initialType ?? 'yangin_alarm_ihtiyac')
   const [customerMode, setCustomerMode] = useState<CustomerMode>(report && !report.customer_id ? 'manual' : 'registered')
   const [materialList, setMaterialList] = useState<MaterialListItem[]>(report?.material_list ?? [])
@@ -208,6 +215,106 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       } satisfies WaterSystemInput
     }
 
+    if (reportType === 'sulu_sistem_hidrolik_hesap') {
+      const mode = String(form.get('calculation_mode') || 'dolap_sprinkler_hidrant') as WaterCalculationMode
+      const segmentIds = String(form.get('hydraulic_segment_ids') || '').split(',').filter(Boolean)
+      const pipeSegments: HydraulicPipeSegment[] = segmentIds.map((id, index) => ({
+        id,
+        fromNodeId: String(form.get(`segment_from_${id}`) || `N${index + 1}`),
+        toNodeId: String(form.get(`segment_to_${id}`) || `N${index + 2}`),
+        label: String(form.get(`segment_label_${id}`) || `Hat ${index + 1}`),
+        pipeType: String(form.get('pipe_type') || 'siyah_celik') as any,
+        flowLpm: num(form, `segment_flow_${id}`),
+        lengthM: num(form, `segment_length_${id}`),
+        heightDifferenceM: num(form, `segment_height_${id}`),
+        selectedDN: String(form.get(`segment_dn_${id}`) || '') || undefined,
+        screwElbow90Count: num(form, `segment_screw_elbow_${id}`),
+        weldedElbow90Count: num(form, `segment_welded_elbow_${id}`),
+        teeReducerCount: num(form, `segment_tee_${id}`),
+        gateValveCount: num(form, `segment_gate_${id}`),
+        checkValveSwingCount: num(form, `segment_swing_check_${id}`),
+        checkValveLiftCount: num(form, `segment_lift_check_${id}`),
+        butterflyValveCount: num(form, `segment_butterfly_${id}`),
+        ballValveCount: num(form, `segment_ball_${id}`),
+        flexHoseCount: num(form, `segment_flex_${id}`),
+      })).filter(segment => segment.flowLpm || segment.lengthM || segment.label)
+      const flags = {
+        cabinet: mode.includes('dolap'),
+        hydrant: mode.includes('hidrant'),
+        sprinkler: mode.includes('sprinkler'),
+      }
+      return {
+        calculationMode: mode,
+        projectName: String(form.get('project_name') || ''),
+        buildingType: String(form.get('building_type') || ''),
+        riskClass: String(form.get('risk_class') || ''),
+        totalClosedAreaM2: num(form, 'total_closed_area_m2'),
+        floorCount: num(form, 'floor_count'),
+        buildingHeightM: num(form, 'building_height_m'),
+        elevationDifferenceM: num(form, 'elevation_difference_m'),
+        farthestHorizontalDistanceM: num(form, 'farthest_horizontal_distance_m'),
+        pipeType: String(form.get('pipe_type') || 'siyah_celik') as any,
+        hazenWilliamsC: num(form, 'hazen_williams_c') || 120,
+        cabinet: {
+          enabled: flags.cabinet,
+          fireCabinetCount: num(form, 'fire_cabinet_count'),
+          manualFireCabinetCount: num(form, 'manual_fire_cabinet_count'),
+          flowPerCabinetLpm: num(form, 'flow_per_cabinet_lpm') || 100,
+          simultaneousCabinetCount: num(form, 'simultaneous_cabinet_count') || 2,
+          endpointPressureBar: num(form, 'cabinet_endpoint_pressure_bar') || 4,
+          hoseLengthM: num(form, 'hose_length_m'),
+          cabinetCoverageRadiusM: num(form, 'cabinet_coverage_radius_m') || 30,
+        },
+        hydrant: {
+          enabled: flags.hydrant,
+          hydrantCount: num(form, 'hydrant_count'),
+          manualHydrantCount: num(form, 'manual_hydrant_count'),
+          sitePerimeterM: num(form, 'site_perimeter_m'),
+          hydrantSpacingM: num(form, 'hydrant_spacing_m') || 100,
+          minimumDesignFlowLpm: num(form, 'hydrant_minimum_design_flow_lpm') || 1900,
+          endpointPressureBar: num(form, 'hydrant_endpoint_pressure_bar') || 7,
+          ringLineEnabled: boolValue(form.get('ring_line_enabled')),
+          rightRingLengthM: num(form, 'right_ring_length_m'),
+          leftRingLengthM: num(form, 'left_ring_length_m'),
+        },
+        sprinkler: {
+          enabled: flags.sprinkler,
+          hazardClass: String(form.get('sprinkler_hazard_class') || 'OH3') as any,
+          systemType: String(form.get('sprinkler_system_type') || 'islak') as any,
+          designAreaM2: num(form, 'sprinkler_design_area_m2') || 216,
+          sprinklerCoverageAreaM2: num(form, 'sprinkler_coverage_area_m2') || 12,
+          kFactorMetric: num(form, 'sprinkler_k_factor') || 80,
+          designDensityLpmM2: num(form, 'sprinkler_design_density') || 5,
+          minimumSprinklerPressureBar: num(form, 'sprinkler_min_pressure_bar') || 0.56,
+          manualSprinklerCount: num(form, 'manual_sprinkler_count'),
+          interventionDurationMin: num(form, 'sprinkler_duration_min') || 60,
+          wallTypeSprinkler: boolValue(form.get('wall_type_sprinkler')),
+          wallTypeThrowDistanceM: num(form, 'wall_type_throw_distance_m'),
+          wallTypeMinimumPressureBar: num(form, 'wall_type_min_pressure_bar') || 1,
+        },
+        pump: {
+          pumpSelectionMode: String(form.get('pump_selection_mode') || 'auto') as any,
+          designFlowMode: String(form.get('design_flow_mode') || 'en_buyuk_senaryo') as any,
+          preferredPumpType: String(form.get('preferred_pump_type') || '') as any,
+          pumpEfficiency: num(form, 'pump_efficiency') || 0.75,
+          motorSafetyFactor: num(form, 'motor_safety_factor') || 1.15,
+          pressureSafetyFactor: num(form, 'pressure_safety_factor') || 1.1,
+          flowSafetyFactor: num(form, 'flow_safety_factor') || 1.1,
+          includeJockeyPump: boolValue(form.get('include_jockey_pump')),
+          includeDieselBackup: boolValue(form.get('include_diesel_backup')),
+        },
+        waterTank: {
+          existingTankAvailable: boolValue(form.get('existing_tank_available')),
+          existingTankVolumeM3: num(form, 'existing_tank_volume_m3'),
+          durationMin: num(form, 'tank_duration_min') || 60,
+          safetyFactor: num(form, 'tank_safety_factor') || 1.1,
+        },
+        pipeSegments,
+        nodes: [],
+        notes: String(form.get('hydraulic_notes') || ''),
+      } satisfies WaterHydraulicInput
+    }
+
     return {
       oda_adi: String(form.get('oda_adi') || ''),
       test_tarihi: String(form.get('test_tarihi') || ''),
@@ -253,7 +360,9 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         ? calculateGeneralNeeds(data as GeneralNeedsInput, settings)
         : reportType === 'yangin_dolabi_hidrant_pompa'
           ? calculateWaterSystem(data as WaterSystemInput, settings)
-          : calculateRoomIntegrity(data as RoomIntegrityInput)
+          : reportType === 'sulu_sistem_hidrolik_hesap'
+            ? calculateWaterHydraulicReport(data as WaterHydraulicInput, settings)
+            : calculateRoomIntegrity(data as RoomIntegrityInput)
     setCalculationResult(calculated.calculation_result)
     setMaterialList(calculated.material_list)
     setMessage('Hesaplama tamamlandı. İhtiyaç listesini kaydetmeden önce düzenleyebilirsiniz.')
@@ -343,7 +452,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         sube_id: subeId,
         lokasyon: String(formData.get(customerMode === 'manual' ? 'manual_lokasyon' : 'lokasyon') || ''),
         adres: customer.address,
-        rapor_tarihi: String(formData.get('rapor_tarihi') || new Date().toISOString().slice(0, 10)),
+        rapor_tarihi: String(formData.get('rapor_tarihi') || stableReportDate || new Date().toISOString().slice(0, 10)),
         hazirlayan_personel_id: String(formData.get('hazirlayan_personel_id') || '') || null,
         durum: 'Hesaplandı',
         standart_profili: String(formData.get('standart_profili') || 'MVP keşif destek hesabı'),
@@ -406,7 +515,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
           <label className="text-sm">Şube *<select name="sube_id" required defaultValue={report?.sube_id ?? defaultSubeId} className={inputCls()}>{subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}</select></label>
           <label className="text-sm">Hazırlayan<select name="hazirlayan_personel_id" defaultValue={report?.hazirlayan_personel_id ?? ''} className={inputCls()}><option value="">Seçiniz</option>{personeller.map(p => <option key={p.id} value={p.id}>{p.ad} {p.soyad}</option>)}</select></label>
           <label className="text-sm">Başlık<input key={reportType} name="baslik" defaultValue={report?.baslik ?? REPORT_TYPE_LABELS[reportType]} className={inputCls()} /></label>
-          <label className="text-sm">Rapor Tarihi<input name="rapor_tarihi" type="date" defaultValue={report?.rapor_tarihi ?? new Date().toISOString().slice(0, 10)} className={inputCls()} /></label>
+          <label className="text-sm">Rapor Tarihi<input name="rapor_tarihi" type="date" defaultValue={stableReportDate} className={inputCls()} /></label>
           {customerMode === 'registered' ? (
             <>
               <label className="text-sm">Lokasyon<input name="lokasyon" defaultValue={report?.lokasyon ?? ''} className={inputCls()} /></label>
@@ -426,6 +535,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       {reportType === 'genel_ihtiyac_raporu' && <GeneralFields inputData={inputData} />}
       {reportType === 'oda_sizdirmazlik_testi' && <RoomFields inputData={inputData} />}
       {reportType === 'yangin_dolabi_hidrant_pompa' && <WaterSystemFields inputData={inputData} />}
+      {reportType === 'sulu_sistem_hidrolik_hesap' && <WaterHydraulicFields inputData={inputData} />}
 
       <div className="sticky bottom-0 z-10 -mx-2 flex flex-wrap items-center gap-2 border bg-white/95 p-3 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
         {report && <Link href={`/teknik-raporlar/${report.id}`} className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600">Detaya Dön</Link>}
@@ -441,6 +551,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
           <h2 className="mb-2 font-semibold">Hesap Sonuçları</h2>
           <ResultSummary result={calculationResult} materialCount={materialList.length} />
           {reportType === 'yangin_dolabi_hidrant_pompa' && <WaterResultCards result={calculationResult} />}
+          {reportType === 'sulu_sistem_hidrolik_hesap' && <WaterHydraulicResult result={calculationResult} />}
         </section>
       )}
 
@@ -503,10 +614,74 @@ function WaterResultCards({ result }: { result: any }) {
   )
 }
 
+function WaterHydraulicResult({ result }: { result: any }) {
+  const cards = [
+    ['Tasarım Debisi', `${result.designFlowLpm ?? 0} l/dak / ${result.designFlowM3h ?? 0} m³/h`],
+    ['Sprinkler Adedi', result.sprinkler ? `${result.sprinkler.selectedSprinklerCount ?? 0} adet` : '-'],
+    ['Sprinkler Debisi', result.sprinkler ? `${result.sprinkler.requiredFlowLpm ?? 0} l/dak` : '-'],
+    ['Pompa Basıncı', `${result.pump?.requiredPressureBar ?? 0} bar / ${result.pump?.requiredPressureMSS ?? 0} mSS`],
+    ['Pompa Gücü', `${result.pump?.selectedMotorPowerKw ?? 0} kW`],
+    ['Su Deposu', `${result.waterTank?.requiredVolumeWithSafetyM3 ?? 0} m³ / ${result.waterTank?.requiredVolumeWithSafetyTon ?? 0} ton`],
+    ['Ana Boru Çapı', result.pipeSummary?.segments?.[0]?.selectedDN ?? '-'],
+    ['Toplam Boru', `${result.pipeSummary?.totalPipeLengthM ?? 0} m`],
+  ]
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {cards.map(([label, value]) => (
+          <div key={label} className="rounded-md bg-gray-50 p-3 dark:bg-gray-900">
+            <div className="text-xs text-gray-500">{label}</div>
+            <div className="text-base font-bold">{value}</div>
+          </div>
+        ))}
+      </div>
+      {result.sprinkler && (
+        <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm md:grid-cols-4 dark:border-gray-700">
+          <div><div className="text-xs text-gray-500">Tasarım Alanı</div><div className="font-bold">{result.sprinkler.designAreaM2 ?? 0} m²</div></div>
+          <div><div className="text-xs text-gray-500">Koruma Alanı</div><div className="font-bold">{result.sprinkler.sprinklerCoverageAreaM2 ?? 0} m²/adet</div></div>
+          <div><div className="text-xs text-gray-500">K Faktörü</div><div className="font-bold">K{result.sprinkler.kFactorMetric ?? 0}</div></div>
+          <div><div className="text-xs text-gray-500">Akma Basıncı</div><div className="font-bold">{result.sprinkler.selectedPressureBar ?? 0} bar</div></div>
+        </div>
+      )}
+      {result.waterTank && (
+        <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm md:grid-cols-4 dark:border-gray-700">
+          <div><div className="text-xs text-gray-500">Depo Süresi</div><div className="font-bold">{result.waterTank.durationMin ?? 0} dk</div></div>
+          <div><div className="text-xs text-gray-500">Net Hacim</div><div className="font-bold">{result.waterTank.requiredVolumeM3 ?? 0} m³ / {result.waterTank.requiredVolumeTon ?? 0} ton</div></div>
+          <div><div className="text-xs text-gray-500">Emniyetli Hacim</div><div className="font-bold">{result.waterTank.requiredVolumeWithSafetyM3 ?? 0} m³ / {result.waterTank.requiredVolumeWithSafetyTon ?? 0} ton</div></div>
+          <div><div className="text-xs text-gray-500">Eksik Hacim</div><div className="font-bold">{result.waterTank.missingVolumeM3 ?? 0} m³ / {result.waterTank.missingVolumeTon ?? 0} ton</div></div>
+        </div>
+      )}
+      {result.sketchPlan?.svg && (
+        <div className="rounded-lg border bg-white p-3">
+          <h3 className="mb-2 text-sm font-semibold">Kroki / Ön Şema</h3>
+          <div dangerouslySetInnerHTML={{ __html: result.sketchPlan.svg }} />
+          <p className="mt-2 text-xs text-gray-600">{result.sketchPlan.summary}</p>
+        </div>
+      )}
+      {Array.isArray(result.pipeSummary?.segments) && result.pipeSummary.segments.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-xs">
+            <thead className="bg-gray-50"><tr><th>No</th><th>Hat</th><th>Debi</th><th>DN</th><th>İç Çap</th><th>Hız</th><th>Uzunluk</th><th>Eşdeğer</th><th>Boru Kaybı</th><th>Son Kayıp</th></tr></thead>
+            <tbody>{result.pipeSummary.segments.map((s: any, i: number) => <tr key={s.id}><td>{i + 1}</td><td>{s.label}</td><td>{s.flowLpm} l/dak</td><td>{s.selectedDN}</td><td>{s.innerDiameterMm} mm</td><td>{s.velocityMs} m/s</td><td>{s.lengthM} m</td><td>{s.totalEquivalentLengthM} m</td><td>{s.pipeLossBar} bar</td><td>{s.finalPressureLossBar} bar</td></tr>)}</tbody>
+          </table>
+        </div>
+      )}
+      <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs text-yellow-900">
+        {WATER_HYDRAULIC_WARNING}
+      </div>
+      {Array.isArray(result.warnings) && result.warnings.length > 0 && (
+        <ul className="list-disc space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 pl-6 text-xs text-amber-800">
+          {result.warnings.map((warning: string) => <li key={warning}>{warning}</li>)}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function AlarmFields({ inputData }: { inputData: any }) {
   const initialRooms: AlarmRoomState[] = Array.isArray(inputData.bolumler) && inputData.bolumler.length > 0
-    ? inputData.bolumler.map((room: any) => makeRoom(Number(room.kat || 1), { ...room, kat: Number(room.kat || 1) }))
-    : [makeRoom(1, { bolum_adi: 'Genel Alan' })]
+    ? inputData.bolumler.map((room: any, index: number) => makeRoom(Number(room.kat || 1), { ...room, kat: Number(room.kat || 1) }, `room-${index + 1}`))
+    : [makeRoom(1, { bolum_adi: 'Genel Alan' }, 'room-1')]
   const initialFloorCount = Math.max(Number(inputData.kat_sayisi || 1), ...initialRooms.map(r => r.kat), 1)
   const [floorCount, setFloorCount] = useState(initialFloorCount)
   const [rooms, setRooms] = useState<AlarmRoomState[]>(initialRooms)
@@ -524,7 +699,7 @@ function AlarmFields({ inputData }: { inputData: any }) {
         const existingFloors = new Set(prev.map(room => room.kat))
         const additions = Array.from({ length: safeNext }, (_, i) => i + 1)
           .filter(kat => !existingFloors.has(kat))
-          .map(kat => makeRoom(kat, { bolum_adi: `Kat ${kat} Genel Alan` }))
+          .map((kat, index) => makeRoom(kat, { bolum_adi: `Kat ${kat} Genel Alan` }, `room-${index + 1}`))
         return [...prev, ...additions]
       })
     }
@@ -536,13 +711,13 @@ function AlarmFields({ inputData }: { inputData: any }) {
   }
 
   function addRoom(kat: number, bolumTipi = 'Ofis') {
-    setRooms(prev => [...prev, makeRoom(kat, { bolum_tipi: bolumTipi, bolum_adi: bolumTipi })])
+    setRooms(prev => [...prev, makeRoom(kat, { bolum_tipi: bolumTipi, bolum_adi: bolumTipi, id: nextIndexedId('room', prev.map(row => row.id)) })])
   }
 
   function addFloor() {
     const next = floorCount + 1
     setFloorCount(next)
-    setRooms(prev => [...prev, makeRoom(next, { bolum_adi: `Kat ${next} Genel Alan` })])
+    setRooms(prev => [...prev, makeRoom(next, { bolum_adi: `Kat ${next} Genel Alan`, id: nextIndexedId('room', prev.map(row => row.id)) })])
   }
 
   return (
@@ -615,8 +790,8 @@ function GeneralFields({ inputData }: { inputData: any }) {
   const systems = inputData.mevcut_sistemler ?? {}
   const label = (key: string) => key.replaceAll('_', ' ')
   const initialDevices: ExistingDeviceState[] = Array.isArray(inputData.mevcut_cihazlar) && inputData.mevcut_cihazlar.length > 0
-    ? inputData.mevcut_cihazlar.map((device: any) => makeExistingDevice(device))
-    : [makeExistingDevice()]
+    ? inputData.mevcut_cihazlar.map((device: any, index: number) => makeExistingDevice(device, `device-${index + 1}`))
+    : [makeExistingDevice({}, 'device-1')]
   const [devices, setDevices] = useState<ExistingDeviceState[]>(initialDevices)
 
   function updateDevice(id: string, patch: Partial<ExistingDeviceState>) {
@@ -640,7 +815,7 @@ function GeneralFields({ inputData }: { inputData: any }) {
       </div>
       <div className="mt-5 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold">Mevcut Cihazlar</h3>
-        <button type="button" onClick={() => setDevices(prev => [...prev, makeExistingDevice()])} className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-gray-50 dark:border-gray-600">+ Cihaz Ekle</button>
+        <button type="button" onClick={() => setDevices(prev => [...prev, makeExistingDevice({ id: nextIndexedId('device', prev.map(row => row.id)) })])} className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-gray-50 dark:border-gray-600">+ Cihaz Ekle</button>
       </div>
       <input type="hidden" name="existing_device_ids" value={devices.map(device => device.id).join(',')} />
       <div className="mt-2 overflow-x-auto">
@@ -683,6 +858,150 @@ function GeneralFields({ inputData }: { inputData: any }) {
           </tbody>
         </table>
       </div>
+    </section>
+  )
+}
+
+function makeHydraulicSegment(patch: Partial<HydraulicPipeSegment> = {}, fallbackId = 'segment-1'): HydraulicPipeSegment {
+  return {
+    fromNodeId: 'Pompa',
+    toNodeId: 'Kolektör',
+    label: 'Ana hat',
+    flowLpm: 1900,
+    lengthM: 30,
+    heightDifferenceM: 0,
+    ...patch,
+    id: patch.id ?? fallbackId,
+  }
+}
+
+function WaterHydraulicFields({ inputData }: { inputData: any }) {
+  const initialSegments: HydraulicPipeSegment[] = Array.isArray(inputData.pipeSegments) && inputData.pipeSegments.length > 0
+    ? inputData.pipeSegments.map((segment: any, index: number) => makeHydraulicSegment(segment, `segment-${index + 1}`))
+    : [makeHydraulicSegment({}, 'segment-1')]
+  const [segments, setSegments] = useState<HydraulicPipeSegment[]>(initialSegments)
+  const [mode, setMode] = useState<WaterCalculationMode>(inputData.calculationMode ?? 'dolap_sprinkler_hidrant')
+  const hasCabinet = mode.includes('dolap')
+  const hasHydrant = mode.includes('hidrant')
+  const hasSprinkler = mode.includes('sprinkler')
+  const modeCards: Array<{ value: WaterCalculationMode; label: string }> = [
+    { value: 'dolap', label: 'Yangın Dolabı' },
+    { value: 'hidrant', label: 'Hidrant' },
+    { value: 'sprinkler', label: 'Sprinkler' },
+    { value: 'dolap_hidrant', label: 'Dolap + Hidrant' },
+    { value: 'dolap_sprinkler', label: 'Dolap + Sprinkler' },
+    { value: 'sprinkler_hidrant', label: 'Sprinkler + Hidrant' },
+    { value: 'dolap_sprinkler_hidrant', label: 'Dolap + Sprinkler + Hidrant' },
+  ]
+  function updateSegment(id: string, patch: Partial<HydraulicPipeSegment>) {
+    setSegments(prev => prev.map(segment => segment.id === id ? { ...segment, ...patch } : segment))
+  }
+  return (
+    <section className="space-y-4 rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div>
+        <h2 className="text-sm font-semibold">Sulu Sistem Hidrolik Hesap</h2>
+        <p className="mt-1 text-xs text-gray-500">Yangın dolabı, hidrant, sprinkler, boru segmenti, pompa, depo ve kroki ön hesabı.</p>
+      </div>
+      <input type="hidden" name="calculation_mode" value={mode} />
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+        {modeCards.map(card => (
+          <button key={card.value} type="button" onClick={() => setMode(card.value)} className={`rounded-lg border px-3 py-2 text-left text-sm ${mode === card.value ? 'border-[#C8102E] bg-red-50 text-[#C8102E]' : 'dark:border-gray-600'}`}>
+            {card.label}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <label className="text-sm">Proje Adı<input name="project_name" defaultValue={inputData.projectName ?? ''} className={inputCls()} /></label>
+        <label className="text-sm">Bina Tipi<input name="building_type" defaultValue={inputData.buildingType ?? ''} className={inputCls()} /></label>
+        <label className="text-sm">Yangın Sınıfı<input name="risk_class" defaultValue={inputData.riskClass ?? 'OH3'} className={inputCls()} /></label>
+        <label className="text-sm">Boru Türü<select name="pipe_type" defaultValue={inputData.pipeType ?? 'siyah_celik'} className={inputCls()}><option value="siyah_celik">Siyah Çelik</option><option value="galvaniz">Galvaniz</option><option value="paslanmaz">Paslanmaz</option><option value="pe100">PE100</option><option value="diger">Diğer</option></select></label>
+        <label className="text-sm">Kapalı Alan m²<input name="total_closed_area_m2" type="number" defaultValue={inputData.totalClosedAreaM2 ?? 1000} className={inputCls()} /></label>
+        <label className="text-sm">Kat Sayısı<input name="floor_count" type="number" defaultValue={inputData.floorCount ?? 2} className={inputCls()} /></label>
+        <label className="text-sm">Bina Yüksekliği m<input name="building_height_m" type="number" defaultValue={inputData.buildingHeightM ?? 8} className={inputCls()} /></label>
+        <label className="text-sm">C Katsayısı<input name="hazen_williams_c" type="number" defaultValue={inputData.hazenWilliamsC ?? 120} className={inputCls()} /></label>
+      </div>
+      {hasCabinet && (
+        <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 md:grid-cols-4 dark:border-gray-700">
+          <h3 className="font-semibold md:col-span-4">Yangın Dolabı</h3>
+          <label className="text-sm">Manuel Dolap Adedi<input name="manual_fire_cabinet_count" type="number" defaultValue={inputData.cabinet?.manualFireCabinetCount ?? 0} className={inputCls()} /></label>
+          <label className="text-sm">Dolap Debisi l/dak<input name="flow_per_cabinet_lpm" type="number" defaultValue={inputData.cabinet?.flowPerCabinetLpm ?? 100} className={inputCls()} /></label>
+          <label className="text-sm">Eş Zamanlı Dolap<input name="simultaneous_cabinet_count" type="number" defaultValue={inputData.cabinet?.simultaneousCabinetCount ?? 2} className={inputCls()} /></label>
+          <label className="text-sm">Uç Basınç bar<input name="cabinet_endpoint_pressure_bar" type="number" step="0.1" defaultValue={inputData.cabinet?.endpointPressureBar ?? 4} className={inputCls()} /></label>
+        </div>
+      )}
+      {hasHydrant && (
+        <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 md:grid-cols-4 dark:border-gray-700">
+          <h3 className="font-semibold md:col-span-4">Hidrant ve Ring Hat</h3>
+          <label className="text-sm">Manuel Hidrant Adedi<input name="manual_hydrant_count" type="number" defaultValue={inputData.hydrant?.manualHydrantCount ?? 0} className={inputCls()} /></label>
+          <label className="text-sm">Tesis Çevresi m<input name="site_perimeter_m" type="number" defaultValue={inputData.hydrant?.sitePerimeterM ?? 450} className={inputCls()} /></label>
+          <label className="text-sm">Hidrant Aralığı m<input name="hydrant_spacing_m" type="number" defaultValue={inputData.hydrant?.hydrantSpacingM ?? 100} className={inputCls()} /></label>
+          <label className="text-sm">Minimum Debi l/dak<input name="hydrant_minimum_design_flow_lpm" type="number" defaultValue={inputData.hydrant?.minimumDesignFlowLpm ?? 1900} className={inputCls()} /></label>
+          <label className="text-sm">Uç Basınç bar<input name="hydrant_endpoint_pressure_bar" type="number" step="0.1" defaultValue={inputData.hydrant?.endpointPressureBar ?? 7} className={inputCls()} /></label>
+          <label className="flex items-center gap-2 pt-6 text-sm"><input name="ring_line_enabled" type="checkbox" defaultChecked={inputData.hydrant?.ringLineEnabled ?? true} /> Ring hattı var</label>
+          <label className="text-sm">Sağ Ring m<input name="right_ring_length_m" type="number" defaultValue={inputData.hydrant?.rightRingLengthM ?? 120} className={inputCls()} /></label>
+          <label className="text-sm">Sol Ring m<input name="left_ring_length_m" type="number" defaultValue={inputData.hydrant?.leftRingLengthM ?? 180} className={inputCls()} /></label>
+        </div>
+      )}
+      {hasSprinkler && (
+        <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 md:grid-cols-4 dark:border-gray-700">
+          <h3 className="font-semibold md:col-span-4">Sprinkler</h3>
+          <label className="text-sm">Tehlike Sınıfı<select name="sprinkler_hazard_class" defaultValue={inputData.sprinkler?.hazardClass ?? 'OH3'} className={inputCls()}>{['LH','OH1','OH2','OH3','OH4','HH'].map(x => <option key={x}>{x}</option>)}</select></label>
+          <label className="text-sm">Sistem Tipi<select name="sprinkler_system_type" defaultValue={inputData.sprinkler?.systemType ?? 'islak'} className={inputCls()}><option value="islak">Islak</option><option value="kuru">Kuru</option><option value="preaction">Preaction</option><option value="deluge">Deluge</option></select></label>
+          <label className="text-sm">Tasarım Alanı m²<input name="sprinkler_design_area_m2" type="number" defaultValue={inputData.sprinkler?.designAreaM2 ?? 216} className={inputCls()} /></label>
+          <label className="text-sm">Koruma Alanı m²<input name="sprinkler_coverage_area_m2" type="number" defaultValue={inputData.sprinkler?.sprinklerCoverageAreaM2 ?? 12} className={inputCls()} /></label>
+          <label className="text-sm">K Faktörü<input name="sprinkler_k_factor" type="number" defaultValue={inputData.sprinkler?.kFactorMetric ?? 80} className={inputCls()} /></label>
+          <label className="text-sm">Yoğunluk l/dak/m²<input name="sprinkler_design_density" type="number" step="0.1" defaultValue={inputData.sprinkler?.designDensityLpmM2 ?? 5} className={inputCls()} /></label>
+          <label className="text-sm">Min. Akma Basıncı bar<input name="sprinkler_min_pressure_bar" type="number" step="0.01" defaultValue={inputData.sprinkler?.minimumSprinklerPressureBar ?? 0.56} className={inputCls()} /></label>
+          <label className="text-sm">Manuel Sprinkler Adedi<input name="manual_sprinkler_count" type="number" defaultValue={inputData.sprinkler?.manualSprinklerCount ?? 0} className={inputCls()} /></label>
+          <label className="text-sm">Müdahale Süresi dk<input name="sprinkler_duration_min" type="number" defaultValue={inputData.sprinkler?.interventionDurationMin ?? 60} className={inputCls()} /></label>
+          <label className="flex items-center gap-2 pt-6 text-sm"><input name="wall_type_sprinkler" type="checkbox" defaultChecked={inputData.sprinkler?.wallTypeSprinkler ?? false} /> Duvar tipi sprinkler</label>
+        </div>
+      )}
+      <div className="grid grid-cols-1 gap-4 rounded-lg border p-3 md:grid-cols-4 dark:border-gray-700">
+        <h3 className="font-semibold md:col-span-4">Pompa ve Depo</h3>
+        <label className="text-sm">Debi Senaryosu<select name="design_flow_mode" defaultValue={inputData.pump?.designFlowMode ?? 'en_buyuk_senaryo'} className={inputCls()}><option value="en_buyuk_senaryo">En büyük senaryo</option><option value="es_zamanli_toplam">Eş zamanlı toplam</option></select></label>
+        <label className="text-sm">Pompa Verimi<input name="pump_efficiency" type="number" step="0.01" defaultValue={inputData.pump?.pumpEfficiency ?? 0.75} className={inputCls()} /></label>
+        <label className="text-sm">Motor Emniyet<input name="motor_safety_factor" type="number" step="0.01" defaultValue={inputData.pump?.motorSafetyFactor ?? 1.15} className={inputCls()} /></label>
+        <label className="text-sm">Basınç Emniyet<input name="pressure_safety_factor" type="number" step="0.01" defaultValue={inputData.pump?.pressureSafetyFactor ?? 1.1} className={inputCls()} /></label>
+        <label className="text-sm">Debi Emniyet<input name="flow_safety_factor" type="number" step="0.01" defaultValue={inputData.pump?.flowSafetyFactor ?? 1.1} className={inputCls()} /></label>
+        <label className="flex items-center gap-2 pt-6 text-sm"><input name="include_jockey_pump" type="checkbox" defaultChecked={inputData.pump?.includeJockeyPump ?? true} /> Jokey pompa</label>
+        <label className="flex items-center gap-2 pt-6 text-sm"><input name="include_diesel_backup" type="checkbox" defaultChecked={inputData.pump?.includeDieselBackup ?? hasHydrant} /> Dizel yedek</label>
+        <label className="text-sm">Depo Süresi dk<input name="tank_duration_min" type="number" defaultValue={inputData.waterTank?.durationMin ?? 60} className={inputCls()} /></label>
+        <label className="text-sm">Depo Emniyet<input name="tank_safety_factor" type="number" step="0.01" defaultValue={inputData.waterTank?.safetyFactor ?? 1.1} className={inputCls()} /></label>
+        <label className="text-sm">Mevcut Depo m³<input name="existing_tank_volume_m3" type="number" defaultValue={inputData.waterTank?.existingTankVolumeM3 ?? 0} className={inputCls()} /></label>
+      </div>
+      <div className="rounded-lg border p-3 dark:border-gray-700">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="font-semibold">Boru Segmentleri ve Fittings</h3>
+          <button type="button" onClick={() => setSegments(prev => [...prev, makeHydraulicSegment({ id: nextIndexedId('segment', prev.map(row => row.id)), label: `Hat ${prev.length + 1}` })])} className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-gray-50 dark:border-gray-600">Segment Ekle</button>
+        </div>
+        <input type="hidden" name="hydraulic_segment_ids" value={segments.map(s => s.id).join(',')} />
+        <div className="space-y-3">
+          {segments.map(segment => (
+            <div key={segment.id} className="grid grid-cols-2 gap-2 rounded-md bg-gray-50 p-3 md:grid-cols-10 dark:bg-gray-900">
+              <input name={`segment_label_${segment.id}`} value={segment.label ?? ''} onChange={e => updateSegment(segment.id, { label: e.target.value })} placeholder="Hat" className={inputCls()} />
+              <input name={`segment_from_${segment.id}`} value={segment.fromNodeId} onChange={e => updateSegment(segment.id, { fromNodeId: e.target.value })} placeholder="Başlangıç" className={inputCls()} />
+              <input name={`segment_to_${segment.id}`} value={segment.toNodeId} onChange={e => updateSegment(segment.id, { toNodeId: e.target.value })} placeholder="Bitiş" className={inputCls()} />
+              <input name={`segment_flow_${segment.id}`} type="number" value={segment.flowLpm} onChange={e => updateSegment(segment.id, { flowLpm: Number(e.target.value) })} placeholder="Debi" className={inputCls()} />
+              <input name={`segment_dn_${segment.id}`} value={segment.selectedDN ?? ''} onChange={e => updateSegment(segment.id, { selectedDN: e.target.value })} placeholder="DN" className={inputCls()} />
+              <input name={`segment_length_${segment.id}`} type="number" value={segment.lengthM} onChange={e => updateSegment(segment.id, { lengthM: Number(e.target.value) })} placeholder="Uzunluk" className={inputCls()} />
+              <input name={`segment_height_${segment.id}`} type="number" value={segment.heightDifferenceM ?? 0} onChange={e => updateSegment(segment.id, { heightDifferenceM: Number(e.target.value) })} placeholder="Yükseklik" className={inputCls()} />
+              <input name={`segment_screw_elbow_${segment.id}`} type="number" defaultValue={segment.screwElbow90Count ?? 0} placeholder="Vidalı dirsek" className={inputCls()} />
+              <input name={`segment_welded_elbow_${segment.id}`} type="number" defaultValue={segment.weldedElbow90Count ?? 0} placeholder="Kaynak dirsek" className={inputCls()} />
+              <input name={`segment_tee_${segment.id}`} type="number" defaultValue={segment.teeReducerCount ?? 0} placeholder="Tee" className={inputCls()} />
+              <input name={`segment_gate_${segment.id}`} type="number" defaultValue={segment.gateValveCount ?? 0} placeholder="Sürgülü vana" className={inputCls()} />
+              <input name={`segment_swing_check_${segment.id}`} type="number" defaultValue={segment.checkValveSwingCount ?? 0} placeholder="Çekvalf döner" className={inputCls()} />
+              <input name={`segment_lift_check_${segment.id}`} type="number" defaultValue={segment.checkValveLiftCount ?? 0} placeholder="Çekvalf mantar" className={inputCls()} />
+              <input name={`segment_butterfly_${segment.id}`} type="number" defaultValue={segment.butterflyValveCount ?? 0} placeholder="Kelebek" className={inputCls()} />
+              <input name={`segment_ball_${segment.id}`} type="number" defaultValue={segment.ballValveCount ?? 0} placeholder="Küresel" className={inputCls()} />
+              <input name={`segment_flex_${segment.id}`} type="number" defaultValue={segment.flexHoseCount ?? 0} placeholder="Flex" className={inputCls()} />
+              <button type="button" onClick={() => setSegments(prev => prev.filter(row => row.id !== segment.id))} className="rounded-md border px-2 py-2 text-xs text-red-600 dark:border-gray-600">Sil</button>
+            </div>
+          ))}
+        </div>
+      </div>
+      <label className="block text-sm">Hidrolik Notlar<textarea name="hydraulic_notes" rows={3} defaultValue={inputData.notes ?? ''} className={inputCls()} /></label>
+      <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs text-yellow-900">{WATER_HYDRAULIC_WARNING}</div>
     </section>
   )
 }

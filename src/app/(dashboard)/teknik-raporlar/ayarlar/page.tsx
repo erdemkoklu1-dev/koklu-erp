@@ -1,18 +1,29 @@
 import { createClient } from '@/lib/supabase/server'
+import { defaultHydraulicSettings } from '@/lib/technical-reports/water-hydraulic-calculator'
 import { waterSystemDefaultSettingRows } from '@/lib/technical-reports/water-system-calculator'
 import TechnicalReportTabs from '../_components/TechnicalReportTabs'
 import TechnicalSettingsTable from './TechnicalSettingsTable'
 
 export default async function TechnicalSettingsPage() {
   const supabase = await createClient()
-  const defaults = waterSystemDefaultSettingRows.map(([ayar_adi, ayar_degeri, birim, aciklama]) => ({
+  const defaults = [
+    ...waterSystemDefaultSettingRows.map(([ayar_adi, ayar_degeri, birim, aciklama]) => ({
     ayar_grubu: 'yangin_sulu_sistem',
     ayar_adi,
     ayar_degeri,
     birim,
     aciklama,
     aktif: true,
-  }))
+    })),
+    ...defaultHydraulicSettings.map(setting => ({
+      ayar_grubu: setting.group,
+      ayar_adi: setting.key,
+      ayar_degeri: setting.value,
+      birim: setting.unit,
+      aciklama: setting.description,
+      aktif: true,
+    })),
+  ]
   const { error: upsertError } = await supabase
     .from('teknik_hesap_ayarlari')
     .upsert(defaults, { onConflict: 'ayar_grubu,ayar_adi', ignoreDuplicates: true })
