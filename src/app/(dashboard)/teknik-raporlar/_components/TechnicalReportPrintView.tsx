@@ -116,6 +116,27 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
         </section>
       )}
 
+      {report.rapor_turu === 'yangin_dolabi_hidrant_pompa' && (
+        <section className="mt-4">
+          <h2 className="mb-2 text-sm font-bold">Sulu Sistem Ön Hesap Sonuçları</h2>
+          <table className="w-full text-xs">
+            <tbody>
+              <tr><th>Yangın Dolabı</th><td>{result.yangin_dolabi_adedi ?? 0} adet</td><th>Hidrant</th><td>{result.hidrant_adedi ?? 0} adet</td></tr>
+              <tr><th>Tasarım Debisi</th><td>{result.tasarim_debisi_l_dak ?? 0} l/dak ({result.tasarim_debisi_m3_h ?? 0} m³/h)</td><th>Boru Çapı</th><td>DN{result.boru_cap_mm ?? '-'}</td></tr>
+              <tr><th>Boru Uzunluğu</th><td>{result.boru_uzunlugu_m ?? 0} m</td><th>Sürtünme Kaybı</th><td>{result.surtunme_kaybi_mSS ?? 0} mSS</td></tr>
+              <tr><th>Basınç İhtiyacı</th><td>{result.basinc_ihtiyaci_bar ?? 0} bar</td><th>Motor Gücü</th><td>{result.motor_gucu_kw ?? 0} kW</td></tr>
+              <tr><th>Pompa Tipi</th><td colSpan={3}>{result.pompa_tipi ?? '-'}</td></tr>
+              <tr><th>Jokey Pompa</th><td>{result.jokey_pompa_debisi_l_dak ?? 0} l/dak</td><th>Yangın Suyu Deposu</th><td>{result.yangin_suyu_deposu_m3 ?? 0} m³</td></tr>
+            </tbody>
+          </table>
+          {Array.isArray(result.uyarilar) && result.uyarilar.length > 0 && (
+            <ul className="mt-2 list-disc pl-5 text-xs">
+              {result.uyarilar.map((warning: string) => <li key={warning}>{warning}</li>)}
+            </ul>
+          )}
+        </section>
+      )}
+
       <section className="mt-3">
         <h2 className="mb-1 text-sm font-bold">Teklife Aktarılabilir İhtiyaç Listesi</h2>
         <table className="w-full text-xs">

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateAlarmNeeds, type AlarmInput } from '@/lib/technical-reports/alarm-calculator'
 import { calculateGeneralNeeds, type ExistingDeviceInput, type GeneralNeedsInput } from '@/lib/technical-reports/general-needs-calculator'
 import { calculateRoomIntegrity, type RoomIntegrityInput } from '@/lib/technical-reports/room-integrity-calculator'
+import { calculateWaterSystem, WATER_SYSTEM_WARNING, type WaterSystemInput, type WaterRiskClass } from '@/lib/technical-reports/water-system-calculator'
 import { createReportNo } from '@/lib/technical-reports/report-utils'
 import { REPORT_TYPE_LABELS, type MaterialListItem, type TechnicalReportRow, type TechnicalReportType, type TechnicalSetting } from '@/lib/technical-reports/types'
 import MaterialListEditor from './MaterialListEditor'
@@ -61,6 +62,7 @@ const reportCards: Array<{ type: TechnicalReportType; text: string }> = [
   { type: 'yangin_alarm_ihtiyac', text: 'Oda, kat, alan ve kullanım tipine göre dedektör, buton, siren ve panel ihtiyacını hesaplar.' },
   { type: 'genel_ihtiyac_raporu', text: 'Binanın mevcut yangın güvenliği durumuna göre eksik sistem ve malzeme ihtiyacını listeler.' },
   { type: 'oda_sizdirmazlik_testi', text: 'Gazlı söndürme sistemleri için oda hacmi, test ölçümleri ve kaçak değerlendirme raporu oluşturur.' },
+  { type: 'yangin_dolabi_hidrant_pompa', text: 'Yangın dolabı, hidrant, boru çapı, pompa gücü ve yangın suyu deposu için ön keşif hesabı yapar.' },
 ]
 
 const sectionTemplates = ['Ofis', 'Oda', 'Koridor', 'Depo', 'Mutfak', 'Elektrik Pano Odası', 'Server Odası', 'Kazan Dairesi', 'Üretim Alanı', 'Diğer']
@@ -184,6 +186,28 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       } satisfies GeneralNeedsInput
     }
 
+    if (reportType === 'yangin_dolabi_hidrant_pompa') {
+      return {
+        bina_tipi: String(form.get('bina_tipi') || ''),
+        risk_sinifi: String(form.get('risk_sinifi') || 'orta_riskli') as WaterRiskClass,
+        kat_sayisi: num(form, 'kat_sayisi'),
+        kat_alani_m2: num(form, 'kat_alani_m2'),
+        toplam_alan_m2: num(form, 'toplam_alan_m2'),
+        bina_yuksekligi_m: num(form, 'bina_yuksekligi_m'),
+        cephe_uzunlugu_m: num(form, 'cephe_uzunlugu_m'),
+        tesis_cevre_m: num(form, 'tesis_cevre_m'),
+        yangin_dolabi_gerekli: boolValue(form.get('yangin_dolabi_gerekli')),
+        hidrant_gerekli: boolValue(form.get('hidrant_gerekli')),
+        ana_hat_uzunlugu_m: num(form, 'ana_hat_uzunlugu_m'),
+        kolon_hatti_uzunlugu_m: num(form, 'kolon_hatti_uzunlugu_m'),
+        esdeger_parca_orani: num(form, 'esdeger_parca_orani'),
+        hedef_cikis_basinci_kpa: num(form, 'hedef_cikis_basinci_kpa'),
+        elektrik_yedekli: boolValue(form.get('elektrik_yedekli')),
+        dizel_yedekli: boolValue(form.get('dizel_yedekli')),
+        aciklama: String(form.get('aciklama') || ''),
+      } satisfies WaterSystemInput
+    }
+
     return {
       oda_adi: String(form.get('oda_adi') || ''),
       test_tarihi: String(form.get('test_tarihi') || ''),
@@ -227,7 +251,9 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       ? calculateAlarmNeeds(data as AlarmInput, settings)
       : reportType === 'genel_ihtiyac_raporu'
         ? calculateGeneralNeeds(data as GeneralNeedsInput, settings)
-        : calculateRoomIntegrity(data as RoomIntegrityInput)
+        : reportType === 'yangin_dolabi_hidrant_pompa'
+          ? calculateWaterSystem(data as WaterSystemInput, settings)
+          : calculateRoomIntegrity(data as RoomIntegrityInput)
     setCalculationResult(calculated.calculation_result)
     setMaterialList(calculated.material_list)
     setMessage('Hesaplama tamamlandı. İhtiyaç listesini kaydetmeden önce düzenleyebilirsiniz.')
@@ -399,6 +425,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       {reportType === 'yangin_alarm_ihtiyac' && <AlarmFields inputData={inputData} />}
       {reportType === 'genel_ihtiyac_raporu' && <GeneralFields inputData={inputData} />}
       {reportType === 'oda_sizdirmazlik_testi' && <RoomFields inputData={inputData} />}
+      {reportType === 'yangin_dolabi_hidrant_pompa' && <WaterSystemFields inputData={inputData} />}
 
       <div className="sticky bottom-0 z-10 -mx-2 flex flex-wrap items-center gap-2 border bg-white/95 p-3 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
         {report && <Link href={`/teknik-raporlar/${report.id}`} className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600">Detaya Dön</Link>}
@@ -413,6 +440,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         <section className="rounded-lg border bg-white p-4 text-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-2 font-semibold">Hesap Sonuçları</h2>
           <ResultSummary result={calculationResult} materialCount={materialList.length} />
+          {reportType === 'yangin_dolabi_hidrant_pompa' && <WaterResultCards result={calculationResult} />}
         </section>
       )}
 
@@ -436,6 +464,41 @@ function ResultSummary({ result, materialCount }: { result: any; materialCount: 
       {items.map(([label, value]) => <div key={label} className="rounded-md bg-gray-50 p-3 dark:bg-gray-900"><div className="text-xs text-gray-500">{label}</div><div className="text-lg font-bold">{value}</div></div>)}
       {Array.isArray(result.oneriler) && <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-900"><div className="text-xs text-gray-500">Öneri</div><div className="text-lg font-bold">{result.oneriler.length}</div></div>}
       {result.degerlendirme && <div className="rounded-md bg-gray-50 p-3 dark:bg-gray-900"><div className="text-xs text-gray-500">Sonuç</div><div className="text-lg font-bold">{result.degerlendirme}</div></div>}
+    </div>
+  )
+}
+
+function WaterResultCards({ result }: { result: any }) {
+  const rows = [
+    ['Yangın Dolabı', `${result.yangin_dolabi_adedi ?? 0} adet`],
+    ['Hidrant', `${result.hidrant_adedi ?? 0} adet`],
+    ['Tasarım Debisi', `${result.tasarim_debisi_l_dak ?? 0} l/dak (${result.tasarim_debisi_m3_h ?? 0} m³/h)`],
+    ['Boru Çapı / Hız', `DN${result.boru_cap_mm ?? '-'} / ${result.boru_hizi_m_s ?? '-'} m/s`],
+    ['Boru Uzunluğu', `${result.boru_uzunlugu_m ?? 0} m`],
+    ['Sürtünme Kaybı', `${result.surtunme_kaybi_mSS ?? 0} mSS`],
+    ['Basınç İhtiyacı', `${result.basinc_ihtiyaci_bar ?? 0} bar`],
+    ['Motor Gücü', `${result.motor_gucu_kw ?? 0} kW`],
+    ['Jokey Pompa', `${result.jokey_pompa_debisi_l_dak ?? 0} l/dak`],
+    ['Yangın Suyu Deposu', `${result.yangin_suyu_deposu_m3 ?? 0} m³`],
+  ]
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        {rows.map(([label, value]) => (
+          <div key={label} className="rounded-md bg-gray-50 p-3 dark:bg-gray-900">
+            <div className="text-xs text-gray-500">{label}</div>
+            <div className="text-base font-bold">{value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs text-yellow-900">
+        {WATER_SYSTEM_WARNING}
+      </div>
+      {Array.isArray(result.uyarilar) && result.uyarilar.length > 0 && (
+        <ul className="list-disc space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 pl-6 text-xs text-amber-800">
+          {result.uyarilar.map((warning: string) => <li key={warning}>{warning}</li>)}
+        </ul>
+      )}
     </div>
   )
 }
@@ -619,6 +682,50 @@ function GeneralFields({ inputData }: { inputData: any }) {
             ))}
           </tbody>
         </table>
+      </div>
+    </section>
+  )
+}
+
+function WaterSystemFields({ inputData }: { inputData: any }) {
+  return (
+    <section className="rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold">Yangın Dolabı, Hidrant ve Pompa Ön Hesabı</h2>
+          <p className="mt-1 text-xs text-gray-500">Sulu yangın söndürme sistemi için ön keşif debi, basınç ve ihtiyaç hesabı.</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <label className="text-sm">Bina / Tesis Tipi<input name="bina_tipi" defaultValue={inputData.bina_tipi ?? ''} className={inputCls()} /></label>
+        <label className="text-sm">Risk Sınıfı<select name="risk_sinifi" defaultValue={inputData.risk_sinifi ?? 'orta_riskli'} className={inputCls()}>
+          <option value="az_riskli">Az Riskli</option>
+          <option value="orta_riskli">Orta Riskli</option>
+          <option value="riskli">Riskli</option>
+          <option value="cok_riskli">Çok Riskli</option>
+        </select></label>
+        <label className="text-sm">Kat Sayısı<input name="kat_sayisi" type="number" min="1" defaultValue={inputData.kat_sayisi ?? 1} className={inputCls()} /></label>
+        <label className="text-sm">Kat Alanı m²<input name="kat_alani_m2" type="number" min="0" defaultValue={inputData.kat_alani_m2 ?? 0} className={inputCls()} /></label>
+        <label className="text-sm">Toplam Alan m²<input name="toplam_alan_m2" type="number" min="0" defaultValue={inputData.toplam_alan_m2 ?? 0} className={inputCls()} /></label>
+        <label className="text-sm">Bina Yüksekliği m<input name="bina_yuksekligi_m" type="number" min="0" defaultValue={inputData.bina_yuksekligi_m ?? 0} className={inputCls()} /></label>
+        <label className="text-sm">Cephe Uzunluğu m<input name="cephe_uzunlugu_m" type="number" min="0" defaultValue={inputData.cephe_uzunlugu_m ?? 0} className={inputCls()} /></label>
+        <label className="text-sm">Tesis Çevresi m<input name="tesis_cevre_m" type="number" min="0" defaultValue={inputData.tesis_cevre_m ?? 0} className={inputCls()} /></label>
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <label className="flex items-center gap-2 text-sm"><input name="yangin_dolabi_gerekli" type="checkbox" defaultChecked={inputData.yangin_dolabi_gerekli ?? true} /> Yangın dolabı gerekli</label>
+        <label className="flex items-center gap-2 text-sm"><input name="hidrant_gerekli" type="checkbox" defaultChecked={inputData.hidrant_gerekli ?? true} /> Hidrant gerekli</label>
+        <label className="flex items-center gap-2 text-sm"><input name="elektrik_yedekli" type="checkbox" defaultChecked={inputData.elektrik_yedekli ?? true} /> Elektrik yedekli pompa</label>
+        <label className="flex items-center gap-2 text-sm"><input name="dizel_yedekli" type="checkbox" defaultChecked={inputData.dizel_yedekli ?? false} /> Dizel yedek pompa</label>
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <label className="text-sm">Ana Hat Uzunluğu m<input name="ana_hat_uzunlugu_m" type="number" min="0" defaultValue={inputData.ana_hat_uzunlugu_m ?? 0} className={inputCls()} /></label>
+        <label className="text-sm">Kolon Hattı Uzunluğu m<input name="kolon_hatti_uzunlugu_m" type="number" min="0" defaultValue={inputData.kolon_hatti_uzunlugu_m ?? 0} className={inputCls()} /></label>
+        <label className="text-sm">Eşdeğer Parça Oranı %<input name="esdeger_parca_orani" type="number" min="0" defaultValue={inputData.esdeger_parca_orani ?? 20} className={inputCls()} /></label>
+        <label className="text-sm">Hedef Çıkış Basıncı kPa<input name="hedef_cikis_basinci_kpa" type="number" min="0" defaultValue={inputData.hedef_cikis_basinci_kpa ?? 700} className={inputCls()} /></label>
+      </div>
+      <label className="mt-4 block text-sm">Saha Notu<textarea name="aciklama" rows={3} defaultValue={inputData.aciklama ?? ''} className={inputCls()} /></label>
+      <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-xs text-yellow-900">
+        {WATER_SYSTEM_WARNING}
       </div>
     </section>
   )

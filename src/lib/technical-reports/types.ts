@@ -4,6 +4,7 @@ export type TechnicalReportType =
   | 'yangin_alarm_ihtiyac'
   | 'genel_ihtiyac_raporu'
   | 'oda_sizdirmazlik_testi'
+  | 'yangin_dolabi_hidrant_pompa'
 
 export type TechnicalReportStatus =
   | 'Taslak'
@@ -24,10 +25,12 @@ export type MaterialListItem = {
 }
 
 export type TechnicalSetting = {
+  id?: string
   ayar_grubu: string
   ayar_adi: string
   ayar_degeri: string
   birim?: string | null
+  aciklama?: string | null
 }
 
 export type TechnicalReportRow = {

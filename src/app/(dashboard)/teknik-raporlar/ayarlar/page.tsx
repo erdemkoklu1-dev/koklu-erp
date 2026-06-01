@@ -1,8 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
+import { waterSystemDefaultSettingRows } from '@/lib/technical-reports/water-system-calculator'
 import TechnicalReportTabs from '../_components/TechnicalReportTabs'
+import TechnicalSettingsTable from './TechnicalSettingsTable'
 
 export default async function TechnicalSettingsPage() {
   const supabase = await createClient()
+  const defaults = waterSystemDefaultSettingRows.map(([ayar_adi, ayar_degeri, birim, aciklama]) => ({
+    ayar_grubu: 'yangin_sulu_sistem',
+    ayar_adi,
+    ayar_degeri,
+    birim,
+    aciklama,
+    aktif: true,
+  }))
+  const { error: upsertError } = await supabase
+    .from('teknik_hesap_ayarlari')
+    .upsert(defaults, { onConflict: 'ayar_grubu,ayar_adi', ignoreDuplicates: true })
+
+  if (upsertError) console.error('[teknik-ayarlar] default water settings upsert failed', upsertError)
+
   const { data: settings } = await supabase
     .from('teknik_hesap_ayarlari')
     .select('*')
@@ -17,16 +33,7 @@ export default async function TechnicalSettingsPage() {
       </div>
       <TechnicalReportTabs active="/teknik-raporlar/ayarlar" />
       <main className="p-6">
-        <div className="overflow-hidden rounded-lg border bg-white dark:border-gray-700 dark:bg-gray-800">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-300">
-              <tr><th className="px-4 py-3 text-left">Grup</th><th className="px-4 py-3 text-left">Ayar</th><th className="px-4 py-3 text-left">Değer</th><th className="px-4 py-3 text-left">Birim</th><th className="px-4 py-3 text-left">Açıklama</th></tr>
-            </thead>
-            <tbody className="divide-y dark:divide-gray-700">
-              {(settings ?? []).map((s: any) => <tr key={s.id}><td className="px-4 py-3">{s.ayar_grubu}</td><td className="px-4 py-3">{s.ayar_adi}</td><td className="px-4 py-3">{s.ayar_degeri}</td><td className="px-4 py-3">{s.birim ?? '-'}</td><td className="px-4 py-3">{s.aciklama}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
+        <TechnicalSettingsTable settings={(settings ?? []) as any} />
       </main>
     </div>
   )

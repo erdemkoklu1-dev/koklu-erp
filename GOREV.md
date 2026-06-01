@@ -1,5 +1,5 @@
 # GÖREV
 
-Teknik Hesap & Raporlar modülündeki rapor aksiyonları görevi tamamlandı.
+Teknik Hesap & Raporlar modülüne Yangın Dolabı, Hidrant ve Yangın Pompası / Hidrofor Ön Hesabı ekleme görevi tamamlandı.
 
 Tamamlanan maddeler temizlendi.
