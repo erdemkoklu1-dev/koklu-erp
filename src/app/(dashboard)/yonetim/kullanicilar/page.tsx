@@ -11,5 +11,11 @@ export default async function KullanicilarPage() {
     .select('id, ad, renk')
     .order('ad')
 
-  return <KullanicilarClient roller={roller ?? []} />
+  const { data: subeler } = await supabase
+    .from('subeler')
+    .select('id, ad')
+    .eq('aktif', true)
+    .order('ad')
+
+  return <KullanicilarClient roller={roller ?? []} subeler={subeler ?? []} />
 }

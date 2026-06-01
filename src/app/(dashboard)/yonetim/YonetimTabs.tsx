@@ -4,11 +4,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const TABS = [
-  { href: '/yonetim/kullanicilar', label: 'Kullanicilar', adminOnly: true },
-  { href: '/yonetim/roller', label: 'Roller & Izinler', adminOnly: true },
-  { href: '/yonetim/kayitlar', label: 'Giris/Cikis Kayitlari', adminOnly: true },
-  { href: '/yonetim/sistem', label: 'Sistem Durumu', adminOnly: true },
-  { href: '/yonetim/yedekleme', label: 'Yedekleme', adminOnly: false },
+  { id: 'kullanicilar', href: '/yonetim/kullanicilar', label: 'Kullanıcılar', adminOnly: true },
+  { id: 'roller', href: '/yonetim/roller', label: 'Roller', adminOnly: true },
+  { id: 'rol-yetkileri', href: '/yonetim/roller', label: 'Rol Yetkileri', adminOnly: true },
+  { id: 'sube-yetkileri', href: '/yonetim/kullanicilar', label: 'Şube Yetkileri', adminOnly: true },
+  { id: 'modul-yetkileri', href: '/yonetim/roller', label: 'Modül Yetkileri', adminOnly: true },
+  { id: 'sistem-ayarlari', href: '/yonetim/sistem', label: 'Sistem Ayarları', adminOnly: true },
+  { id: 'teknik-ayarlari', href: '/teknik-raporlar/ayarlar', label: 'Teknik Ayarlar', adminOnly: true },
+  { id: 'loglar', href: '/yonetim/kayitlar', label: 'Loglar / İşlem Geçmişi', adminOnly: true },
+  { id: 'yedekleme', href: '/yonetim/yedekleme', label: 'Yedekleme', adminOnly: false },
 ]
 
 export default function YonetimTabs({ isAdmin }: { isAdmin: boolean }) {
@@ -18,7 +22,7 @@ export default function YonetimTabs({ isAdmin }: { isAdmin: boolean }) {
       {TABS.filter(tab => isAdmin || !tab.adminOnly).map(tab => {
         const active = pathname.startsWith(tab.href)
         return (
-          <Link key={tab.href} href={tab.href}
+          <Link key={tab.id} href={tab.href}
             className={`whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               active
                 ? 'border-[#C8102E] text-[#C8102E]'

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import CustomersClient, { type CustomerRow, type ControlStatus } from './CustomersClient'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
 import PrintButton from '@/components/PrintButton'
+import { getCurrentAccess } from '@/lib/auth/authorization'
 
 function resolveCityInfo(il: string | null, address: string | null): {
   city: 'Erzincan' | 'İstanbul' | 'Diğer'
@@ -80,12 +81,21 @@ function computeControlStatus(devices: any[]): { status: ControlStatus; daysUnti
 
 export default async function CustomersPage() {
   const supabase = await createClient()
+  const access = await getCurrentAccess()
 
-  const { data: customers } = await supabase
+  let customerQuery = supabase
     .from('customers')
     .select('*')
     .eq('is_active', true)
     .order('full_name')
+
+  if (access && !access.isAdmin) {
+    customerQuery = access.branchIds.length > 0
+      ? customerQuery.in('sube_id', access.branchIds)
+      : customerQuery.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
+  }
+
+  const { data: customers } = await customerQuery
 
   const { data: devices } = await supabase
     .from('devices')

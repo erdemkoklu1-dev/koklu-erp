@@ -26,9 +26,10 @@ type Props = {
   /** Extra params to preserve (e.g. status, type) — key:value */
   preserveParams?: Record<string, string | undefined>
   subeler?: { id: string; ad: string }[]
+  lockedSubeId?: string | null
 }
 
-function FiltreForm({ basePath, preserveParams = {}, subeler = [] }: Props) {
+function FiltreForm({ basePath, preserveParams = {}, subeler = [], lockedSubeId = null }: Props) {
   const sp = useSearchParams()
   const router = useRouter()
 
@@ -36,15 +37,15 @@ function FiltreForm({ basePath, preserveParams = {}, subeler = [] }: Props) {
   const [from, setFrom]     = useState(sp.get('from') ?? '')
   const [to, setTo]         = useState(sp.get('to') ?? '')
   const [sort, setSort]     = useState(sp.get('sort') ?? 'date_desc')
-  const [sube, setSube]     = useState(sp.get('sube') ?? '')
+  const [sube, setSube]     = useState(lockedSubeId ?? sp.get('sube') ?? '')
 
   useEffect(() => {
     setPeriod(sp.get('period') ?? '')
     setFrom(sp.get('from') ?? '')
     setTo(sp.get('to') ?? '')
     setSort(sp.get('sort') ?? 'date_desc')
-    setSube(sp.get('sube') ?? '')
-  }, [sp])
+    setSube(lockedSubeId ?? sp.get('sube') ?? '')
+  }, [sp, lockedSubeId])
 
   function onPeriodChange(val: string) {
     setPeriod(val)
@@ -67,7 +68,7 @@ function FiltreForm({ basePath, preserveParams = {}, subeler = [] }: Props) {
       if (to)   p.set('to', to)
     }
     if (sort && sort !== 'date_desc') p.set('sort', sort)
-    if (sube) p.set('sube', sube)
+    if (lockedSubeId || sube) p.set('sube', lockedSubeId ?? sube)
     router.push(`${basePath}?${p.toString()}`)
   }
 
@@ -114,7 +115,7 @@ function FiltreForm({ basePath, preserveParams = {}, subeler = [] }: Props) {
 
       <div>
         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Şube</label>
-        <select value={sube} onChange={e => setSube(e.target.value)} className={`${inputCls} min-w-40`}>
+        <select value={sube} onChange={e => setSube(e.target.value)} disabled={!!lockedSubeId} className={`${inputCls} min-w-40 disabled:bg-gray-100`}>
           <option value="">Tüm Şubeler</option>
           {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
         </select>

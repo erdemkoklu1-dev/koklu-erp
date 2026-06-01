@@ -1,22 +1,41 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { TeslimatListeClient, type TeslimatRow } from './TeslimatListeClient'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+
+type RawTeslimat = {
+  id: string
+  teslimat_no: string | null
+  teslimat_tarihi: string | null
+  hedef_tarih: string | null
+  durum: string | null
+  customers: unknown
+  subeler: unknown
+  personeller: unknown
+}
 
 export default async function TeslimatListePage({ searchParams }: { searchParams: Promise<{ durum?: string }> }) {
   const params = await searchParams
   const supabase = createServiceClient()
+  const access = await getCurrentAccess()
+  function scope(query: any) {
+    if (!access || access.isAdmin) return query
+    if (access.branchIds.length === 0) return query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
+    return query.in('sube_id', access.branchIds)
+  }
 
   const [{ data: rows }, { data: subeler }] = await Promise.all([
-    supabase
+    scope(supabase
       .from('teslimatlar')
       .select('id, teslimat_no, teslimat_tarihi, hedef_tarih, durum, customers(id, full_name), subeler(id, ad), personeller(id, ad, soyad)')
       .order('created_at', { ascending: false })
-      .limit(300),
+      .limit(300)),
     supabase.from('subeler').select('id, ad').order('ad'),
   ])
 
   // Kalem sayısını ayrı sorguda çek
-  const ids = (rows ?? []).map(r => r.id)
+  const rawRows = (rows ?? []) as RawTeslimat[]
+  const ids = rawRows.map(r => r.id)
   const { data: kalemRows } = ids.length > 0
     ? await supabase.from('teslimat_kalemleri').select('teslimat_id').in('teslimat_id', ids)
     : { data: [] }
@@ -26,7 +45,7 @@ export default async function TeslimatListePage({ searchParams }: { searchParams
     kalemCountMap.set(kr.teslimat_id, (kalemCountMap.get(kr.teslimat_id) ?? 0) + 1)
   }
 
-  const typedRows: TeslimatRow[] = (rows ?? []).map(r => {
+  const typedRows: TeslimatRow[] = rawRows.map(r => {
     const c = r.customers as unknown as { id: string; full_name: string } | null
     const s = r.subeler as unknown as { id: string; ad: string } | null
     const p = r.personeller as unknown as { id: string; ad: string; soyad: string } | null
@@ -43,7 +62,8 @@ export default async function TeslimatListePage({ searchParams }: { searchParams
     }
   })
 
-  const typedSubeler = (subeler ?? []).map(s => ({ id: s.id, ad: s.ad ?? '' }))
+  const visibleSubeler = access?.isAdmin ? (subeler ?? []) : (subeler ?? []).filter(s => access?.branchIds.includes(s.id))
+  const typedSubeler = visibleSubeler.map(s => ({ id: s.id, ad: s.ad ?? '' }))
 
   return (
     <div className="space-y-5 p-6">

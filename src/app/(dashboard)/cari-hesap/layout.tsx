@@ -1,6 +1,8 @@
 import CariHesapTabs from './_components/CariHesapTabs'
+import { requireModuleAccess } from '@/lib/auth/authorization'
 
-export default function CariHesapLayout({ children }: { children: React.ReactNode }) {
+export default async function CariHesapLayout({ children }: { children: React.ReactNode }) {
+  await requireModuleAccess('current_account')
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-700 flex flex-col">
       <div className="bg-white dark:bg-gray-800 border-b px-6 py-4 flex items-center gap-3 sticky top-0 z-10">

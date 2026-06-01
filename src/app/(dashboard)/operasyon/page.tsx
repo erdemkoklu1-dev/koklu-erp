@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import OperationShell from './_components/OperationShell'
 import OperationFilters from './_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
+import { allowedBranchFilter, getCurrentAccess } from '@/lib/auth/authorization'
 
 type SearchParams = Promise<{ sube?: string; baslangic?: string; bitis?: string; q?: string }>
 
@@ -40,10 +41,19 @@ function withSube(href: string, subeId?: string) {
 export default async function OperasyonPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
   const supabase = createServiceClient()
+  const access = await getCurrentAccess()
+  const effectiveSube = access ? allowedBranchFilter(access, params.sube) : params.sube
   const today = new Date().toISOString().slice(0, 10)
   const tenDaysAgo = new Date()
   tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
   const tenDaysAgoStr = tenDaysAgo.toISOString().slice(0, 10)
+
+  function applySube(query: any, _requested?: string) {
+    if (effectiveSube === '__none__') return query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
+    if (effectiveSube) return query.eq('sube_id', effectiveSube)
+    if (access && !access.isAdmin) return query.in('sube_id', access.branchIds)
+    return query
+  }
 
   const [
     { data: subeler },
@@ -85,7 +95,8 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
     applySube(supabase.from('is_planlari').select('id, plan_no, baslik, durum, sonraki_is_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5), params.sube),
   ])
 
-  const branchRows = await Promise.all((subeler ?? []).map(async sube => {
+  const visibleSubeler = access?.isAdmin ? (subeler ?? []) : (subeler ?? []).filter(s => access?.branchIds.includes(s.id))
+  const branchRows = await Promise.all(visibleSubeler.map(async sube => {
     const [
       { count: acikSevk },
       { count: acikEmanet },
@@ -148,8 +159,8 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
       <div className="space-y-6 p-6 print:p-0">
         <OperationFilters
           action="/operasyon"
-          subeler={subeler ?? []}
-          values={params}
+          subeler={visibleSubeler}
+          values={{ ...params, sube: effectiveSube && effectiveSube !== '__none__' ? effectiveSube : undefined }}
           searchPlaceholder="Özet içinde ara"
         />
 

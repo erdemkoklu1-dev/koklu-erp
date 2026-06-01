@@ -1,6 +1,8 @@
 import HatirlatmaTabs from './HatirlatmaTabs'
+import { requireModuleAccess } from '@/lib/auth/authorization'
 
-export default function HatirlatmalarLayout({ children }: { children: React.ReactNode }) {
+export default async function HatirlatmalarLayout({ children }: { children: React.ReactNode }) {
+  await requireModuleAccess('reminders')
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-700 flex flex-col">
       <div className="bg-white dark:bg-gray-800 border-b px-6 py-4">

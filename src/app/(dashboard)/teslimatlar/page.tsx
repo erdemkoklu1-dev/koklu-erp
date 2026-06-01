@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { formatTRDate } from '@/lib/finance/formatters'
 import TabletModeButton from './TabletModeButton'
+import { getCurrentAccess } from '@/lib/auth/authorization'
 
 type TeslimatKalemRow = {
   id: string
@@ -12,6 +13,15 @@ type TeslimatKalemRow = {
 
 type SubeJoin = { ad?: string | null }
 type CustomerJoin = { id?: string | null; full_name?: string | null }
+type SubeRow = { sube_id: string | null; subeler: unknown; durum: string | null }
+type SonTeslimatRow = {
+  id: string
+  teslimat_no: string | null
+  teslimat_tarihi: string | null
+  durum: string
+  customers: unknown
+  subeler: unknown
+}
 
 function kalemMarker(notlar: string | null | undefined) {
   return String(notlar ?? '').match(/Teslimat kalemi: ([0-9a-f-]+)/i)?.[1] ?? null
@@ -65,10 +75,16 @@ function DashboardCard({ label, value, icon, valueCls, isUrgent, href }: CardPro
 
 export default async function TeslimatlarPage() {
   const supabase = createServiceClient()
+  const access = await getCurrentAccess()
   const today = new Date().toISOString().slice(0, 10)
   const tenDaysAgoDate = new Date()
   tenDaysAgoDate.setDate(tenDaysAgoDate.getDate() - 10)
   const tenDaysAgo = tenDaysAgoDate.toISOString().slice(0, 10)
+  function scope(query: any) {
+    if (!access || access.isAdmin) return query
+    if (access.branchIds.length === 0) return query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
+    return query.in('sube_id', access.branchIds)
+  }
 
   const [
     { count: todayCount },
@@ -82,12 +98,12 @@ export default async function TeslimatlarPage() {
     { data: sonTeslimatlar },
     { data: subeRows },
   ] = await Promise.all([
-    supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today),
-    supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte'),
-    supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']),
-    supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']),
-    supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']).lt('created_at', tenDaysAgo),
-    supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']).lt('created_at', tenDaysAgo),
+    scope(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today)),
+    scope(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte')),
+    scope(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi'])),
+    scope(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim'])),
+    scope(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']).lt('created_at', tenDaysAgo)),
+    scope(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']).lt('created_at', tenDaysAgo)),
     supabase
       .from('teslimat_kalemleri')
       .select('id, aciklama, toplam_tutar, teslimatlar(teslimat_no, durum)')
@@ -99,16 +115,16 @@ export default async function TeslimatlarPage() {
       .select('id, aciklama, notlar')
       .ilike('notlar', '%Teslimat kalemi:%')
       .limit(1000),
-    supabase
+    scope(supabase
       .from('teslimatlar')
       .select('id, teslimat_no, teslimat_tarihi, durum, customers(id, full_name), subeler(ad)')
       .order('created_at', { ascending: false })
-      .limit(8),
-    supabase
+      .limit(8)),
+    scope(supabase
       .from('teslimatlar')
       .select('sube_id, subeler(ad), durum')
       .neq('durum', 'tamamlandi')
-      .neq('durum', 'iptal'),
+      .neq('durum', 'iptal')),
   ])
 
   const aktarilanKalemler = new Set((onKayitlar ?? []).map(k => kalemMarker(k.notlar)).filter(Boolean))
@@ -120,10 +136,12 @@ export default async function TeslimatlarPage() {
   }).length
 
   const gecikenCount = (gecikenGeriCount ?? 0) + (gecikenEmanetCount ?? 0)
+  const typedSubeRows = (subeRows ?? []) as SubeRow[]
+  const typedSonTeslimatlar = (sonTeslimatlar ?? []) as SonTeslimatRow[]
 
   // Şube bazlı açık iş
   const subeMap = new Map<string, { ad: string; subeId: string; count: number }>()
-  for (const row of subeRows ?? []) {
+  for (const row of typedSubeRows) {
     const sube = row.subeler as SubeJoin | null
     const key = (row.sube_id as string | null) ?? 'genel'
     const cur = subeMap.get(key) ?? { ad: sube?.ad ?? 'Genel', subeId: key, count: 0 }
@@ -170,7 +188,7 @@ export default async function TeslimatlarPage() {
             <Link href="/teslimatlar/liste" className="text-sm text-[#C8102E] hover:underline">Tümünü gör →</Link>
           </div>
           <div className="divide-y dark:divide-gray-700">
-            {(sonTeslimatlar ?? []).map(row => {
+            {typedSonTeslimatlar.map(row => {
               const customer = row.customers as CustomerJoin | null
               const sube = row.subeler as SubeJoin | null
               const durumIcon = row.durum === 'tamamlandi' ? '✅' : row.durum === 'sevkte' ? '🚚' : row.durum === 'iptal' ? '❌' : '📦'
@@ -200,7 +218,7 @@ export default async function TeslimatlarPage() {
                 </div>
               )
             })}
-            {(sonTeslimatlar ?? []).length === 0 && (
+            {typedSonTeslimatlar.length === 0 && (
               <div className="py-10 text-center">
                 <div className="mb-2 text-3xl">📦</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Henüz teslimat kaydı yok.</div>

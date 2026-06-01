@@ -5,19 +5,24 @@ import { formatDateTR, personName } from '@/lib/technical-reports/report-utils'
 import { REPORT_TYPE_LABELS, type TechnicalReportRow, type TechnicalReportType } from '@/lib/technical-reports/types'
 import TechnicalReportTabs from './_components/TechnicalReportTabs'
 import TechnicalReportDeleteButton from './_components/TechnicalReportDeleteButton'
+import { allowedBranchFilter, getCurrentAccess } from '@/lib/auth/authorization'
 
 type SearchParams = Promise<{ q?: string; tur?: TechnicalReportType; sube?: string; durum?: string; from?: string; to?: string }>
 
 export default async function TechnicalReportsPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
   const supabase = await createClient()
+  const access = await getCurrentAccess()
+  const effectiveSube = access ? allowedBranchFilter(access, params.sube) : params.sube
   let query = supabase
     .from('teknik_raporlar')
     .select('*, customers(full_name), subeler(ad), personeller(ad, soyad)')
     .order('created_at', { ascending: false })
 
   if (params.tur) query = query.eq('rapor_turu', params.tur)
-  if (params.sube) query = query.eq('sube_id', params.sube)
+  if (effectiveSube === '__none__') query = query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
+  else if (effectiveSube) query = query.eq('sube_id', effectiveSube)
+  else if (access && !access.isAdmin) query = query.in('sube_id', access.branchIds)
   if (params.durum) query = query.eq('durum', params.durum)
   if (params.from) query = query.gte('rapor_tarihi', params.from)
   if (params.to) query = query.lte('rapor_tarihi', params.to)
@@ -28,6 +33,7 @@ export default async function TechnicalReportsPage({ searchParams }: { searchPar
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
   ])
   const reports = (rows ?? []) as TechnicalReportRow[]
+  const visibleSubeler = access?.isAdmin ? (subeler ?? []) : (subeler ?? []).filter(s => access?.branchIds.includes(s.id))
   const now = new Date()
   const thisMonth = reports.filter(r => new Date(r.created_at).getMonth() === now.getMonth() && new Date(r.created_at).getFullYear() === now.getFullYear()).length
   const countBy = (fn: (row: TechnicalReportRow) => boolean) => reports.filter(fn).length
@@ -69,9 +75,9 @@ export default async function TechnicalReportsPage({ searchParams }: { searchPar
             <option value="">Tüm Rapor Türleri</option>
             {Object.entries(REPORT_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <select name="sube" defaultValue={params.sube ?? ''} className="rounded-md border px-3 py-2 text-sm dark:border-gray-600">
+          <select name="sube" defaultValue={effectiveSube && effectiveSube !== '__none__' ? effectiveSube : ''} disabled={!!access?.singleBranchId} className="rounded-md border px-3 py-2 text-sm disabled:bg-gray-100 dark:border-gray-600">
             <option value="">Tüm Şubeler</option>
-            {(subeler ?? []).map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+            {visibleSubeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
           </select>
           <select name="durum" defaultValue={params.durum ?? ''} className="rounded-md border px-3 py-2 text-sm dark:border-gray-600">
             <option value="">Tüm Durumlar</option>
