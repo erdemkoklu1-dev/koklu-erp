@@ -4,15 +4,20 @@ import { createClient } from '@/lib/supabase/server'
 import { formatDateTR, personName } from '@/lib/technical-reports/report-utils'
 import { REPORT_TYPE_LABELS, type TechnicalReportRow } from '@/lib/technical-reports/types'
 import TechnicalReportPrintView from '../_components/TechnicalReportPrintView'
+import TechnicalReportActions from '../_components/TechnicalReportActions'
 
 export default async function TechnicalReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('teknik_raporlar')
-    .select('*, customers(full_name, address), subeler(ad), personeller(ad, soyad)')
-    .eq('id', id)
-    .single()
+  const [{ data }, { data: customers }, { data: subeler }] = await Promise.all([
+    supabase
+      .from('teknik_raporlar')
+      .select('*, customers(full_name, address), subeler(ad), personeller(ad, soyad)')
+      .eq('id', id)
+      .single(),
+    supabase.from('customers').select('id, full_name').order('full_name'),
+    supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
+  ])
   if (!data) notFound()
   const report = data as TechnicalReportRow
 
@@ -24,13 +29,16 @@ export default async function TechnicalReportDetailPage({ params }: { params: Pr
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{report.baslik}</h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{report.rapor_no} · {REPORT_TYPE_LABELS[report.rapor_turu]}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/teknik-raporlar/${report.id}/duzenle`} className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600">Düzenle</Link>
-          <Link href={`/teknik-raporlar/${report.id}/yazdir`} className="rounded-lg bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white">Yazdır</Link>
-          <button className="rounded-lg border px-4 py-2 text-sm font-semibold dark:border-gray-600">PDF İndir</button>
-          <button className="rounded-lg border px-4 py-2 text-sm font-semibold dark:border-gray-600">Teklife Aktar</button>
-          <button className="rounded-lg border px-4 py-2 text-sm font-semibold dark:border-gray-600">Kopyala</button>
-          <button className="rounded-lg border px-4 py-2 text-sm font-semibold text-red-600 dark:border-gray-600">İptal Et</button>
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/teknik-raporlar/${report.id}/duzenle`} className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600">Düzenle</Link>
+            <Link href={`/teknik-raporlar/${report.id}/yazdir`} className="rounded-lg bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white">Yazdır</Link>
+            <TechnicalReportActions
+              report={report}
+              customers={(customers ?? []).map(customer => ({ id: customer.id, label: customer.full_name ?? '-' }))}
+              subeler={(subeler ?? []).map(sube => ({ id: sube.id, label: sube.ad ?? '-' }))}
+            />
+          </div>
         </div>
       </div>
       <section className="no-print mb-5 grid grid-cols-2 gap-3 rounded-lg border bg-white p-4 text-sm md:grid-cols-4 dark:border-gray-700 dark:bg-gray-800">

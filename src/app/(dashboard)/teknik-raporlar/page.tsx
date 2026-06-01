@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import { formatDateTR, personName } from '@/lib/technical-reports/report-utils'
 import { REPORT_TYPE_LABELS, type TechnicalReportRow, type TechnicalReportType } from '@/lib/technical-reports/types'
 import TechnicalReportTabs from './_components/TechnicalReportTabs'
+import TechnicalReportDeleteButton from './_components/TechnicalReportDeleteButton'
 
 type SearchParams = Promise<{ q?: string; tur?: TechnicalReportType; sube?: string; durum?: string; from?: string; to?: string }>
 
@@ -111,6 +112,7 @@ export default async function TechnicalReportsPage({ searchParams }: { searchPar
                         <Link href={`/teknik-raporlar/${report.id}`} className="text-[#C8102E] hover:underline">Detay</Link>
                         <Link href={`/teknik-raporlar/${report.id}/duzenle`} className="text-gray-600 hover:underline">Düzenle</Link>
                         <Link href={`/teknik-raporlar/${report.id}/yazdir`} className="text-gray-600 hover:underline">Yazdır</Link>
+                        <TechnicalReportDeleteButton reportId={report.id} />
                       </div>
                     </td>
                   </tr>

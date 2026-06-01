@@ -1,3 +1,5 @@
+import { technicalReportTypeLabels } from './reportTypeLabels'
+
 export type TechnicalReportType =
   | 'yangin_alarm_ihtiyac'
   | 'genel_ihtiyac_raporu'
@@ -47,20 +49,19 @@ export type TechnicalReportRow = {
   material_list: MaterialListItem[]
   notes: string | null
   pdf_url: string | null
+  teklif_id: string | null
+  teslimat_id: string | null
+  talep_id: string | null
   created_at: string
   customers?: { full_name?: string | null; address?: string | null } | null
   subeler?: { ad?: string | null } | null
   personeller?: { ad?: string | null; soyad?: string | null } | null
 }
 
-export const REPORT_TYPE_LABELS: Record<TechnicalReportType, string> = {
-  yangin_alarm_ihtiyac: 'Yangın Alarm Sistemi İhtiyaç Hesabı',
-  genel_ihtiyac_raporu: 'Genel Keşif ve İhtiyaç Listesi Raporu',
-  oda_sizdirmazlik_testi: 'Oda Sızdırmazlık Testi',
-}
+export const REPORT_TYPE_LABELS: Record<TechnicalReportType, string> = Object.fromEntries(
+  Object.entries(technicalReportTypeLabels).map(([type, value]) => [type, value.title])
+) as Record<TechnicalReportType, string>
 
-export const REPORT_TYPE_SUBTITLES: Record<TechnicalReportType, string> = {
-  yangin_alarm_ihtiyac: 'Yangın algılama ve alarm sistemi ön keşif raporu',
-  genel_ihtiyac_raporu: 'Yangın güvenliği mevcut durum ve ihtiyaç değerlendirme raporu',
-  oda_sizdirmazlik_testi: 'Gazlı söndürme sistemi oda bütünlüğü ön değerlendirme raporu',
-}
+export const REPORT_TYPE_SUBTITLES: Record<TechnicalReportType, string> = Object.fromEntries(
+  Object.entries(technicalReportTypeLabels).map(([type, value]) => [type, value.subtitle])
+) as Record<TechnicalReportType, string>

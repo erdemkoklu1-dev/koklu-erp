@@ -1,4 +1,5 @@
 import type { TechnicalReportType } from './types'
+import { getTechnicalReportTypePrefix } from './reportTypeLabels'
 
 export function formatDateTR(value?: string | null) {
   if (!value) return '-'
@@ -6,15 +7,10 @@ export function formatDateTR(value?: string | null) {
 }
 
 export function createReportNo(type: TechnicalReportType) {
-  const prefix: Record<TechnicalReportType, string> = {
-    yangin_alarm_ihtiyac: 'YAIR',
-    genel_ihtiyac_raporu: 'GIR',
-    oda_sizdirmazlik_testi: 'OST',
-  }
   const now = new Date()
   const date = now.toISOString().slice(0, 10).replaceAll('-', '')
   const time = `${now.getHours()}${now.getMinutes()}${now.getSeconds()}`.padStart(6, '0')
-  return `${prefix[type]}-${date}-${time}`
+  return `${getTechnicalReportTypePrefix(type)}-${date}-${time}`
 }
 
 export function personName(person?: { ad?: string | null; soyad?: string | null } | null) {
