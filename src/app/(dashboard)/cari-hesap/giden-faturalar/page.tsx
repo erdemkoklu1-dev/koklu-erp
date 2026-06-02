@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { formatCurrency, formatTRDate, INVOICE_STATUS_CONFIG } from '@/lib/finance/formatters'
 import GidenFiltresi from './GidenFiltresi'
 import PrintButton from '@/components/PrintButton'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
 
 function computeDateRange(period?: string, from?: string, to?: string) {
   const today = new Date()
@@ -34,6 +36,7 @@ export default async function GidenFaturalarPage({
 }) {
   const { q, period, from: fromParam, to: toParam, sort, durum, sehir, sube } = await searchParams
   const supabase = createServiceClient()
+  const access = await getCurrentAccess()
   const today = new Date().toISOString().split('T')[0]
 
   const { from: dateFrom, to: dateTo } = computeDateRange(period, fromParam, toParam)
@@ -42,6 +45,13 @@ export default async function GidenFaturalarPage({
     : sort === 'amount_desc' || sort === 'amount_asc' ? 'total_amount'
     : 'invoice_date'
   const dbAsc = sort === 'date_asc' || sort === 'amount_asc'
+  const { data: branchRows } = await supabase
+    .from('subeler')
+    .select('id, ad')
+    .eq('aktif', true)
+    .order('ad')
+  const visibleBranches = filterVisibleBranches((branchRows ?? []) as { id: string; ad: string }[], access)
+  const lockedBranchId = getLockedBranchId(access)
 
   let query = supabase
     .from('invoices')
@@ -58,7 +68,7 @@ export default async function GidenFaturalarPage({
     query = query.ilike('invoice_number', `%${q.trim()}%`)
   }
 
-  if (sube) query = query.eq('sube_id', sube)
+  query = applyBranchScope(query, access, sube)
 
   if (durum && durum !== 'tumu' && durum !== 'gecikmiş') {
     if (durum === 'vergi_mahsup') {
@@ -173,7 +183,7 @@ export default async function GidenFaturalarPage({
       </div>
 
       {/* Filtreler */}
-      <GidenFiltresi />
+      <GidenFiltresi subeler={visibleBranches} lockedSubeId={lockedBranchId} />
 
       {/* Sonuç sayısı */}
       <div className="text-sm text-gray-500 dark:text-gray-400 px-1">

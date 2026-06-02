@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { formatCurrency, formatTRDate, INVOICE_STATUS_CONFIG } from '@/lib/finance/formatters'
 import FaturaFiltrePaneli from '../_components/FaturaFiltrePaneli'
 import PrintButton from '@/components/PrintButton'
-import { allowedBranchFilter, getCurrentAccess } from '@/lib/auth/authorization'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
 
 const TYPE_LABELS: Record<string, string> = {
   satis: 'Satış', alis: 'Alış', iade_satis: 'İade (Satış)', iade_alis: 'İade (Alış)',
@@ -41,7 +42,6 @@ export default async function FaturalarPage({
   const { status, type, q, period, from: fromParam, to: toParam, sort, sube } = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
-  const effectiveSube = access ? allowedBranchFilter(access, sube) : sube
 
   const isMahsupFilter = status === 'vergi_mahsup'
   const { from: dateFrom, to: dateTo } = computeDateRange(period, fromParam, toParam)
@@ -57,9 +57,7 @@ export default async function FaturalarPage({
     if (status && status !== 'all') query = query.eq('status', status)
   }
   if (type && type !== 'all') query = query.eq('invoice_type', type)
-  if (effectiveSube === '__none__') query = query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
-  else if (effectiveSube) query = query.eq('sube_id', effectiveSube)
-  else if (access && !access.isAdmin) query = query.in('sube_id', access.branchIds)
+  query = applyBranchScope(query, access, sube)
   if (dateFrom) query = query.gte('invoice_date', dateFrom)
   if (dateTo)   query = query.lte('invoice_date', dateTo)
 
@@ -76,16 +74,17 @@ export default async function FaturalarPage({
     .from('subeler')
     .select('id, ad')
     .order('ad')
-  const visibleSubeler = access?.isAdmin ? (subeler ?? []) : (subeler ?? []).filter(s => access?.branchIds.includes(s.id))
+  const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string }[], access)
 
   // Counts (no date filter, to keep status chips accurate)
-  const { data: allInvoices } = await supabase
+  let allInvoicesQuery = supabase
     .from('invoices')
     .select('status, mahsup_durumu, sube_id')
-  const scopedAllInvoices = access?.isAdmin ? (allInvoices ?? []) : (allInvoices ?? []).filter(inv => inv.sube_id && access?.branchIds.includes(inv.sube_id))
+  allInvoicesQuery = applyBranchScope(allInvoicesQuery, access, sube)
+  const { data: allInvoices } = await allInvoicesQuery
 
-  const counts: Record<string, number> = { all: scopedAllInvoices.length }
-  for (const inv of scopedAllInvoices) {
+  const counts: Record<string, number> = { all: allInvoices?.length ?? 0 }
+  for (const inv of allInvoices ?? []) {
     counts[inv.status] = (counts[inv.status] ?? 0) + 1
     if (inv.mahsup_durumu === 'vergi_mahsup') {
       counts['vergi_mahsup'] = (counts['vergi_mahsup'] ?? 0) + 1
@@ -281,7 +280,7 @@ export default async function FaturalarPage({
           q: q ?? undefined,
         }}
         subeler={visibleSubeler}
-        lockedSubeId={access?.singleBranchId ?? null}
+        lockedSubeId={getLockedBranchId(access)}
       />
 
       {/* Özet kartlar */}

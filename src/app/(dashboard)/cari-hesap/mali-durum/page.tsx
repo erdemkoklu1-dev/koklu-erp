@@ -1,6 +1,28 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import { formatCurrency, formatTRDate, MONTHS_TR, INVOICE_STATUS_CONFIG } from '@/lib/finance/formatters'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyBranchScope } from '@/lib/auth/branch-scope'
+
+type InvoiceAmountRow = {
+  total_amount: number | null
+  paid_amount?: number | null
+}
+
+type InvoiceDueRow = {
+  id: string
+  invoice_number: string | null
+  total_amount: number | null
+  paid_amount: number | null
+  due_date: string | null
+  customers: { full_name: string | null } | null
+}
+
+type YearlyInvoiceRow = {
+  invoice_date: string
+  invoice_type: string | null
+  total_amount: number | null
+}
 
 export default async function MaliDurumPage({
   searchParams,
@@ -9,6 +31,7 @@ export default async function MaliDurumPage({
 }) {
   const { yil, ay } = await searchParams
   const supabase = createServiceClient()
+  const access = await getCurrentAccess()
   const today = new Date()
   const year = parseInt(yil ?? String(today.getFullYear()))
   const month = parseInt(ay ?? String(today.getMonth() + 1))
@@ -23,6 +46,7 @@ export default async function MaliDurumPage({
 
   const in7 = new Date(today); in7.setDate(today.getDate() + 7)
   const in7Str = in7.toISOString().split('T')[0]
+  const invoiceScope = (query: any) => applyBranchScope(query, access)
 
   const [
     { data: monthInvoices },
@@ -39,12 +63,12 @@ export default async function MaliDurumPage({
     { data: thisWeekAlisInvoices },
   ] = await Promise.all([
     // Bu ay kesilen satış faturaları
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('total_amount, paid_amount, status')
       .eq('invoice_type', 'satis')
       .gte('invoice_date', monthStart)
       .lt('invoice_date', nextMonth)
-      .neq('status', 'iptal'),
+      .neq('status', 'iptal')),
 
     // Bu ay gelir/gider işlemleri
     supabase.from('transactions')
@@ -53,24 +77,24 @@ export default async function MaliDurumPage({
       .lt('transaction_date', nextMonth),
 
     // Gecikmiş alacaklar
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('id, invoice_number, total_amount, paid_amount, due_date, customers(full_name)')
       .eq('invoice_type', 'satis')
       .not('due_date', 'is', null)
       .lt('due_date', todayStr)
       .in('status', ['kesildi', 'gonderildi', 'kismi_odendi'])
       .order('due_date', { ascending: true })
-      .limit(10),
+      .limit(10)),
 
     // 30 gün içinde vadesi gelecek
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('id, invoice_number, total_amount, paid_amount, due_date, customers(full_name)')
       .eq('invoice_type', 'satis')
       .gte('due_date', todayStr)
       .lte('due_date', in30Str)
       .in('status', ['kesildi', 'gonderildi', 'kismi_odendi'])
       .order('due_date', { ascending: true })
-      .limit(10),
+      .limit(10)),
 
     // Bu ay maaş ödemeleri
     supabase.from('salary_payments')
@@ -94,47 +118,56 @@ export default async function MaliDurumPage({
       .limit(10),
 
     // Yıllık aylık özet
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('invoice_date, total_amount, invoice_type')
       .gte('invoice_date', yearStart)
       .lt('invoice_date', yearEnd)
-      .neq('status', 'iptal'),
+      .neq('status', 'iptal')),
 
     // Bu ay gelen fatura toplamı
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('total_amount')
       .eq('invoice_type', 'alis')
       .gte('invoice_date', monthStart)
       .lt('invoice_date', nextMonth)
-      .neq('status', 'iptal'),
+      .neq('status', 'iptal')),
 
     // Ödenmemiş gelen faturalar
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('total_amount, paid_amount')
       .eq('invoice_type', 'alis')
-      .in('status', ['taslak', 'kesildi', 'gonderildi', 'kismi_odendi']),
+      .in('status', ['taslak', 'kesildi', 'gonderildi', 'kismi_odendi'])),
 
     // Vadesi geçmiş borçlar
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('total_amount, paid_amount')
       .eq('invoice_type', 'alis')
       .not('due_date', 'is', null)
       .lt('due_date', todayStr)
-      .in('status', ['taslak', 'kesildi', 'gonderildi', 'kismi_odendi']),
+      .in('status', ['taslak', 'kesildi', 'gonderildi', 'kismi_odendi'])),
 
     // Bu hafta vadesi dolacak gelen faturalar
-    supabase.from('invoices')
+    invoiceScope(supabase.from('invoices')
       .select('id')
       .eq('invoice_type', 'alis')
       .gte('due_date', todayStr)
       .lte('due_date', in7Str)
-      .in('status', ['taslak', 'kesildi', 'gonderildi', 'kismi_odendi']),
+      .in('status', ['taslak', 'kesildi', 'gonderildi', 'kismi_odendi'])),
   ])
 
+  const monthInvoiceRows = (monthInvoices ?? []) as InvoiceAmountRow[]
+  const overdueInvoiceRows = (overdueInvoices ?? []) as InvoiceDueRow[]
+  const upcomingInvoiceRows = (upcomingInvoices ?? []) as InvoiceDueRow[]
+  const yearlyInvoiceRows = (yearlyInvoicesRaw ?? []) as YearlyInvoiceRow[]
+  const monthAlisInvoiceRows = (monthAlisInvoices ?? []) as InvoiceAmountRow[]
+  const unpaidAlisInvoiceRows = (unpaidAlisInvoices ?? []) as InvoiceAmountRow[]
+  const overdueAlisInvoiceRows = (overdueAlisInvoices ?? []) as InvoiceAmountRow[]
+  const thisWeekAlisInvoiceRows = (thisWeekAlisInvoices ?? []) as { id: string }[]
+
   // Hesaplamalar
-  const ciro = (monthInvoices ?? []).reduce((s, i) => s + (i.total_amount ?? 0), 0)
-  const tahsilat = (monthInvoices ?? []).reduce((s, i) => s + (i.paid_amount ?? 0), 0)
-  const alacak = (monthInvoices ?? []).reduce((s, i) => s + Math.max(0, (i.total_amount ?? 0) - (i.paid_amount ?? 0)), 0)
+  const ciro = monthInvoiceRows.reduce((s, i) => s + (i.total_amount ?? 0), 0)
+  const tahsilat = monthInvoiceRows.reduce((s, i) => s + (i.paid_amount ?? 0), 0)
+  const alacak = monthInvoiceRows.reduce((s, i) => s + Math.max(0, (i.total_amount ?? 0) - (i.paid_amount ?? 0)), 0)
 
   const gelirIslemleri = (monthTransactions ?? []).filter(t => t.direction === 'gelir')
   const giderIslemleri = (monthTransactions ?? []).filter(t => t.direction === 'gider')
@@ -143,19 +176,19 @@ export default async function MaliDurumPage({
   const personelMaliyet = (monthSalaries ?? []).reduce((s, p) => s + (p.net_amount ?? 0) + (p.sgk_employer ?? 0), 0)
   const netKar = toplamGelir + tahsilat - toplamGider - personelMaliyet
 
-  const overdueTotal = (overdueInvoices ?? []).reduce(
+  const overdueTotal = overdueInvoiceRows.reduce(
     (s, i) => s + Math.max(0, (i.total_amount ?? 0) - (i.paid_amount ?? 0)), 0
   )
 
   // Gelen fatura hesaplamaları
-  const buAyGelenToplam = (monthAlisInvoices ?? []).reduce((s, i) => s + (i.total_amount ?? 0), 0)
-  const odenmemisGelenToplam = (unpaidAlisInvoices ?? []).reduce(
+  const buAyGelenToplam = monthAlisInvoiceRows.reduce((s, i) => s + (i.total_amount ?? 0), 0)
+  const odenmemisGelenToplam = unpaidAlisInvoiceRows.reduce(
     (s, i) => s + Math.max(0, (i.total_amount ?? 0) - (i.paid_amount ?? 0)), 0
   )
-  const gecikmisBorcToplam = (overdueAlisInvoices ?? []).reduce(
+  const gecikmisBorcToplam = overdueAlisInvoiceRows.reduce(
     (s, i) => s + Math.max(0, (i.total_amount ?? 0) - (i.paid_amount ?? 0)), 0
   )
-  const buHaftaVadeliSayi = (thisWeekAlisInvoices ?? []).length
+  const buHaftaVadeliSayi = thisWeekAlisInvoiceRows.length
 
   // Aylık ciro trendi (son 6 ay)
   type MonthlyBar = { label: string; satis: number; alis: number }
@@ -165,7 +198,7 @@ export default async function MaliDurumPage({
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     monthlyMap.set(key, { label: MONTHS_TR[d.getMonth()].slice(0, 3), satis: 0, alis: 0 })
   }
-  for (const inv of yearlyInvoicesRaw ?? []) {
+  for (const inv of yearlyInvoiceRows) {
     const key = inv.invoice_date.slice(0, 7)
     if (monthlyMap.has(key)) {
       const row = monthlyMap.get(key)!
@@ -231,7 +264,7 @@ export default async function MaliDurumPage({
         <div className={`rounded-xl p-5 border ${overdueTotal > 0 ? 'bg-red-50 border-red-200' : 'bg-white dark:bg-gray-800'}`}>
           <div className={`text-xs font-medium mb-1 ${overdueTotal > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>Gecikmiş Alacak</div>
           <div className={`text-2xl font-bold ${overdueTotal > 0 ? 'text-red-700' : 'text-gray-900 dark:text-gray-100'}`}>{formatCurrency(overdueTotal)}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{overdueInvoices?.length ?? 0} fatura gecikmiş</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{overdueInvoiceRows.length} fatura gecikmiş</div>
         </div>
         <div className="bg-white dark:bg-gray-800 border rounded-xl p-5">
           <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</div>
@@ -264,7 +297,7 @@ export default async function MaliDurumPage({
           <div className="bg-white dark:bg-gray-800 border rounded-xl p-4">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bu Ay Gelen Fatura</div>
             <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(buAyGelenToplam)}</div>
-            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{monthAlisInvoices?.length ?? 0} fatura</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{monthAlisInvoiceRows.length} fatura</div>
           </div>
           <div className={`rounded-xl p-4 border ${odenmemisGelenToplam > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white dark:bg-gray-800'}`}>
             <div className={`text-xs font-medium mb-1 ${odenmemisGelenToplam > 0 ? 'text-orange-600' : 'text-gray-500 dark:text-gray-400'}`}>Ödenmemiş Borç</div>
@@ -325,7 +358,7 @@ export default async function MaliDurumPage({
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">30 Gün İçinde Vadeler</h3>
           </div>
           <div className="divide-y max-h-48 overflow-y-auto">
-            {(upcomingTax ?? []).length === 0 && (upcomingInvoices ?? []).length === 0 ? (
+            {(upcomingTax ?? []).length === 0 && upcomingInvoiceRows.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">Yaklaşan vade yok</div>
             ) : null}
             {(upcomingTax ?? []).map((t, i) => (
@@ -339,7 +372,7 @@ export default async function MaliDurumPage({
                 </span>
               </div>
             ))}
-            {(upcomingInvoices ?? []).map(inv => {
+            {upcomingInvoiceRows.map(inv => {
               const remaining = (inv.total_amount ?? 0) - (inv.paid_amount ?? 0)
               const c = inv.customers as any
               return (
@@ -361,19 +394,19 @@ export default async function MaliDurumPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Gecikmiş Alacaklar */}
-        {(overdueInvoices ?? []).length > 0 && (
+        {overdueInvoiceRows.length > 0 && (
           <div className="bg-white dark:bg-gray-800 border border-red-200 rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-red-100 bg-red-50 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-red-800">
                 Gecikmiş Alacaklar
-                <span className="ml-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">{overdueInvoices?.length}</span>
+                <span className="ml-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">{overdueInvoiceRows.length}</span>
               </h3>
               <Link href="/cari-hesap/faturalar" className="text-xs text-red-600 hover:underline font-medium">
                 Tümünü gör →
               </Link>
             </div>
             <div className="divide-y">
-              {(overdueInvoices ?? []).map(inv => {
+              {overdueInvoiceRows.map(inv => {
                 const remaining = (inv.total_amount ?? 0) - (inv.paid_amount ?? 0)
                 const daysOver = Math.floor((Date.now() - new Date(inv.due_date!).getTime()) / 86400000)
                 const c = inv.customers as any

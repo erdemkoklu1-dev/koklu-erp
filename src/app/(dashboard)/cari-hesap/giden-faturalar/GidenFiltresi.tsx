@@ -3,7 +3,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { SORT_OPTIONS, PERIOD_OPTIONS } from '../_components/FaturaFiltrePaneli'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
-import { createClient } from '@/lib/supabase/client'
 
 const DURUM_OPTIONS = [
   { value: 'tumu',         label: 'Tüm Durumlar' },
@@ -15,7 +14,12 @@ const DURUM_OPTIONS = [
   { value: 'gecikmiş',     label: 'Gecikmiş' },
 ]
 
-function GidenFiltrePaneli() {
+type Props = {
+  subeler: { id: string; ad: string }[]
+  lockedSubeId?: string | null
+}
+
+function GidenFiltrePaneli({ subeler, lockedSubeId = null }: Props) {
   const sp = useSearchParams()
   const router = useRouter()
 
@@ -26,13 +30,7 @@ function GidenFiltrePaneli() {
   const [sort, setSort]     = useState(sp.get('sort') ?? 'date_desc')
   const [durum, setDurum]   = useState(sp.get('durum') ?? 'tumu')
   const [sehir, setSehir]   = useState(sp.get('sehir') ?? '')
-  const [sube, setSube]     = useState(sp.get('sube') ?? '')
-  const [subeler, setSubeler] = useState<{ id: string; ad: string }[]>([])
-
-  useEffect(() => {
-    createClient().from('subeler').select('id, ad').order('ad')
-      .then(({ data }: { data: { id: string; ad: string }[] | null }) => setSubeler(data ?? []))
-  }, [])
+  const [sube, setSube]     = useState(lockedSubeId ?? sp.get('sube') ?? '')
 
   const stateRef = useRef({ q, period, from, to, sort, durum, sehir, sube })
   useEffect(() => {
@@ -47,8 +45,8 @@ function GidenFiltrePaneli() {
     setSort(sp.get('sort') ?? 'date_desc')
     setDurum(sp.get('durum') ?? 'tumu')
     setSehir(sp.get('sehir') ?? '')
-    setSube(sp.get('sube') ?? '')
-  }, [sp])
+    setSube(lockedSubeId ?? sp.get('sube') ?? '')
+  }, [sp, lockedSubeId])
 
   // Auto-trigger search on q change (min 2 chars or cleared)
   const isFirstRender = useRef(true)
@@ -65,7 +63,7 @@ function GidenFiltrePaneli() {
       if (s.sort !== 'date_desc') p.set('sort', s.sort)
       if (s.durum !== 'tumu')     p.set('durum', s.durum)
       if (s.sehir)                p.set('sehir', s.sehir)
-      if (s.sube)                 p.set('sube', s.sube)
+      if (lockedSubeId || s.sube) p.set('sube', lockedSubeId ?? s.sube)
       router.push(`/cari-hesap/giden-faturalar?${p.toString()}`)
     }, 600)
     return () => clearTimeout(timer)
@@ -81,7 +79,7 @@ function GidenFiltrePaneli() {
     if (sort !== 'date_desc') p.set('sort', sort)
     if (durum !== 'tumu')     p.set('durum', durum)
     if (sehir)                p.set('sehir', sehir)
-    if (sube)                 p.set('sube', sube)
+    if (lockedSubeId || sube) p.set('sube', lockedSubeId ?? sube)
     router.push(`/cari-hesap/giden-faturalar?${p.toString()}`)
   }
 
@@ -123,8 +121,8 @@ function GidenFiltrePaneli() {
       <div className="flex flex-wrap gap-3 items-end">
         <div>
           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Şube</label>
-          <select value={sube} onChange={e => setSube(e.target.value)} className={`${inputCls} min-w-40`}>
-            <option value="">Tüm Şubeler</option>
+          <select value={sube} onChange={e => setSube(e.target.value)} disabled={!!lockedSubeId} className={`${inputCls} min-w-40 disabled:bg-gray-100`}>
+            {!lockedSubeId && <option value="">Tüm Şubeler</option>}
             {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
           </select>
         </div>
@@ -183,10 +181,10 @@ function GidenFiltrePaneli() {
   )
 }
 
-export default function GidenFiltresi() {
+export default function GidenFiltresi(props: Props) {
   return (
     <Suspense fallback={<div className="bg-white dark:bg-gray-800 border rounded-xl p-4 h-24" />}>
-      <GidenFiltrePaneli />
+      <GidenFiltrePaneli {...props} />
     </Suspense>
   )
 }
