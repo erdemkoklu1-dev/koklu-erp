@@ -109,9 +109,11 @@ export async function createTalepAction(_prevState: TalepFormState, formData: Fo
     .single()
 
   if (error) return { error: `Talep oluşturulamadı: ${error.message}` }
+  if (!data?.id) return { error: 'Talep oluşturuldu ancak detay sayfası için kayıt ID bilgisi alınamadı.' }
 
   revalidatePath('/operasyon')
   revalidatePath('/operasyon/talepler')
+  revalidatePath(`/operasyon/talepler/${data.id}`)
   redirect(`/operasyon/talepler/${data.id}`)
 }
 

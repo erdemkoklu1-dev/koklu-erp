@@ -4,8 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { updateTalepDurumAction } from '../actions'
 import OperationShell from '../../_components/OperationShell'
 import { formatTRDate } from '@/lib/finance/formatters'
-import { getCurrentAccess } from '@/lib/auth/authorization'
-import { applyBranchScope } from '@/lib/auth/branch-scope'
+import { getCurrentAccess, type CurrentAccess } from '@/lib/auth/authorization'
 
 const DURUMLAR = ['Yeni', 'İşleme Alındı', 'Planlandı', 'Sahada', 'Beklemede', 'Tamamlandı', 'İptal', 'Teslimata Aktarıldı', 'İş Planına Aktarıldı', 'Teklif Verildi']
 
@@ -15,23 +14,31 @@ function relationOne<T>(value: Relation<T>) {
   return Array.isArray(value) ? value[0] ?? null : value
 }
 
+function canAccessTalep(access: CurrentAccess | null, subeId: string | null) {
+  if (!access) return false
+  if (access.isAdmin) return true
+  if (!subeId) return false
+  return access.branchIds.includes(subeId)
+}
+
 export default async function TalepDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
 
-  let query = supabase
+  const { data: talep, error } = await supabase
     .from('musteri_talepleri')
     .select('*, customers(id, full_name, phone, email), subeler(ad), personeller(ad, soyad)')
     .eq('id', id)
-  query = applyBranchScope(query, access)
+    .maybeSingle()
 
-  const { data: talep } = await query.single()
-  if (!talep) notFound()
+  if (error || !talep || !canAccessTalep(access, talep.sube_id)) notFound()
 
   const customer = relationOne(talep.customers as Relation<{ full_name?: string | null }>)
   const sube = relationOne(talep.subeler as Relation<{ ad?: string | null }>)
   const personel = relationOne(talep.personeller as Relation<{ ad?: string | null; soyad?: string | null }>)
+  const customerName = talep.customer_name_snapshot ?? customer?.full_name ?? '-'
+  const manualCustomerName = talep.customer_id ? null : talep.customer_name_snapshot
 
   return (
     <OperationShell active="talepler" title={`Talep Detayı - ${talep.talep_no}`}>
@@ -55,7 +62,9 @@ export default async function TalepDetayPage({ params }: { params: Promise<{ id:
           <section className="rounded-lg border bg-white p-5 dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
             <h2 className="mb-4 font-semibold">Talep Bilgileri</h2>
             <dl className="grid gap-4 md:grid-cols-2">
-              <div><dt className="text-xs text-gray-500">Müşteri</dt><dd className="font-medium">{talep.customer_name_snapshot ?? customer?.full_name ?? '-'}</dd></div>
+              <div><dt className="text-xs text-gray-500">Müşteri</dt><dd className="font-medium">{customerName}</dd></div>
+              <div><dt className="text-xs text-gray-500">Kayıtlı Müşteri</dt><dd>{customer?.full_name ?? '-'}</dd></div>
+              <div><dt className="text-xs text-gray-500">Manuel Müşteri</dt><dd>{manualCustomerName ?? '-'}</dd></div>
               <div><dt className="text-xs text-gray-500">Şube</dt><dd className="font-medium">{sube?.ad ?? '-'}</dd></div>
               <div><dt className="text-xs text-gray-500">Cihaz</dt><dd>{talep.cihaz_name_snapshot ?? '-'}</dd></div>
               <div><dt className="text-xs text-gray-500">Kategori</dt><dd>{talep.kategori}</dd></div>
