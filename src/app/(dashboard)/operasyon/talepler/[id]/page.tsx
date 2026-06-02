@@ -24,7 +24,6 @@ export default async function TalepDetayPage({ params }: { params: Promise<{ id:
     .from('musteri_talepleri')
     .select('*')
     .eq('id', id)
-    .is('deleted_at', null)
     .maybeSingle()
 
   if (error) {

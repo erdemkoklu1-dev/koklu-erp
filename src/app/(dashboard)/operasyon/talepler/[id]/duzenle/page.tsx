@@ -19,7 +19,6 @@ export default async function TalepDuzenlePage({ params }: { params: Promise<{ i
     .from('musteri_talepleri')
     .select('id, baslik, aciklama, kategori, oncelik, durum, hedef_tarih, kaynak, notlar, sube_id')
     .eq('id', id)
-    .is('deleted_at', null)
     .maybeSingle()
 
   if (error) throw new Error(`Talep düzenleme bilgisi alınamadı: ${error.message}`)

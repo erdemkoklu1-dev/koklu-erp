@@ -21,7 +21,6 @@ export default async function TalepYazdirPage({ params }: { params: Promise<{ id
     .from('musteri_talepleri')
     .select('*')
     .eq('id', id)
-    .is('deleted_at', null)
     .maybeSingle()
 
   if (error) throw new Error(`Talep yazdırma bilgisi alınamadı: ${error.message}`)

@@ -59,6 +59,11 @@ function applyStatusFilter<T extends { in: (column: string, values: string[]) =>
   return query.in('durum', talepStatusAliases(normalized))
 }
 
+function applyDefaultVisibility<T extends { not: (column: string, operator: string, value: string) => T }>(query: T, durum?: string) {
+  if (durum) return query
+  return query.not('durum', 'in', quotedIn(talepStatusAliases('cancelled')))
+}
+
 function applyOpenStatusFilter<T extends { not: (column: string, operator: string, value: string) => T }>(query: T) {
   return query.not('durum', 'in', quotedIn([...talepStatusAliases('completed'), ...talepStatusAliases('cancelled')]))
 }
@@ -86,11 +91,11 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
   let query = supabase
     .from('musteri_talepleri')
     .select('id, talep_no, customer_name_snapshot, cihaz_name_snapshot, baslik, aciklama, kategori, oncelik, durum, talep_tarihi, hedef_tarih, sube_id, sorumlu_personel_id')
-    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(200)
 
   query = applyBranchScope(query, access, effectiveSube)
+  query = applyDefaultVisibility(query, params.durum)
   query = applyStatusFilter(query, params.durum)
   query = applyDateFilters(query, params.baslangic, params.bitis)
   if (params.oncelik) query = query.eq('oncelik', params.oncelik)
@@ -102,7 +107,7 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
   }
 
   const scoped = <T,>(baseQuery: T) => applyBranchScope(baseQuery, access, effectiveSube) as T
-  const baseCount = () => scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).is('deleted_at', null))
+  const baseCount = () => scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }))
   const statusCount = (status: 'new' | 'in_progress' | 'waiting' | 'completed') => applyDateFilters(
     baseCount().in('durum', talepStatusAliases(status)),
     params.baslangic,

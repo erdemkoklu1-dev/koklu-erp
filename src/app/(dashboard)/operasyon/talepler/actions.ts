@@ -182,7 +182,6 @@ export async function updateTalepAction(_prevState: TalepFormState, formData: Fo
       updated_by: userId,
     })
     .eq('id', id)
-    .is('deleted_at', null)
 
   if (error) return { error: `Talep güncellenemedi: ${error.message}` }
 
@@ -206,8 +205,8 @@ export async function softDeleteTalepAction(formData: FormData) {
   const { error } = await svc
     .from('musteri_talepleri')
     .update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: userId,
+      durum: 'İptal',
+      tamamlanma_tarihi: new Date().toISOString(),
       updated_by: userId,
     })
     .eq('id', id)
