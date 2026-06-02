@@ -18,6 +18,18 @@ import { applyBranchScope, EMPTY_BRANCH_ID, filterVisibleBranches } from '@/lib/
 
 type CardTone = 'default' | 'green' | 'yellow' | 'red' | 'blue'
 
+type ReminderDeviceRow = {
+  expiry_date: string | null
+  customers: { id?: string; full_name?: string | null; sube_id?: string | null } | { id?: string; full_name?: string | null; sube_id?: string | null }[] | null
+}
+
+type ReminderCustomerRow = {
+  id: string
+  name: string
+  days: number
+  deviceCount: number
+}
+
 function safe(n: number | null | undefined) {
   return n ?? 0
 }
@@ -70,13 +82,17 @@ function KpiCard({
 }
 
 function scopedCustomerQuery(svc: ReturnType<typeof createServiceClient>, access: Awaited<ReturnType<typeof getCurrentAccess>>) {
-  let query = svc.from('customers').select('*', { count: 'exact', head: true }).eq('is_active', true)
+  const query = svc.from('customers').select('*', { count: 'exact', head: true }).eq('is_active', true)
   return applyBranchScope(query, access)
 }
 
 async function countRows(query: PromiseLike<{ count: number | null }>) {
   const { count } = await query
   return count ?? 0
+}
+
+function relationOne<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
 
 export default async function DashboardPage() {
@@ -166,7 +182,7 @@ export default async function DashboardPage() {
       ))
     : 0
 
-  let expiringDevices: Array<{ expiry_date: string | null; customers: { id?: string; full_name?: string | null; sube_id?: string | null } | null }> = []
+  let expiringDevices: ReminderDeviceRow[] = []
   if (canReminders) {
     let deviceQuery = svc
       .from('devices')
@@ -175,7 +191,7 @@ export default async function DashboardPage() {
       .not('expiry_date', 'is', null)
       .lte('expiry_date', in90DaysStr)
       .order('expiry_date', { ascending: true })
-      .limit(8)
+      .limit(500)
 
     if (access && !access.isAdmin) {
       deviceQuery = access.branchIds.length > 0
@@ -184,7 +200,7 @@ export default async function DashboardPage() {
     }
 
     const { data } = await deviceQuery
-    expiringDevices = (data ?? []) as typeof expiringDevices
+    expiringDevices = (data ?? []) as ReminderDeviceRow[]
   }
 
   let recentServices: Array<{ id: string; form_number: string | null; service_date: string | null; status: string | null; customers: { full_name?: string | null } | null }> = []
@@ -238,14 +254,28 @@ export default async function DashboardPage() {
     overdueDebtSupplierCount = new Set(debts.map(row => row.supplier_name).filter(Boolean)).size
   }
 
-  const reminderRows = expiringDevices.map(device => {
+  const reminderMap = new Map<string, ReminderCustomerRow>()
+  for (const device of expiringDevices) {
+    const customer = relationOne(device.customers)
+    if (!customer?.id) continue
+
     const days = device.expiry_date ? Math.floor((new Date(device.expiry_date).getTime() - today.getTime()) / 86400000) : 0
-    return {
-      id: device.customers?.id ?? '',
-      name: device.customers?.full_name ?? '-',
-      days,
+    const current = reminderMap.get(customer.id)
+
+    if (current) {
+      current.deviceCount += 1
+      current.days = Math.min(current.days, days)
+    } else {
+      reminderMap.set(customer.id, {
+        id: customer.id,
+        name: customer.full_name ?? '-',
+        days,
+        deviceCount: 1,
+      })
     }
-  }).filter(row => row.id)
+  }
+  const reminderRows = Array.from(reminderMap.values()).sort((a, b) => a.days - b.days || a.name.localeCompare(b.name, 'tr-TR'))
+  const reminderDeviceCount = reminderRows.reduce((sum, row) => sum + row.deviceCount, 0)
 
   const net = monthlyIncome - monthlyExpense
   const dateLabel = new Date().toLocaleDateString('tr-TR', {
@@ -294,7 +324,7 @@ export default async function DashboardPage() {
           <KpiCard href="/teknik-raporlar" title="Teknik Raporlar" value={technicalReportCount.toLocaleString('tr-TR')} detail="bu ay oluşturulan" icon={<FileText size={18} />} />
         )}
         {canReminders && (
-          <KpiCard href="/hatirlatmalar" title="Hatırlatmalar" value={reminderRows.length.toLocaleString('tr-TR')} detail="90 gün içinde SKT" tone={reminderRows.length > 0 ? 'red' : 'default'} icon={<Bell size={18} />} />
+          <KpiCard href="/hatirlatmalar" title="Hatırlatmalar" value={reminderRows.length.toLocaleString('tr-TR')} detail={`${reminderDeviceCount.toLocaleString('tr-TR')} cihaz`} tone={reminderRows.length > 0 ? 'red' : 'default'} icon={<Bell size={18} />} />
         )}
         {canFinance && (
           <KpiCard href="/cari-hesap/giden-faturalar" title="Bekleyen Alacak" value={formatCurrency(receivableAmount)} detail="ödenmemiş satış faturaları" tone={receivableAmount > 0 ? 'yellow' : 'default'} icon={<Wallet size={18} />} />
@@ -336,7 +366,7 @@ export default async function DashboardPage() {
                 <Link key={row.id} href={`/customers/${row.id}`} className="flex items-center justify-between px-5 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
                   <span className="font-medium text-gray-800 dark:text-gray-100">{row.name}</span>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${row.days < 0 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                    {row.days < 0 ? `${Math.abs(row.days)}g gecikti` : `${row.days} gün`}
+                    {row.deviceCount} cihaz {row.days < 0 ? `${Math.abs(row.days)}g gecikti` : `${row.days} gün`}
                   </span>
                 </Link>
               )) : <div className="px-5 py-8 text-center text-sm text-gray-400">90 gün içinde hatırlatma yok.</div>}

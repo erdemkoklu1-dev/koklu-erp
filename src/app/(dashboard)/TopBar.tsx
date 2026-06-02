@@ -18,7 +18,7 @@ export default function TopBar({ email, userId, adSoyad }: Props) {
   const supabase = createClient()
   const { theme, toggle } = useTheme()
 
-  // Giriş kaydı — component mount olduğunda bir kez
+  // Giriş kaydı - component mount olduğunda bir kez.
   useEffect(() => {
     fetch('/api/giris-kayit', {
       method: 'POST',
@@ -49,7 +49,6 @@ export default function TopBar({ email, userId, adSoyad }: Props) {
         {adSoyad || email}
       </Link>
 
-      {/* Tema toggle */}
       <button
         onClick={toggle}
         title={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}
