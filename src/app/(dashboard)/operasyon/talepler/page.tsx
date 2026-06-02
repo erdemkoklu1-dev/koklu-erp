@@ -5,20 +5,10 @@ import OperationFilters from '../_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { completeTalepAction, softDeleteTalepAction } from './actions'
+import { TALEP_STATUS_OPTIONS, normalizeTalepStatus, talepStatusAliases, talepStatusLabel } from './status'
 
 type SearchParams = Promise<{ durum?: string; oncelik?: string; geciken?: string; hedef?: string; q?: string; sube?: string; baslangic?: string; bitis?: string }>
-
-const DURUMLAR = ['Yeni', 'İşleme Alındı', 'Planlandı', 'Sahada', 'Beklemede', 'Tamamlandı', 'İptal']
-
-const DURUM_BADGE: Record<string, string> = {
-  Yeni: 'bg-blue-50 text-blue-700 border-blue-200',
-  'İşleme Alındı': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  Planlandı: 'bg-purple-50 text-purple-700 border-purple-200',
-  Sahada: 'bg-orange-50 text-orange-700 border-orange-200',
-  Beklemede: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  Tamamlandı: 'bg-green-50 text-green-700 border-green-200',
-  İptal: 'bg-red-50 text-red-700 border-red-200',
-}
 
 type TalepRow = {
   id: string
@@ -29,20 +19,60 @@ type TalepRow = {
   aciklama: string | null
   kategori: string | null
   oncelik: string | null
-  durum: string
+  durum: string | null
   talep_tarihi: string | null
   hedef_tarih: string | null
-  subeler: { ad: string | null } | { ad: string | null }[] | null
-  personeller: { ad: string | null; soyad: string | null } | { ad: string | null; soyad: string | null }[] | null
+  sube_id: string | null
+  sorumlu_personel_id: string | null
 }
 
-function relationOne<T>(value: T | T[] | null) {
-  return Array.isArray(value) ? value[0] ?? null : value
+type SubeRow = { id: string; ad: string | null }
+type PersonelRow = { id: string; ad: string | null; soyad: string | null }
+
+const DURUM_BADGE: Record<string, string> = {
+  new: 'bg-blue-50 text-blue-700 border-blue-200',
+  in_progress: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  planned: 'bg-purple-50 text-purple-700 border-purple-200',
+  field: 'bg-orange-50 text-orange-700 border-orange-200',
+  waiting: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  completed: 'bg-green-50 text-green-700 border-green-200',
+  cancelled: 'bg-red-50 text-red-700 border-red-200',
 }
 
 function withSube(href: string, subeId?: string | null) {
   if (!subeId) return href
   return `${href}${href.includes('?') ? '&' : '?'}sube=${encodeURIComponent(subeId)}`
+}
+
+function validDate(value?: string) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null
+}
+
+function quotedIn(values: string[]) {
+  return `(${values.map(value => `"${value.replaceAll('"', '\\"')}"`).join(',')})`
+}
+
+function applyStatusFilter<T extends { in: (column: string, values: string[]) => T }>(query: T, durum?: string) {
+  if (!durum) return query
+  const normalized = normalizeTalepStatus(durum)
+  if (normalized === 'unknown') return query
+  return query.in('durum', talepStatusAliases(normalized))
+}
+
+function applyOpenStatusFilter<T extends { not: (column: string, operator: string, value: string) => T }>(query: T) {
+  return query.not('durum', 'in', quotedIn([...talepStatusAliases('completed'), ...talepStatusAliases('cancelled')]))
+}
+
+function applyDateFilters<T extends { gte: (column: string, value: string) => T; lte: (column: string, value: string) => T }>(
+  query: T,
+  baslangic?: string,
+  bitis?: string,
+) {
+  const start = validDate(baslangic)
+  const end = validDate(bitis)
+  if (start) query = query.gte('talep_tarihi', start)
+  if (end) query = query.lte('talep_tarihi', end)
+  return query
 }
 
 export default async function TaleplerPage({ searchParams }: { searchParams: SearchParams }) {
@@ -55,20 +85,29 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
 
   let query = supabase
     .from('musteri_talepleri')
-    .select('id, talep_no, customer_name_snapshot, cihaz_name_snapshot, baslik, aciklama, kategori, oncelik, durum, talep_tarihi, hedef_tarih, subeler(ad), personeller(ad, soyad)')
+    .select('id, talep_no, customer_name_snapshot, cihaz_name_snapshot, baslik, aciklama, kategori, oncelik, durum, talep_tarihi, hedef_tarih, sube_id, sorumlu_personel_id')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(200)
 
   query = applyBranchScope(query, access, effectiveSube)
-  if (params.durum) query = query.eq('durum', params.durum)
+  query = applyStatusFilter(query, params.durum)
+  query = applyDateFilters(query, params.baslangic, params.bitis)
   if (params.oncelik) query = query.eq('oncelik', params.oncelik)
-  if (params.baslangic) query = query.gte('talep_tarihi', params.baslangic)
-  if (params.bitis) query = query.lte('talep_tarihi', params.bitis)
-  if (params.hedef === 'bugun') query = query.eq('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')
-  if (params.geciken === '1') query = query.lt('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')
-  if (params.q) query = query.or(`baslik.ilike.%${params.q}%,talep_no.ilike.%${params.q}%,customer_name_snapshot.ilike.%${params.q}%`)
+  if (params.hedef === 'bugun') query = applyOpenStatusFilter(query.eq('hedef_tarih', today))
+  if (params.geciken === '1') query = applyOpenStatusFilter(query.lt('hedef_tarih', today))
+  if (params.q?.trim()) {
+    const q = params.q.trim().replaceAll('%', '\\%').replaceAll(',', ' ')
+    query = query.or(`baslik.ilike.%${q}%,talep_no.ilike.%${q}%,customer_name_snapshot.ilike.%${q}%`)
+  }
 
-  const scopedCount = <T,>(baseQuery: T) => applyBranchScope(baseQuery, access, effectiveSube) as T
+  const scoped = <T,>(baseQuery: T) => applyBranchScope(baseQuery, access, effectiveSube) as T
+  const baseCount = () => scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).is('deleted_at', null))
+  const statusCount = (status: 'new' | 'in_progress' | 'waiting' | 'completed') => applyDateFilters(
+    baseCount().in('durum', talepStatusAliases(status)),
+    params.baslangic,
+    params.bitis,
+  )
 
   const [
     { data: rows },
@@ -83,25 +122,36 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
   ] = await Promise.all([
     query,
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
-    scopedCount(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'Yeni')),
-    scopedCount(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'İşleme Alındı')),
-    scopedCount(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('oncelik', 'Acil').not('durum', 'in', '("Tamamlandı","İptal")')),
-    scopedCount(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'Beklemede')),
-    scopedCount(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
-    scopedCount(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).lt('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
-    scopedCount(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı')),
+    statusCount('new'),
+    statusCount('in_progress'),
+    applyDateFilters(applyOpenStatusFilter(baseCount().eq('oncelik', 'Acil')), params.baslangic, params.bitis),
+    statusCount('waiting'),
+    applyOpenStatusFilter(baseCount().eq('hedef_tarih', today)),
+    applyOpenStatusFilter(baseCount().lt('hedef_tarih', today)),
+    statusCount('completed'),
   ])
 
-  const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string | null }[], access)
   const talepRows = (rows ?? []) as TalepRow[]
+  const subeIds = Array.from(new Set(talepRows.map(row => row.sube_id).filter(Boolean) as string[]))
+  const personelIds = Array.from(new Set(talepRows.map(row => row.sorumlu_personel_id).filter(Boolean) as string[]))
+
+  const [{ data: rowSubeler }, { data: personeller }] = await Promise.all([
+    subeIds.length > 0 ? supabase.from('subeler').select('id, ad').in('id', subeIds) : Promise.resolve({ data: [] }),
+    personelIds.length > 0 ? supabase.from('personeller').select('id, ad, soyad').in('id', personelIds) : Promise.resolve({ data: [] }),
+  ])
+
+  const subeMap = new Map(((rowSubeler ?? []) as SubeRow[]).map(sube => [sube.id, sube.ad ?? '-']))
+  const personelMap = new Map(((personeller ?? []) as PersonelRow[]).map(personel => [personel.id, `${personel.ad ?? ''} ${personel.soyad ?? ''}`.trim() || '-']))
+  const visibleSubeler = filterVisibleBranches((subeler ?? []) as SubeRow[], access)
+
   const cards = [
-    ['Yeni Talepler', yeni ?? 0, withSube('/operasyon/talepler?durum=Yeni', effectiveSube)],
-    ['İşleme Alınanlar', islemeAlinan ?? 0, withSube('/operasyon/talepler?durum=İşleme Alındı', effectiveSube)],
+    ['Yeni Talepler', yeni ?? 0, withSube('/operasyon/talepler?durum=new', effectiveSube)],
+    ['İşleme Alınanlar', islemeAlinan ?? 0, withSube('/operasyon/talepler?durum=in_progress', effectiveSube)],
     ['Acil Talepler', acil ?? 0, withSube('/operasyon/talepler?oncelik=Acil', effectiveSube)],
-    ['Bekleyenler', bekleyen ?? 0, withSube('/operasyon/talepler?durum=Beklemede', effectiveSube)],
+    ['Bekleyenler', bekleyen ?? 0, withSube('/operasyon/talepler?durum=waiting', effectiveSube)],
     ['Bugün Çözülecekler', bugun ?? 0, withSube('/operasyon/talepler?hedef=bugun', effectiveSube)],
     ['Gecikenler', geciken ?? 0, withSube('/operasyon/talepler?geciken=1', effectiveSube)],
-    ['Tamamlananlar', tamamlanan ?? 0, withSube('/operasyon/talepler?durum=Tamamlandı', effectiveSube)],
+    ['Tamamlananlar', tamamlanan ?? 0, withSube('/operasyon/talepler?durum=completed', effectiveSube)],
   ] as const
 
   return (
@@ -120,13 +170,13 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
           action="/operasyon/talepler"
           subeler={visibleSubeler}
           values={{ ...params, sube: effectiveSube }}
-          durumlar={DURUMLAR}
+          durumlar={TALEP_STATUS_OPTIONS}
           searchPlaceholder="Müşteri, talep no veya başlık ara"
           lockedSubeId={lockedSubeId}
         />
 
-        <div className="overflow-hidden rounded-lg border bg-white dark:border-gray-700 dark:bg-gray-800">
-          <table className="min-w-full divide-y text-sm dark:divide-gray-700">
+        <div className="overflow-x-auto rounded-lg border bg-white dark:border-gray-700 dark:bg-gray-800">
+          <table className="min-w-[1320px] divide-y text-sm dark:divide-gray-700">
             <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-700">
               <tr>
                 <th className="px-4 py-3 text-left">Talep No</th>
@@ -144,33 +194,54 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
             </thead>
             <tbody className="divide-y dark:divide-gray-700">
               {talepRows.map(row => {
-                const sube = relationOne(row.subeler)
-                const personel = relationOne(row.personeller)
+                const status = normalizeTalepStatus(row.durum)
                 return (
-                <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-3 font-mono text-[#C8102E]">{row.talep_no}</td>
-                  <td className="px-4 py-3">{row.customer_name_snapshot ?? '-'}</td>
-                  <td className="px-4 py-3">{sube?.ad ?? '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{row.baslik}</div>
-                    <div className="max-w-xs truncate text-xs text-gray-500">{row.aciklama}</div>
-                  </td>
-                  <td className="px-4 py-3">{row.kategori}</td>
-                  <td className="px-4 py-3">{row.oncelik}</td>
-                  <td className="px-4 py-3">{formatTRDate(row.talep_tarihi)}</td>
-                  <td className="px-4 py-3">{formatTRDate(row.hedef_tarih)}</td>
-                  <td className="px-4 py-3"><span className={`rounded-full border px-2 py-0.5 text-xs ${DURUM_BADGE[row.durum] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}>{row.durum}</span></td>
-                  <td className="px-4 py-3">{personel ? `${personel.ad ?? ''} ${personel.soyad ?? ''}`.trim() : '-'}</td>
-                  <td className="no-print px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/operasyon/talepler/${row.id}`} className="text-[#C8102E] hover:underline">Detay</Link>
-                    </div>
-                  </td>
-                </tr>
+                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="px-4 py-3 font-mono text-[#C8102E]">{row.talep_no}</td>
+                    <td className="px-4 py-3">{row.customer_name_snapshot ?? '-'}</td>
+                    <td className="px-4 py-3">{row.sube_id ? subeMap.get(row.sube_id) ?? '-' : '-'}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{row.baslik}</div>
+                      <div className="max-w-xs truncate text-xs text-gray-500">{row.aciklama}</div>
+                    </td>
+                    <td className="px-4 py-3">{row.kategori}</td>
+                    <td className="px-4 py-3">{row.oncelik}</td>
+                    <td className="px-4 py-3">{formatTRDate(row.talep_tarihi)}</td>
+                    <td className="px-4 py-3">{formatTRDate(row.hedef_tarih)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full border px-2 py-0.5 text-xs ${DURUM_BADGE[status] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        {talepStatusLabel(row.durum)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{row.sorumlu_personel_id ? personelMap.get(row.sorumlu_personel_id) ?? '-' : '-'}</td>
+                    <td className="no-print px-4 py-3 text-right">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Link href={`/operasyon/talepler/${row.id}`} className="text-[#C8102E] hover:underline">Detay</Link>
+                        <Link href={`/operasyon/talepler/${row.id}/duzenle`} className="text-gray-600 hover:underline dark:text-gray-300">Düzenle</Link>
+                        <Link href={`/operasyon/talepler/${row.id}/yazdir`} className="text-gray-600 hover:underline dark:text-gray-300">Yazdır</Link>
+                        <Link href={`/operasyon/is-planlari/yeni?requestId=${row.id}`} className="text-gray-600 hover:underline dark:text-gray-300">İş Planına Aktar</Link>
+                        <Link href={`/teslimatlar/yeni?requestId=${row.id}`} className="text-gray-600 hover:underline dark:text-gray-300">Teslimata Aktar</Link>
+                        {status !== 'completed' && (
+                          <form action={completeTalepAction}>
+                            <input type="hidden" name="id" value={row.id} />
+                            <button className="text-green-700 hover:underline">Tamamlandı Yap</button>
+                          </form>
+                        )}
+                        <form action={softDeleteTalepAction}>
+                          <input type="hidden" name="id" value={row.id} />
+                          <button className="text-red-700 hover:underline">Sil</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
                 )
               })}
               {talepRows.length === 0 && (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-500">Talep bulunamadı. <Link href="/operasyon/talepler/yeni" className="text-[#C8102E] hover:underline">Yeni talep oluştur</Link></td></tr>
+                <tr>
+                  <td colSpan={11} className="px-4 py-10 text-center text-gray-500">
+                    Talep bulunamadı. <Link href="/operasyon/talepler/yeni" className="text-[#C8102E] hover:underline">Yeni talep oluştur</Link>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

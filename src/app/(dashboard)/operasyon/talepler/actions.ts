@@ -6,14 +6,33 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { resolveBranchFilter } from '@/lib/auth/branch-scope'
+import { normalizeTalepStatus } from './status'
 
 export type TalepFormState = {
   error?: string
 }
 
+function canAccessCreatedTalep(access: Awaited<ReturnType<typeof getCurrentAccess>>, subeId: string | null) {
+  if (!access) return false
+  if (access.isAdmin) return true
+  return !!subeId && access.branchIds.includes(subeId)
+}
+
 function text(formData: FormData, key: string) {
   const value = String(formData.get(key) ?? '').trim()
   return value || null
+}
+
+function dbTalepDurum(value: string | null) {
+  const normalized = normalizeTalepStatus(value)
+  if (normalized === 'new') return 'Yeni'
+  if (normalized === 'in_progress') return 'İşleme Alındı'
+  if (normalized === 'planned') return 'Planlandı'
+  if (normalized === 'field') return 'Sahada'
+  if (normalized === 'waiting') return 'Beklemede'
+  if (normalized === 'completed') return 'Tamamlandı'
+  if (normalized === 'cancelled') return 'İptal'
+  return value || 'Yeni'
 }
 
 async function currentUserId() {
@@ -96,7 +115,7 @@ export async function createTalepAction(_prevState: TalepFormState, formData: Fo
       aciklama,
       kategori,
       oncelik,
-      durum: text(formData, 'durum') ?? 'Yeni',
+      durum: dbTalepDurum(text(formData, 'durum')),
       hedef_tarih: text(formData, 'hedef_tarih'),
       sube_id: subeId,
       sorumlu_personel_id: text(formData, 'sorumlu_personel_id'),
@@ -105,11 +124,14 @@ export async function createTalepAction(_prevState: TalepFormState, formData: Fo
       created_by: userId,
       updated_by: userId,
     })
-    .select('id')
+    .select('id, sube_id')
     .single()
 
   if (error) return { error: `Talep oluşturulamadı: ${error.message}` }
   if (!data?.id) return { error: 'Talep oluşturuldu ancak detay sayfası için kayıt ID bilgisi alınamadı.' }
+  if (!canAccessCreatedTalep(access, data.sube_id)) {
+    return { error: 'Talep kaydedildi ancak bu kullanıcı için detay erişimi doğrulanamadı. Lütfen talepler listesinden şube yetkisini kontrol edin.' }
+  }
 
   revalidatePath('/operasyon')
   revalidatePath('/operasyon/talepler')
@@ -120,7 +142,7 @@ export async function createTalepAction(_prevState: TalepFormState, formData: Fo
 export async function updateTalepDurumAction(formData: FormData) {
   const userId = await currentUserId()
   const id = text(formData, 'id')
-  const durum = text(formData, 'durum')
+  const durum = dbTalepDurum(text(formData, 'durum'))
   if (!id || !durum) throw new Error('Talep veya durum bulunamadı.')
 
   const svc = createServiceClient()
@@ -133,4 +155,65 @@ export async function updateTalepDurumAction(formData: FormData) {
   revalidatePath('/operasyon')
   revalidatePath('/operasyon/talepler')
   revalidatePath(`/operasyon/talepler/${id}`)
+}
+
+export async function updateTalepAction(_prevState: TalepFormState, formData: FormData): Promise<TalepFormState> {
+  const userId = await currentUserId()
+  const id = text(formData, 'id')
+  const baslik = text(formData, 'baslik')
+  const aciklama = text(formData, 'aciklama')
+  const kategori = text(formData, 'kategori')
+  if (!id || !baslik || !aciklama || !kategori) {
+    return { error: 'Talep, başlık, kategori ve açıklama zorunludur.' }
+  }
+
+  const svc = createServiceClient()
+  const { error } = await svc
+    .from('musteri_talepleri')
+    .update({
+      baslik,
+      aciklama,
+      kategori,
+      oncelik: text(formData, 'oncelik') ?? 'Normal',
+      durum: dbTalepDurum(text(formData, 'durum')),
+      hedef_tarih: text(formData, 'hedef_tarih'),
+      kaynak: text(formData, 'kaynak') ?? 'Telefon',
+      notlar: text(formData, 'notlar'),
+      updated_by: userId,
+    })
+    .eq('id', id)
+    .is('deleted_at', null)
+
+  if (error) return { error: `Talep güncellenemedi: ${error.message}` }
+
+  revalidatePath('/operasyon')
+  revalidatePath('/operasyon/talepler')
+  revalidatePath(`/operasyon/talepler/${id}`)
+  redirect(`/operasyon/talepler/${id}`)
+}
+
+export async function completeTalepAction(formData: FormData) {
+  formData.set('durum', 'completed')
+  await updateTalepDurumAction(formData)
+}
+
+export async function softDeleteTalepAction(formData: FormData) {
+  const userId = await currentUserId()
+  const id = text(formData, 'id')
+  if (!id) throw new Error('Talep bulunamadı.')
+
+  const svc = createServiceClient()
+  const { error } = await svc
+    .from('musteri_talepleri')
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: userId,
+      updated_by: userId,
+    })
+    .eq('id', id)
+
+  if (error) throw new Error(`Talep silinemedi: ${error.message}`)
+
+  revalidatePath('/operasyon')
+  revalidatePath('/operasyon/talepler')
 }

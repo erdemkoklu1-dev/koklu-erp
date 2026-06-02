@@ -12,7 +12,7 @@ type Props = {
     baslangic?: string
     bitis?: string
   }
-  durumlar?: string[]
+  durumlar?: Array<string | { value: string; label: string }>
   searchPlaceholder?: string
   lockedSubeId?: string | null
 }
@@ -41,7 +41,10 @@ export default function OperationFilters({ action, subeler, values, durumlar, se
       {durumlar ? (
         <select name="durum" defaultValue={values.durum ?? ''} className="rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
           <option value="">Tüm durumlar</option>
-          {durumlar.map(durum => <option key={durum} value={durum}>{durum}</option>)}
+          {durumlar.map(durum => {
+            const option = typeof durum === 'string' ? { value: durum, label: durum } : durum
+            return <option key={option.value} value={option.value}>{option.label}</option>
+          })}
         </select>
       ) : (
         <div className="hidden md:block" />

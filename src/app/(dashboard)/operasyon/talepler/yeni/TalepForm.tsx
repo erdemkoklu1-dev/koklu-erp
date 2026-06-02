@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useActionState, useMemo, useState } from 'react'
 import { createTalepAction, type TalepFormState } from '../actions'
+import { TALEP_STATUS_OPTIONS } from '../status'
 
 type Customer = {
   id: string
@@ -43,7 +44,6 @@ type Props = {
 
 const KATEGORILER = ['Arıza', 'Bakım Talebi', 'Kurulum', 'Teklif Talebi', 'Ürün Talebi', 'Dolum Talebi', 'Teslimat Talebi', 'Şikayet', 'Periyodik Kontrol', 'Diğer']
 const ONCELIKLER = ['Düşük', 'Normal', 'Yüksek', 'Acil']
-const DURUMLAR = ['Yeni', 'İşleme Alındı', 'Planlandı', 'Sahada', 'Beklemede']
 const KAYNAKLAR = ['Telefon', 'WhatsApp', 'E-posta', 'Yüz yüze', 'Sistem', 'Diğer']
 
 const initialState: TalepFormState = {}
@@ -155,8 +155,10 @@ export default function TalepForm({ customers, devices, subeler, personeller, de
 
       <label className="space-y-1">
         <span className="text-sm font-medium">Durum</span>
-        <select name="durum" defaultValue="Yeni" className="w-full rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
-          {DURUMLAR.map(value => <option key={value}>{value}</option>)}
+        <select name="durum" defaultValue="new" className="w-full rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+          {TALEP_STATUS_OPTIONS.filter(option => !['completed', 'cancelled'].includes(option.value)).map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
         </select>
       </label>
 

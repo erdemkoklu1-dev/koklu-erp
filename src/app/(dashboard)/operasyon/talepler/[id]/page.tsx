@@ -8,12 +8,6 @@ import { getCurrentAccess, type CurrentAccess } from '@/lib/auth/authorization'
 
 const DURUMLAR = ['Yeni', 'İşleme Alındı', 'Planlandı', 'Sahada', 'Beklemede', 'Tamamlandı', 'İptal', 'Teslimata Aktarıldı', 'İş Planına Aktarıldı', 'Teklif Verildi']
 
-type Relation<T> = T | T[] | null
-
-function relationOne<T>(value: Relation<T>) {
-  return Array.isArray(value) ? value[0] ?? null : value
-}
-
 function canAccessTalep(access: CurrentAccess | null, subeId: string | null) {
   if (!access) return false
   if (access.isAdmin) return true
@@ -28,15 +22,29 @@ export default async function TalepDetayPage({ params }: { params: Promise<{ id:
 
   const { data: talep, error } = await supabase
     .from('musteri_talepleri')
-    .select('*, customers(id, full_name, phone, email), subeler(ad), personeller(ad, soyad)')
+    .select('*')
     .eq('id', id)
+    .is('deleted_at', null)
     .maybeSingle()
 
-  if (error || !talep || !canAccessTalep(access, talep.sube_id)) notFound()
+  if (error) {
+    throw new Error(`Talep detayı alınamadı: ${error.message}`)
+  }
 
-  const customer = relationOne(talep.customers as Relation<{ full_name?: string | null }>)
-  const sube = relationOne(talep.subeler as Relation<{ ad?: string | null }>)
-  const personel = relationOne(talep.personeller as Relation<{ ad?: string | null; soyad?: string | null }>)
+  if (!talep || !canAccessTalep(access, talep.sube_id)) notFound()
+
+  const [{ data: customer }, { data: sube }, { data: personel }] = await Promise.all([
+    talep.customer_id
+      ? supabase.from('customers').select('id, full_name').eq('id', talep.customer_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    talep.sube_id
+      ? supabase.from('subeler').select('ad').eq('id', talep.sube_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    talep.sorumlu_personel_id
+      ? supabase.from('personeller').select('ad, soyad').eq('id', talep.sorumlu_personel_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+
   const customerName = talep.customer_name_snapshot ?? customer?.full_name ?? '-'
   const manualCustomerName = talep.customer_id ? null : talep.customer_name_snapshot
 
