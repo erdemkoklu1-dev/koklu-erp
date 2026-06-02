@@ -3,6 +3,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import OperationShell from '../_components/OperationShell'
 import OperationFilters from '../_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
 
 type SearchParams = Promise<{ durum?: string; geciken?: string; bugun?: string; q?: string; sube?: string; baslangic?: string; bitis?: string }>
 
@@ -22,11 +24,7 @@ function branchName(value: unknown) {
   return (row as { ad?: string } | null)?.ad ?? '-'
 }
 
-function applySube(query: any, subeId?: string) {
-  return subeId ? query.eq('sube_id', subeId) : query
-}
-
-function withSube(href: string, subeId?: string) {
+function withSube(href: string, subeId?: string | null) {
   if (!subeId) return href
   return `${href}${href.includes('?') ? '&' : '?'}sube=${encodeURIComponent(subeId)}`
 }
@@ -34,6 +32,9 @@ function withSube(href: string, subeId?: string) {
 export default async function IsPlanlariPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
   const supabase = createServiceClient()
+  const access = await getCurrentAccess()
+  const lockedSubeId = getLockedBranchId(access)
+  const effectiveSube = lockedSubeId ?? params.sube
   const today = new Date().toISOString().slice(0, 10)
 
   let query = supabase
@@ -42,11 +43,13 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (params.sube) query = query.eq('sube_id', params.sube)
+  query = applyBranchScope(query, access, effectiveSube)
   if (params.q) query = query.or(`baslik.ilike.%${params.q}%,plan_no.ilike.%${params.q}%,customer_name_snapshot.ilike.%${params.q}%`)
   if (params.durum && params.durum !== 'Bekliyor') query = query.eq('durum', params.durum)
   if (params.baslangic) query = query.gte('baslangic_tarihi', params.baslangic)
   if (params.bitis) query = query.lte('baslangic_tarihi', params.bitis)
+
+  const scopedCount = <T,>(baseQuery: T) => applyBranchScope(baseQuery, access, effectiveSube) as T
 
   const [
     { data: plans },
@@ -58,22 +61,23 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
   ] = await Promise.all([
     query,
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('planlanan_tarih', today), params.sube),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor'), params.sube),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı'), params.sube),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")'), params.sube),
+    scopedCount(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('planlanan_tarih', today)),
+    scopedCount(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor')),
+    scopedCount(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı')),
+    scopedCount(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
   ])
 
   let rows = plans ?? []
-  if (params.bugun === '1') rows = rows.filter(r => r.sonraki_is_tarihi === today)
-  if (params.durum === 'Bekliyor') rows = rows.filter(r => Math.max((r.toplam_is_sayisi || 0) - (r.tamamlanan_is_sayisi || 0) - (r.iptal_is_sayisi || 0), 0) > 0)
-  if (params.geciken === '1') rows = rows.filter(r => r.sonraki_is_tarihi && r.sonraki_is_tarihi < today && !['Tamamlandı', 'İptal'].includes(r.durum))
+  if (params.bugun === '1') rows = rows.filter(row => row.sonraki_is_tarihi === today)
+  if (params.durum === 'Bekliyor') rows = rows.filter(row => Math.max((row.toplam_is_sayisi || 0) - (row.tamamlanan_is_sayisi || 0) - (row.iptal_is_sayisi || 0), 0) > 0)
+  if (params.geciken === '1') rows = rows.filter(row => row.sonraki_is_tarihi && row.sonraki_is_tarihi < today && !['Tamamlandı', 'İptal'].includes(row.durum))
 
+  const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string | null }[], access)
   const cards = [
-    ['Bugünkü işler', bugun ?? 0, withSube('/operasyon/is-planlari?bugun=1', params.sube)],
-    ['Bekleyen işler', bekleyen ?? 0, withSube('/operasyon/is-planlari?durum=Bekliyor', params.sube)],
-    ['Tamamlanan işler', tamamlanan ?? 0, withSube('/operasyon/is-planlari?durum=Tamamlandı', params.sube)],
-    ['Geciken işler', geciken ?? 0, withSube('/operasyon/is-planlari?geciken=1', params.sube)],
+    ['Bugünkü işler', bugun ?? 0, withSube('/operasyon/is-planlari?bugun=1', effectiveSube)],
+    ['Bekleyen işler', bekleyen ?? 0, withSube('/operasyon/is-planlari?durum=Bekliyor', effectiveSube)],
+    ['Tamamlanan işler', tamamlanan ?? 0, withSube('/operasyon/is-planlari?durum=Tamamlandı', effectiveSube)],
+    ['Geciken işler', geciken ?? 0, withSube('/operasyon/is-planlari?geciken=1', effectiveSube)],
   ] as const
 
   return (
@@ -90,10 +94,11 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
 
         <OperationFilters
           action="/operasyon/is-planlari"
-          subeler={subeler ?? []}
-          values={params}
+          subeler={visibleSubeler}
+          values={{ ...params, sube: effectiveSube }}
           durumlar={DURUMLAR}
           searchPlaceholder="Plan adı veya müşteri ara"
+          lockedSubeId={lockedSubeId}
         />
 
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 print:block">

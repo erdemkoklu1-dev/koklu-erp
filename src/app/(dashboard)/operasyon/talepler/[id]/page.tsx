@@ -4,19 +4,34 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { updateTalepDurumAction } from '../actions'
 import OperationShell from '../../_components/OperationShell'
 import { formatTRDate } from '@/lib/finance/formatters'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyBranchScope } from '@/lib/auth/branch-scope'
 
 const DURUMLAR = ['Yeni', 'İşleme Alındı', 'Planlandı', 'Sahada', 'Beklemede', 'Tamamlandı', 'İptal', 'Teslimata Aktarıldı', 'İş Planına Aktarıldı', 'Teklif Verildi']
+
+type Relation<T> = T | T[] | null
+
+function relationOne<T>(value: Relation<T>) {
+  return Array.isArray(value) ? value[0] ?? null : value
+}
 
 export default async function TalepDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServiceClient()
-  const { data: talep } = await supabase
+  const access = await getCurrentAccess()
+
+  let query = supabase
     .from('musteri_talepleri')
     .select('*, customers(id, full_name, phone, email), subeler(ad), personeller(ad, soyad)')
     .eq('id', id)
-    .single()
+  query = applyBranchScope(query, access)
 
+  const { data: talep } = await query.single()
   if (!talep) notFound()
+
+  const customer = relationOne(talep.customers as Relation<{ full_name?: string | null }>)
+  const sube = relationOne(talep.subeler as Relation<{ ad?: string | null }>)
+  const personel = relationOne(talep.personeller as Relation<{ ad?: string | null; soyad?: string | null }>)
 
   return (
     <OperationShell active="talepler" title={`Talep Detayı - ${talep.talep_no}`}>
@@ -30,7 +45,7 @@ export default async function TalepDetayPage({ params }: { params: Promise<{ id:
           <form action={updateTalepDurumAction} className="no-print flex gap-2">
             <input type="hidden" name="id" value={talep.id} />
             <select name="durum" defaultValue={talep.durum} className="rounded-md border px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
-              {DURUMLAR.map(v => <option key={v}>{v}</option>)}
+              {DURUMLAR.map(value => <option key={value}>{value}</option>)}
             </select>
             <button className="rounded-md bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a00d25]">Güncelle</button>
           </form>
@@ -40,8 +55,8 @@ export default async function TalepDetayPage({ params }: { params: Promise<{ id:
           <section className="rounded-lg border bg-white p-5 dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
             <h2 className="mb-4 font-semibold">Talep Bilgileri</h2>
             <dl className="grid gap-4 md:grid-cols-2">
-              <div><dt className="text-xs text-gray-500">Müşteri</dt><dd className="font-medium">{talep.customer_name_snapshot ?? talep.customers?.full_name ?? '-'}</dd></div>
-              <div><dt className="text-xs text-gray-500">Şube</dt><dd className="font-medium">{talep.subeler?.ad ?? '-'}</dd></div>
+              <div><dt className="text-xs text-gray-500">Müşteri</dt><dd className="font-medium">{talep.customer_name_snapshot ?? customer?.full_name ?? '-'}</dd></div>
+              <div><dt className="text-xs text-gray-500">Şube</dt><dd className="font-medium">{sube?.ad ?? '-'}</dd></div>
               <div><dt className="text-xs text-gray-500">Cihaz</dt><dd>{talep.cihaz_name_snapshot ?? '-'}</dd></div>
               <div><dt className="text-xs text-gray-500">Kategori</dt><dd>{talep.kategori}</dd></div>
               <div><dt className="text-xs text-gray-500">Öncelik</dt><dd>{talep.oncelik}</dd></div>
@@ -49,7 +64,7 @@ export default async function TalepDetayPage({ params }: { params: Promise<{ id:
               <div><dt className="text-xs text-gray-500">Kaynak</dt><dd>{talep.kaynak}</dd></div>
               <div><dt className="text-xs text-gray-500">Talep Tarihi</dt><dd>{formatTRDate(talep.talep_tarihi)}</dd></div>
               <div><dt className="text-xs text-gray-500">Hedef Tarih</dt><dd>{formatTRDate(talep.hedef_tarih)}</dd></div>
-              <div><dt className="text-xs text-gray-500">Atanan Kişi</dt><dd>{talep.personeller ? `${talep.personeller.ad ?? ''} ${talep.personeller.soyad ?? ''}`.trim() : '-'}</dd></div>
+              <div><dt className="text-xs text-gray-500">Atanan Kişi</dt><dd>{personel ? `${personel.ad ?? ''} ${personel.soyad ?? ''}`.trim() : '-'}</dd></div>
             </dl>
             <div className="mt-6">
               <h3 className="mb-2 text-sm font-semibold">Açıklama</h3>

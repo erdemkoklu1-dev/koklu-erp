@@ -3,7 +3,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import OperationShell from './_components/OperationShell'
 import OperationFilters from './_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
-import { allowedBranchFilter, getCurrentAccess } from '@/lib/auth/authorization'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
 
 type SearchParams = Promise<{ sube?: string; baslangic?: string; bitis?: string; q?: string }>
 
@@ -12,6 +13,19 @@ type SummaryCard = {
   value: number
   href: string
   tone: string
+}
+
+type ActivityRow = {
+  id: string
+  teslimat_no?: string | null
+  talep_no?: string | null
+  plan_no?: string | null
+  baslik?: string | null
+  teslimat_tarihi?: string | null
+  talep_tarihi?: string | null
+  sonraki_is_tarihi?: string | null
+  customers?: { full_name: string | null } | { full_name: string | null }[] | null
+  subeler?: { ad: string | null } | { ad: string | null }[] | null
 }
 
 function Card({ title, value, href, tone }: SummaryCard) {
@@ -23,37 +37,33 @@ function Card({ title, value, href, tone }: SummaryCard) {
   )
 }
 
-function applySube(query: any, subeId?: string) {
-  return subeId ? query.eq('sube_id', subeId) : query
-}
-
-function applyDate(query: any, column: string, baslangic?: string, bitis?: string) {
+function applyDate<T extends { gte: (column: string, value: string) => T; lte: (column: string, value: string) => T }>(query: T, column: string, baslangic?: string, bitis?: string) {
   if (baslangic) query = query.gte(column, baslangic)
   if (bitis) query = query.lte(column, bitis)
   return query
 }
 
-function withSube(href: string, subeId?: string) {
+function withSube(href: string, subeId?: string | null) {
   if (!subeId) return href
   return `${href}${href.includes('?') ? '&' : '?'}sube=${encodeURIComponent(subeId)}`
+}
+
+function relationOne<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
 
 export default async function OperasyonPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
-  const effectiveSube = access ? allowedBranchFilter(access, params.sube) : params.sube
+  const lockedSubeId = getLockedBranchId(access)
+  const effectiveSube = lockedSubeId ?? params.sube
   const today = new Date().toISOString().slice(0, 10)
   const tenDaysAgo = new Date()
   tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
   const tenDaysAgoStr = tenDaysAgo.toISOString().slice(0, 10)
 
-  function applySube(query: any, _requested?: string) {
-    if (effectiveSube === '__none__') return query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
-    if (effectiveSube) return query.eq('sube_id', effectiveSube)
-    if (access && !access.isAdmin) return query.in('sube_id', access.branchIds)
-    return query
-  }
+  const scoped = <T,>(query: T) => applyBranchScope(query, access, effectiveSube) as T
 
   const [
     { data: subeler },
@@ -76,26 +86,26 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
     { data: sonIsPlanlari },
   ] = await Promise.all([
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
-    applyDate(applySube(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today), params.sube), 'teslimat_tarihi', params.baslangic, params.bitis),
-    applyDate(applySube(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte'), params.sube), 'teslimat_tarihi', params.baslangic, params.bitis),
-    applySube(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']), params.sube),
-    applySube(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']), params.sube),
-    applySube(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']).lt('created_at', tenDaysAgoStr), params.sube),
-    applySube(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']).lt('created_at', tenDaysAgoStr), params.sube),
-    applyDate(applySube(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'Yeni'), params.sube), 'talep_tarihi', params.baslangic, params.bitis),
-    applyDate(applySube(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'İşleme Alındı'), params.sube), 'talep_tarihi', params.baslangic, params.bitis),
-    applyDate(applySube(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('oncelik', 'Acil').not('durum', 'in', '("Tamamlandı","İptal")'), params.sube), 'talep_tarihi', params.baslangic, params.bitis),
-    applySube(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).lt('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")'), params.sube),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('planlanan_tarih', today), params.sube),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor'), params.sube),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı'), params.sube),
-    applySube(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")'), params.sube),
-    applySube(supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum, customers(full_name), subeler(ad)').order('created_at', { ascending: false }).limit(5), params.sube),
-    applySube(supabase.from('musteri_talepleri').select('id, talep_no, baslik, durum, talep_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5), params.sube),
-    applySube(supabase.from('is_planlari').select('id, plan_no, baslik, durum, sonraki_is_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5), params.sube),
+    applyDate(scoped(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today)), 'teslimat_tarihi', params.baslangic, params.bitis),
+    applyDate(scoped(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte')), 'teslimat_tarihi', params.baslangic, params.bitis),
+    scoped(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi'])),
+    scoped(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim'])),
+    scoped(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']).lt('created_at', tenDaysAgoStr)),
+    scoped(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']).lt('created_at', tenDaysAgoStr)),
+    applyDate(scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'Yeni')), 'talep_tarihi', params.baslangic, params.bitis),
+    applyDate(scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'İşleme Alındı')), 'talep_tarihi', params.baslangic, params.bitis),
+    applyDate(scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('oncelik', 'Acil').not('durum', 'in', '("Tamamlandı","İptal")')), 'talep_tarihi', params.baslangic, params.bitis),
+    scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).lt('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
+    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('planlanan_tarih', today)),
+    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor')),
+    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı')),
+    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
+    scoped(supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum, customers(full_name), subeler(ad)').order('created_at', { ascending: false }).limit(5)),
+    scoped(supabase.from('musteri_talepleri').select('id, talep_no, baslik, durum, talep_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
+    scoped(supabase.from('is_planlari').select('id, plan_no, baslik, durum, sonraki_is_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
   ])
 
-  const visibleSubeler = access?.isAdmin ? (subeler ?? []) : (subeler ?? []).filter(s => access?.branchIds.includes(s.id))
+  const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string | null }[], access)
   const branchRows = await Promise.all(visibleSubeler.map(async sube => {
     const [
       { count: acikSevk },
@@ -127,32 +137,36 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
     {
       title: 'Teslimat Özeti',
       cards: [
-        { title: 'Bugün teslim edilecekler', value: bugunTeslim ?? 0, href: withSube('/operasyon/teslimatlar?durum=bugun', params.sube), tone: 'text-blue-600' },
-        { title: 'Sevkte olanlar', value: sevkte ?? 0, href: withSube('/operasyon/teslimatlar?durum=sevkte', params.sube), tone: 'text-orange-600' },
-        { title: 'Açık emanetler', value: emanet ?? 0, href: withSube('/teslimatlar/emanetler', params.sube), tone: 'text-yellow-700' },
-        { title: 'Geri teslim bekleyenler', value: geriBekleyen ?? 0, href: withSube('/teslimatlar/geri-teslim', params.sube), tone: 'text-red-600' },
-        { title: '10 günü geçen teslimatlar', value: (gecikenGeri ?? 0) + (gecikenEmanet ?? 0), href: withSube('/teslimatlar/gecikenler', params.sube), tone: 'text-red-700' },
+        { title: 'Bugün teslim edilecekler', value: bugunTeslim ?? 0, href: withSube('/operasyon/teslimatlar?durum=bugun', effectiveSube), tone: 'text-blue-600' },
+        { title: 'Sevkte olanlar', value: sevkte ?? 0, href: withSube('/operasyon/teslimatlar?durum=sevkte', effectiveSube), tone: 'text-orange-600' },
+        { title: 'Açık emanetler', value: emanet ?? 0, href: withSube('/teslimatlar/emanetler', effectiveSube), tone: 'text-yellow-700' },
+        { title: 'Geri teslim bekleyenler', value: geriBekleyen ?? 0, href: withSube('/teslimatlar/geri-teslim', effectiveSube), tone: 'text-red-600' },
+        { title: '10 günü geçen teslimatlar', value: (gecikenGeri ?? 0) + (gecikenEmanet ?? 0), href: withSube('/teslimatlar/gecikenler', effectiveSube), tone: 'text-red-700' },
       ],
     },
     {
       title: 'Talep Özeti',
       cards: [
-        { title: 'Yeni talepler', value: yeniTalep ?? 0, href: withSube('/operasyon/talepler?durum=Yeni', params.sube), tone: 'text-blue-600' },
-        { title: 'İşleme alınan talepler', value: islemeAlinan ?? 0, href: withSube('/operasyon/talepler?durum=İşleme Alındı', params.sube), tone: 'text-indigo-700' },
-        { title: 'Acil talepler', value: acilTalep ?? 0, href: withSube('/operasyon/talepler?oncelik=Acil', params.sube), tone: 'text-red-600' },
-        { title: 'Geciken talepler', value: gecikenTalep ?? 0, href: withSube('/operasyon/talepler?geciken=1', params.sube), tone: 'text-red-700' },
+        { title: 'Yeni talepler', value: yeniTalep ?? 0, href: withSube('/operasyon/talepler?durum=Yeni', effectiveSube), tone: 'text-blue-600' },
+        { title: 'İşleme alınan talepler', value: islemeAlinan ?? 0, href: withSube('/operasyon/talepler?durum=İşleme Alındı', effectiveSube), tone: 'text-indigo-700' },
+        { title: 'Acil talepler', value: acilTalep ?? 0, href: withSube('/operasyon/talepler?oncelik=Acil', effectiveSube), tone: 'text-red-600' },
+        { title: 'Geciken talepler', value: gecikenTalep ?? 0, href: withSube('/operasyon/talepler?geciken=1', effectiveSube), tone: 'text-red-700' },
       ],
     },
     {
       title: 'İş Planı Özeti',
       cards: [
-        { title: 'Bugünkü işler', value: bugunkuIs ?? 0, href: withSube('/operasyon/is-planlari?bugun=1', params.sube), tone: 'text-blue-600' },
-        { title: 'Bekleyen işler', value: bekleyenIs ?? 0, href: withSube('/operasyon/is-planlari?durum=Bekliyor', params.sube), tone: 'text-yellow-700' },
-        { title: 'Tamamlanan işler', value: tamamlananIs ?? 0, href: withSube('/operasyon/is-planlari?durum=Tamamlandı', params.sube), tone: 'text-green-700' },
-        { title: 'Geciken işler', value: gecikenIs ?? 0, href: withSube('/operasyon/is-planlari?geciken=1', params.sube), tone: 'text-red-700' },
+        { title: 'Bugünkü işler', value: bugunkuIs ?? 0, href: withSube('/operasyon/is-planlari?bugun=1', effectiveSube), tone: 'text-blue-600' },
+        { title: 'Bekleyen işler', value: bekleyenIs ?? 0, href: withSube('/operasyon/is-planlari?durum=Bekliyor', effectiveSube), tone: 'text-yellow-700' },
+        { title: 'Tamamlanan işler', value: tamamlananIs ?? 0, href: withSube('/operasyon/is-planlari?durum=Tamamlandı', effectiveSube), tone: 'text-green-700' },
+        { title: 'Geciken işler', value: gecikenIs ?? 0, href: withSube('/operasyon/is-planlari?geciken=1', effectiveSube), tone: 'text-red-700' },
       ],
     },
   ]
+
+  const teslimatRows = (sonTeslimatlar ?? []) as ActivityRow[]
+  const talepRows = (sonTalepler ?? []) as ActivityRow[]
+  const planRows = (sonIsPlanlari ?? []) as ActivityRow[]
 
   return (
     <OperationShell active="ozet" title="Operasyon Özeti">
@@ -160,12 +174,13 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
         <OperationFilters
           action="/operasyon"
           subeler={visibleSubeler}
-          values={{ ...params, sube: effectiveSube && effectiveSube !== '__none__' ? effectiveSube : undefined }}
+          values={{ ...params, sube: effectiveSube }}
           searchPlaceholder="Özet içinde ara"
+          lockedSubeId={lockedSubeId}
         />
 
         <div className="print-only hidden text-xs text-gray-600">
-          Filtre: {params.sube ? `Şube ${params.sube}` : 'Tüm şubeler'} {params.baslangic ? `, Başlangıç ${params.baslangic}` : ''} {params.bitis ? `, Bitiş ${params.bitis}` : ''}
+          Filtre: {effectiveSube ? `Şube ${effectiveSube}` : 'Tüm şubeler'} {params.baslangic ? `, Başlangıç ${params.baslangic}` : ''} {params.bitis ? `, Bitiş ${params.bitis}` : ''}
         </div>
 
         {sections.map(section => (
@@ -213,24 +228,34 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Son Aktiviteler</h2>
             <div className="rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
               <div className="space-y-4 text-sm">
-                {(sonTeslimatlar ?? []).map((row: any) => (
-                  <Link key={`t-${row.id}`} href={`/teslimatlar/${row.id}`} className="block rounded-md p-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <div className="font-medium">Teslimat: {row.teslimat_no}</div>
-                    <div className="text-xs text-gray-500">{row.customers?.full_name ?? '-'} · {row.subeler?.ad ?? '-'} · {formatTRDate(row.teslimat_tarihi)}</div>
-                  </Link>
-                ))}
-                {(sonTalepler ?? []).map((row: any) => (
-                  <Link key={`r-${row.id}`} href={`/operasyon/talepler/${row.id}`} className="block rounded-md p-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <div className="font-medium">Talep: {row.baslik}</div>
-                    <div className="text-xs text-gray-500">{row.talep_no} · {row.subeler?.ad ?? '-'} · {formatTRDate(row.talep_tarihi)}</div>
-                  </Link>
-                ))}
-                {(sonIsPlanlari ?? []).map((row: any) => (
-                  <Link key={`p-${row.id}`} href={`/operasyon/is-planlari/${row.id}`} className="block rounded-md p-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <div className="font-medium">İş Planı: {row.baslik}</div>
-                    <div className="text-xs text-gray-500">{row.plan_no} · {row.subeler?.ad ?? '-'} · {formatTRDate(row.sonraki_is_tarihi)}</div>
-                  </Link>
-                ))}
+                {teslimatRows.map(row => {
+                  const customer = relationOne(row.customers)
+                  const sube = relationOne(row.subeler)
+                  return (
+                    <Link key={`t-${row.id}`} href={`/teslimatlar/${row.id}`} className="block rounded-md p-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <div className="font-medium">Teslimat: {row.teslimat_no}</div>
+                      <div className="text-xs text-gray-500">{customer?.full_name ?? '-'} · {sube?.ad ?? '-'} · {formatTRDate(row.teslimat_tarihi)}</div>
+                    </Link>
+                  )
+                })}
+                {talepRows.map(row => {
+                  const sube = relationOne(row.subeler)
+                  return (
+                    <Link key={`r-${row.id}`} href={`/operasyon/talepler/${row.id}`} className="block rounded-md p-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <div className="font-medium">Talep: {row.baslik}</div>
+                      <div className="text-xs text-gray-500">{row.talep_no} · {sube?.ad ?? '-'} · {formatTRDate(row.talep_tarihi)}</div>
+                    </Link>
+                  )
+                })}
+                {planRows.map(row => {
+                  const sube = relationOne(row.subeler)
+                  return (
+                    <Link key={`p-${row.id}`} href={`/operasyon/is-planlari/${row.id}`} className="block rounded-md p-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <div className="font-medium">İş Planı: {row.baslik}</div>
+                      <div className="text-xs text-gray-500">{row.plan_no} · {sube?.ad ?? '-'} · {formatTRDate(row.sonraki_is_tarihi)}</div>
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           </div>
