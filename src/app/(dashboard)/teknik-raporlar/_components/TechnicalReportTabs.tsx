@@ -6,6 +6,7 @@ const tabs = [
   ['/teknik-raporlar/alarm-hesabi', 'Yangın Alarm Hesabı'],
   ['/teknik-raporlar/genel-ihtiyac', 'Genel İhtiyaç Raporu'],
   ['/teknik-raporlar/oda-sizdirmazlik', 'Oda Sızdırmazlık Testi'],
+  ['/teknik-raporlar/havalandirma-test', 'Havalandırma Testi'],
   ['/teknik-raporlar/sulu-sistem', 'Sulu Sistem Hesabı'],
   ['/teknik-raporlar/ayarlar', 'Teknik Ayarlar'],
 ] as const

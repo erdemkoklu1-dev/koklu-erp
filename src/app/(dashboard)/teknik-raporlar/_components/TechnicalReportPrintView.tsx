@@ -200,6 +200,48 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
         </section>
       )}
 
+      {report.rapor_turu === 'havalandirma_test_raporu' && (
+        <section className="mt-4">
+          <h2 className="mb-2 text-sm font-bold">Havalandırma Test Sonuçları</h2>
+          <div className="mb-3 rounded-md border-l-4 border-[#C8102E] bg-red-50 p-2 text-xs">
+            <strong>Sonuç:</strong> {result.degerlendirme ?? '-'} · {result.otomatik_degerlendirme ?? ''}
+          </div>
+          <table className="w-full text-xs">
+            <tbody>
+              <tr><th>Kesit</th><td>{result.kesit_aciklama ?? '-'}</td><th>Kesit Alanı</th><td>{result.kesit_alani_m2 ?? 0} m²</td></tr>
+              <tr><th>Giriş Ortalama Hız</th><td>{result.giris_ortalama_hiz_ms ?? 0} m/s</td><th>Çıkış Ortalama Hız</th><td>{result.cikis_ortalama_hiz_ms ?? 0} m/s</td></tr>
+              <tr><th>Min / Max Hız</th><td>{result.minimum_hiz_ms ?? 0} / {result.maksimum_hiz_ms ?? 0} m/s</td><th>Kayıp Oranı</th><td>%{result.kayip_orani_yuzde ?? 0}</td></tr>
+              <tr><th>Giriş Debisi</th><td>{result.giris_debi_m3_s ?? 0} m³/s · {result.giris_debi_m3_h ?? 0} m³/h</td><th>Çıkış Debisi</th><td>{result.cikis_debi_m3_s ?? 0} m³/s · {result.cikis_debi_m3_h ?? 0} m³/h</td></tr>
+              <tr><th>Minimum Hız Eşiği</th><td>{result.minimum_hiz_esigi_ms ?? 0} m/s</td><th>Maksimum Kayıp Eşiği</th><td>%{result.maksimum_kayip_esigi_yuzde ?? 0}</td></tr>
+            </tbody>
+          </table>
+          {input.giris_olcumleri && (
+            <section className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <MeasurementPrintTable title="Giriş 5 Nokta Ölçümü" values={input.giris_olcumleri} />
+              <MeasurementPrintTable title="Çıkış 5 Nokta Ölçümü" values={input.cikis_olcumleri} muted={result.sanal_cikis_kullanildi} />
+            </section>
+          )}
+          {result.sanal_cikis_kullanildi && (
+            <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs font-semibold text-amber-900">
+              Çıkış ölçümü yapılamadığı için çıkış debisi ve hız değerleri tahmini sanal çıkış hesabıyla üretilmiştir.
+            </div>
+          )}
+          {Array.isArray(result.oneriler) && result.oneriler.length > 0 && (
+            <section className="mt-3">
+              <h3 className="mb-1 text-xs font-bold">Otomatik Öneriler</h3>
+              <ul className="list-disc pl-5 text-xs">
+                {result.oneriler.map((item: string) => <li key={item}>{item}</li>)}
+              </ul>
+            </section>
+          )}
+          {result.manuel_degerlendirme && (
+            <section className="mt-3 rounded-md border p-2 text-xs">
+              <strong>Manuel Değerlendirme:</strong> {result.manuel_degerlendirme}
+            </section>
+          )}
+        </section>
+      )}
+
       <section className="mt-3">
         <h2 className="mb-1 text-sm font-bold">Teklife Aktarılabilir İhtiyaç Listesi</h2>
         <table className="w-full text-xs">
@@ -219,12 +261,27 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
 
       {report.notes && <section className="mt-4 text-sm"><h2 className="font-bold">Açıklama ve Notlar</h2><p>{report.notes}</p></section>}
 
-      {report.rapor_turu === 'oda_sizdirmazlik_testi' && (
+      {(report.rapor_turu === 'oda_sizdirmazlik_testi' || report.rapor_turu === 'havalandirma_test_raporu') && (
         <section className="mt-10 grid grid-cols-2 gap-12 text-sm">
           <div className="border-t pt-2">Test Personeli İmza</div>
           <div className="border-t pt-2">Müşteri Yetkilisi İmza</div>
         </section>
       )}
     </article>
+  )
+}
+
+function MeasurementPrintTable({ title, values, muted = false }: { title: string; values: any; muted?: boolean }) {
+  return (
+    <div className={`rounded-md border p-2 ${muted ? 'text-gray-500' : ''}`}>
+      <h3 className="mb-1 text-xs font-bold">{title}</h3>
+      <table className="w-full text-[10px]">
+        <tbody>
+          <tr><th>Üst</th><td>{values?.ust ?? '-'}</td><th>Alt</th><td>{values?.alt ?? '-'}</td></tr>
+          <tr><th>Sağ</th><td>{values?.sag ?? '-'}</td><th>Sol</th><td>{values?.sol ?? '-'}</td></tr>
+          <tr><th>Orta</th><td colSpan={3}>{values?.orta ?? '-'}</td></tr>
+        </tbody>
+      </table>
+    </div>
   )
 }

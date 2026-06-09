@@ -66,6 +66,7 @@ export default async function TechnicalReportsPage({ searchParams }: { searchPar
           <Stat title="Taslak Raporlar" value={countBy(r => r.durum === 'Taslak')} />
           <Stat title="Teklife Aktarılanlar" value={countBy(r => r.durum === 'Teklife Aktarıldı')} />
           <Stat title="Oda Sızdırmazlık Testleri" value={countBy(r => r.rapor_turu === 'oda_sizdirmazlik_testi')} />
+          <Stat title="Havalandırma Testleri" value={countBy(r => r.rapor_turu === 'havalandirma_test_raporu')} />
           <Stat title="Alarm Hesapları" value={countBy(r => r.rapor_turu === 'yangin_alarm_ihtiyac')} />
         </section>
 

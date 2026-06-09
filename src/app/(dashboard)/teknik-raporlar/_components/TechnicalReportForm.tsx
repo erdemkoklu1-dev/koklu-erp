@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateAlarmNeeds, type AlarmInput } from '@/lib/technical-reports/alarm-calculator'
 import { calculateGeneralNeeds, type ExistingDeviceInput, type GeneralNeedsInput } from '@/lib/technical-reports/general-needs-calculator'
 import { calculateRoomIntegrity, type RoomIntegrityInput } from '@/lib/technical-reports/room-integrity-calculator'
+import { calculateVentilationTest, type VentilationEvaluationMode, type VentilationSectionType, type VentilationTestInput } from '@/lib/technical-reports/ventilation-test-calculator'
 import { calculateWaterSystem, WATER_SYSTEM_WARNING, type WaterSystemInput, type WaterRiskClass } from '@/lib/technical-reports/water-system-calculator'
 import { calculateWaterHydraulicReport, WATER_HYDRAULIC_WARNING } from '@/lib/technical-reports/water-hydraulic-calculator'
 import type { HydraulicPipeSegment, WaterCalculationMode, WaterHydraulicInput } from '@/lib/technical-reports/water-hydraulic-types'
@@ -65,6 +66,7 @@ const reportCards: Array<{ type: TechnicalReportType; text: string }> = [
   { type: 'yangin_alarm_ihtiyac', text: 'Oda, kat, alan ve kullanım tipine göre dedektör, buton, siren ve panel ihtiyacını hesaplar.' },
   { type: 'genel_ihtiyac_raporu', text: 'Binanın mevcut yangın güvenliği durumuna göre eksik sistem ve malzeme ihtiyacını listeler.' },
   { type: 'oda_sizdirmazlik_testi', text: 'Gazlı söndürme sistemleri için oda hacmi, test ölçümleri ve kaçak değerlendirme raporu oluşturur.' },
+  { type: 'havalandirma_test_raporu', text: 'Havalandırma giriş/çıkış hız ölçümleri, kesit alanı, debi ve kayıp oranı raporu oluşturur.' },
   { type: 'sulu_sistem_hidrolik_hesap', text: 'Dolap, hidrant, sprinkler, hidrolik boru, pompa, depo ve kroki hesabını birlikte üretir.' },
 ]
 
@@ -315,6 +317,43 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       } satisfies WaterHydraulicInput
     }
 
+    if (reportType === 'havalandirma_test_raporu') {
+      const measurement = (prefix: 'giris' | 'cikis') => ({
+        ust: num(form, `${prefix}_ust`),
+        alt: num(form, `${prefix}_alt`),
+        sag: num(form, `${prefix}_sag`),
+        sol: num(form, `${prefix}_sol`),
+        orta: num(form, `${prefix}_orta`),
+      })
+      return {
+        firma_kurum: String(form.get('firma_kurum') || ''),
+        test_tarihi: String(form.get('test_tarihi') || ''),
+        test_yapilan_mahal: String(form.get('test_yapilan_mahal') || ''),
+        sistem_tipi: String(form.get('havalandirma_sistem_tipi') || ''),
+        tekniker_ad_soyad: String(form.get('tekniker_ad_soyad') || ''),
+        ekipnet_no: String(form.get('ekipnet_no') || ''),
+        cihaz_marka: String(form.get('cihaz_marka') || ''),
+        cihaz_model: String(form.get('cihaz_model') || ''),
+        cihaz_seri_no: String(form.get('cihaz_seri_no') || ''),
+        kesit_tipi: String(form.get('kesit_tipi') || 'dikdortgen') as VentilationSectionType,
+        manuel_kesit_adi: String(form.get('manuel_kesit_adi') || ''),
+        dairesel_cap_mm: num(form, 'dairesel_cap_mm'),
+        dikdortgen_en_mm: num(form, 'dikdortgen_en_mm'),
+        dikdortgen_boy_mm: num(form, 'dikdortgen_boy_mm'),
+        kare_kenar_mm: num(form, 'kare_kenar_mm'),
+        manuel_kesit_alani_m2: num(form, 'manuel_kesit_alani_m2'),
+        havalandirma_uzunlugu_m: num(form, 'havalandirma_uzunlugu_m'),
+        dirsek_sayisi: num(form, 'dirsek_sayisi'),
+        giris_olcumleri: measurement('giris'),
+        cikis_olcumleri: measurement('cikis'),
+        cikis_olcumu_yapilamadi: boolValue(form.get('cikis_olcumu_yapilamadi')),
+        sanal_cikis_hesabi: boolValue(form.get('sanal_cikis_hesabi')),
+        degerlendirme_modu: String(form.get('degerlendirme_modu') || 'otomatik') as VentilationEvaluationMode,
+        manuel_degerlendirme: String(form.get('manuel_degerlendirme') || ''),
+        olcum_notlari: String(form.get('olcum_notlari') || ''),
+      } satisfies VentilationTestInput
+    }
+
     return {
       oda_adi: String(form.get('oda_adi') || ''),
       test_tarihi: String(form.get('test_tarihi') || ''),
@@ -362,7 +401,9 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
           ? calculateWaterSystem(data as WaterSystemInput, settings)
           : reportType === 'sulu_sistem_hidrolik_hesap'
             ? calculateWaterHydraulicReport(data as WaterHydraulicInput, settings)
-            : calculateRoomIntegrity(data as RoomIntegrityInput)
+            : reportType === 'havalandirma_test_raporu'
+              ? calculateVentilationTest(data as VentilationTestInput, settings)
+              : calculateRoomIntegrity(data as RoomIntegrityInput)
     setCalculationResult(calculated.calculation_result)
     setMaterialList(calculated.material_list)
     setMessage('Hesaplama tamamlandı. İhtiyaç listesini kaydetmeden önce düzenleyebilirsiniz.')
@@ -534,6 +575,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       {reportType === 'yangin_alarm_ihtiyac' && <AlarmFields inputData={inputData} />}
       {reportType === 'genel_ihtiyac_raporu' && <GeneralFields inputData={inputData} />}
       {reportType === 'oda_sizdirmazlik_testi' && <RoomFields inputData={inputData} />}
+      {reportType === 'havalandirma_test_raporu' && <VentilationFields inputData={inputData} report={report} />}
       {reportType === 'yangin_dolabi_hidrant_pompa' && <WaterSystemFields inputData={inputData} />}
       {reportType === 'sulu_sistem_hidrolik_hesap' && <WaterHydraulicFields inputData={inputData} />}
 
@@ -550,6 +592,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         <section className="rounded-lg border bg-white p-4 text-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-2 font-semibold">Hesap Sonuçları</h2>
           <ResultSummary result={calculationResult} materialCount={materialList.length} />
+          {reportType === 'havalandirma_test_raporu' && <VentilationResultCards result={calculationResult} />}
           {reportType === 'yangin_dolabi_hidrant_pompa' && <WaterResultCards result={calculationResult} />}
           {reportType === 'sulu_sistem_hidrolik_hesap' && <WaterHydraulicResult result={calculationResult} />}
         </section>
@@ -1047,6 +1090,150 @@ function WaterSystemFields({ inputData }: { inputData: any }) {
         {WATER_SYSTEM_WARNING}
       </div>
     </section>
+  )
+}
+
+function largeInputCls() {
+  return 'w-full rounded-lg border px-4 py-3 text-base dark:border-gray-600'
+}
+
+function VentilationFields({ inputData, report }: { inputData: any; report?: TechnicalReportRow }) {
+  const [sectionType, setSectionType] = useState<VentilationSectionType>(inputData.kesit_tipi ?? 'dikdortgen')
+  const [virtualExit, setVirtualExit] = useState(Boolean(inputData.cikis_olcumu_yapilamadi ?? false))
+  const [mode, setMode] = useState<VentilationEvaluationMode>(inputData.degerlendirme_modu ?? 'otomatik')
+  return (
+    <section className="space-y-5 rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div>
+        <h2 className="text-base font-semibold">Havalandırma Test Raporu</h2>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label className="text-sm font-medium">Firma / Kurum<input name="firma_kurum" defaultValue={inputData.firma_kurum ?? report?.customer_name_snapshot ?? ''} className={largeInputCls()} /></label>
+        <label className="text-sm font-medium">Test Tarihi<input name="test_tarihi" type="date" defaultValue={inputData.test_tarihi ?? report?.rapor_tarihi ?? ''} className={largeInputCls()} /></label>
+        <label className="text-sm font-medium">Test Yapılan Mahal<input name="test_yapilan_mahal" defaultValue={inputData.test_yapilan_mahal ?? ''} className={largeInputCls()} /></label>
+        <label className="text-sm font-medium">Sistem Tipi<input name="havalandirma_sistem_tipi" defaultValue={inputData.sistem_tipi ?? ''} className={largeInputCls()} /></label>
+        <label className="text-sm font-medium">Tekniker Adı Soyadı<input name="tekniker_ad_soyad" defaultValue={inputData.tekniker_ad_soyad ?? ''} className={largeInputCls()} /></label>
+        <label className="text-sm font-medium">Ekipnet Numarası<input name="ekipnet_no" defaultValue={inputData.ekipnet_no ?? ''} className={largeInputCls()} /></label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 rounded-lg border p-4 md:grid-cols-3 dark:border-gray-700">
+        <h3 className="text-sm font-semibold md:col-span-3">Ölçüm Cihazı</h3>
+        <label className="text-sm font-medium">Marka<input name="cihaz_marka" defaultValue={inputData.cihaz_marka ?? ''} className={largeInputCls()} /></label>
+        <label className="text-sm font-medium">Model<input name="cihaz_model" defaultValue={inputData.cihaz_model ?? ''} className={largeInputCls()} /></label>
+        <label className="text-sm font-medium">Seri No<input name="cihaz_seri_no" defaultValue={inputData.cihaz_seri_no ?? ''} className={largeInputCls()} /></label>
+      </div>
+
+      <div className="rounded-lg border p-4 dark:border-gray-700">
+        <h3 className="mb-3 text-sm font-semibold">Kanal / Menfez Kesiti</h3>
+        <input type="hidden" name="kesit_tipi" value={sectionType} />
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {[
+            ['dairesel', 'Dairesel'],
+            ['dikdortgen', 'Dikdörtgen'],
+            ['kare', 'Kare'],
+            ['manuel', 'Manuel Alan'],
+          ].map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setSectionType(value as VentilationSectionType)} className={`rounded-lg border px-4 py-3 text-sm font-semibold ${sectionType === value ? 'border-[#C8102E] bg-red-50 text-[#C8102E]' : 'dark:border-gray-600'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+          {sectionType === 'dairesel' && <label className="text-sm font-medium">Çap mm<input name="dairesel_cap_mm" type="number" min="0" defaultValue={inputData.dairesel_cap_mm ?? 250} className={largeInputCls()} /></label>}
+          {sectionType === 'dikdortgen' && (
+            <>
+              <label className="text-sm font-medium">Giriş / Çıkış Eni mm<input name="dikdortgen_en_mm" type="number" min="0" defaultValue={inputData.dikdortgen_en_mm ?? 400} className={largeInputCls()} /></label>
+              <label className="text-sm font-medium">Giriş / Çıkış Boyu mm<input name="dikdortgen_boy_mm" type="number" min="0" defaultValue={inputData.dikdortgen_boy_mm ?? 200} className={largeInputCls()} /></label>
+            </>
+          )}
+          {sectionType === 'kare' && <label className="text-sm font-medium">Kenar mm<input name="kare_kenar_mm" type="number" min="0" defaultValue={inputData.kare_kenar_mm ?? 300} className={largeInputCls()} /></label>}
+          {sectionType === 'manuel' && (
+            <>
+              <label className="text-sm font-medium">Manuel Kesit Adı<input name="manuel_kesit_adi" defaultValue={inputData.manuel_kesit_adi ?? ''} className={largeInputCls()} /></label>
+              <label className="text-sm font-medium">Kesit Alanı m²<input name="manuel_kesit_alani_m2" type="number" min="0" step="0.0001" defaultValue={inputData.manuel_kesit_alani_m2 ?? 0} className={largeInputCls()} /></label>
+            </>
+          )}
+          <label className="text-sm font-medium">Havalandırma Uzunluğu m<input name="havalandirma_uzunlugu_m" type="number" min="0" step="0.1" defaultValue={inputData.havalandirma_uzunlugu_m ?? 0} className={largeInputCls()} /></label>
+          <label className="text-sm font-medium">Dirsek Sayısı<input name="dirsek_sayisi" type="number" min="0" defaultValue={inputData.dirsek_sayisi ?? 0} className={largeInputCls()} /></label>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <FivePointMeasurement title="Giriş" prefix="giris" values={inputData.giris_olcumleri} disabled={false} />
+        <FivePointMeasurement title="Çıkış" prefix="cikis" values={inputData.cikis_olcumleri} disabled={virtualExit} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 rounded-lg border p-4 md:grid-cols-3 dark:border-gray-700">
+        <label className="flex items-center gap-3 text-sm font-medium">
+          <input name="cikis_olcumu_yapilamadi" type="checkbox" checked={virtualExit} onChange={e => setVirtualExit(e.target.checked)} />
+          Çıkış ölçümü yapılamadı
+        </label>
+        <label className="flex items-center gap-3 text-sm font-medium">
+          <input name="sanal_cikis_hesabi" type="checkbox" defaultChecked={inputData.sanal_cikis_hesabi ?? true} />
+          Sanal çıkış hesabı
+        </label>
+        <label className="text-sm font-medium">Sonuç Modu<select name="degerlendirme_modu" value={mode} onChange={e => setMode(e.target.value as VentilationEvaluationMode)} className={largeInputCls()}><option value="otomatik">Otomatik</option><option value="manuel">Manuel Değerlendirme</option></select></label>
+        {mode === 'manuel' && <label className="text-sm font-medium md:col-span-3">Manuel Değerlendirme<textarea name="manuel_degerlendirme" rows={3} defaultValue={inputData.manuel_degerlendirme ?? ''} className={largeInputCls()} /></label>}
+        <label className="text-sm font-medium md:col-span-3">Ölçüm Notları<textarea name="olcum_notlari" rows={3} defaultValue={inputData.olcum_notlari ?? ''} className={largeInputCls()} /></label>
+      </div>
+    </section>
+  )
+}
+
+function FivePointMeasurement({ title, prefix, values, disabled }: { title: string; prefix: 'giris' | 'cikis'; values?: any; disabled: boolean }) {
+  const point = (key: 'ust' | 'alt' | 'sag' | 'sol' | 'orta', label: string, className = '') => (
+    <label className={`text-xs font-semibold text-gray-600 ${className}`}>
+      {label}
+      <input name={`${prefix}_${key}`} type="number" step="0.01" min="0" disabled={disabled} defaultValue={values?.[key] ?? ''} className={`${largeInputCls()} mt-1 text-center disabled:bg-gray-100`} />
+    </label>
+  )
+  return (
+    <div className="rounded-lg border p-4 dark:border-gray-700">
+      <h3 className="mb-3 text-sm font-semibold">{title} 5 Nokta Ölçüm Şablonu</h3>
+      <div className="mx-auto grid max-w-lg grid-cols-3 gap-3">
+        <div />
+        {point('ust', 'Üst')}
+        <div />
+        {point('sol', 'Sol')}
+        {point('orta', 'Orta')}
+        {point('sag', 'Sağ')}
+        <div />
+        {point('alt', 'Alt')}
+        <div />
+      </div>
+    </div>
+  )
+}
+
+function VentilationResultCards({ result }: { result: any }) {
+  const cards = [
+    ['Ortalama Hız', `${result.ortalama_hiz_ms ?? 0} m/s`],
+    ['Min / Max Hız', `${result.minimum_hiz_ms ?? 0} / ${result.maksimum_hiz_ms ?? 0} m/s`],
+    ['Kesit Alanı', `${result.kesit_alani_m2 ?? 0} m²`],
+    ['Giriş Debisi', `${result.giris_debi_m3_s ?? 0} m³/s · ${result.giris_debi_m3_h ?? 0} m³/h`],
+    ['Çıkış Debisi', `${result.cikis_debi_m3_s ?? 0} m³/s · ${result.cikis_debi_m3_h ?? 0} m³/h`],
+    ['Kayıp Oranı', `%${result.kayip_orani_yuzde ?? 0}`],
+    ['Sonuç', result.degerlendirme ?? '-'],
+  ]
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        {cards.map(([label, value]) => (
+          <div key={label} className="rounded-md bg-gray-50 p-3 dark:bg-gray-900">
+            <div className="text-xs text-gray-500">{label}</div>
+            <div className="text-base font-bold">{value}</div>
+          </div>
+        ))}
+      </div>
+      <div className={`rounded-lg border p-3 text-xs ${result.sanal_cikis_kullanildi ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-green-200 bg-green-50 text-green-900'}`}>
+        {result.otomatik_degerlendirme}
+      </div>
+      {Array.isArray(result.oneriler) && result.oneriler.length > 0 && (
+        <ul className="list-disc space-y-1 rounded-lg border border-gray-200 bg-white p-3 pl-6 text-xs dark:border-gray-700 dark:bg-gray-900">
+          {result.oneriler.map((item: string) => <li key={item}>{item}</li>)}
+        </ul>
+      )}
+    </div>
   )
 }
 

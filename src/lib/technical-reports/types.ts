@@ -4,6 +4,7 @@ export type TechnicalReportType =
   | 'yangin_alarm_ihtiyac'
   | 'genel_ihtiyac_raporu'
   | 'oda_sizdirmazlik_testi'
+  | 'havalandirma_test_raporu'
   | 'yangin_dolabi_hidrant_pompa'
   | 'sulu_sistem_hidrolik_hesap'
 

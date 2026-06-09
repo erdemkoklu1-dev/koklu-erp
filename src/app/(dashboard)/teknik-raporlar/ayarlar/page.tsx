@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { ventilationDefaultSettings } from '@/lib/technical-reports/ventilation-test-calculator'
 import { defaultHydraulicSettings } from '@/lib/technical-reports/water-hydraulic-calculator'
 import { waterSystemDefaultSettingRows } from '@/lib/technical-reports/water-system-calculator'
 import TechnicalReportTabs from '../_components/TechnicalReportTabs'
@@ -21,6 +22,14 @@ export default async function TechnicalSettingsPage() {
       ayar_degeri: setting.value,
       birim: setting.unit,
       aciklama: setting.description,
+      aktif: true,
+    })),
+    ...ventilationDefaultSettings.map(([ayar_adi, ayar_degeri, birim, aciklama]) => ({
+      ayar_grubu: 'havalandirma_test',
+      ayar_adi,
+      ayar_degeri,
+      birim,
+      aciklama,
       aktif: true,
     })),
   ]
