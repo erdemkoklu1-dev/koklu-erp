@@ -85,6 +85,41 @@ function num(form: FormData, key: string) {
   return Number.isFinite(value) ? value : 0
 }
 
+function serializeError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    }
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    try {
+      return JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)))
+    } catch {
+      return { message: String(error) }
+    }
+  }
+
+  return { message: String(error) }
+}
+
+function sanitizeJsonForDb<T>(value: T): T {
+  return JSON.parse(
+    JSON.stringify(value, (_key, val) => {
+      if (typeof val === 'number' && !Number.isFinite(val)) return null
+      if (typeof val === 'undefined') return null
+      if (typeof val === 'function') return null
+      return val
+    })
+  ) as T
+}
+
+function supabaseErrorMessage(action: 'insert' | 'update', error: any) {
+  return `[teknik_raporlar_${action}_failed] ${error?.message || 'Bilinmeyen Supabase hatası'} | code=${error?.code || '-'} | details=${error?.details || '-'} | hint=${error?.hint || '-'}`
+}
+
 function nextIndexedId(prefix: string, existingIds: string[] = []) {
   const used = new Set(existingIds)
   let index = existingIds.length + 1
@@ -473,10 +508,12 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
     const form = event.currentTarget
     const formData = new FormData(form)
     let payloadForLog: Record<string, any> | null = null
+    let inputDataForLog: any = null
+    let resultDataForLog: any = null
     const submitIntent = String((event.nativeEvent as SubmitEvent).submitter?.getAttribute('value') || 'detail')
     const subeId = String(formData.get('sube_id') || '')
     if (!subeId) {
-      setMessage('Şube seçimi zorunludur.')
+      setMessage('Kayıt tamamlanamadı: Şube seçilmeden teknik rapor kaydedilemez.')
       setSaving(false)
       return
     }
@@ -486,28 +523,38 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       const customer = await resolveCustomer(formData, supabase)
       const { data, calculated } = calculate(form)
       const { data: auth } = await supabase.auth.getUser()
-      const input_data = {
+      const title = String(formData.get('baslik') || REPORT_TYPE_LABELS[reportType]).trim()
+      const reportDate = String(formData.get('rapor_tarihi') || stableReportDate || new Date().toISOString().slice(0, 10))
+      if (!title) throw new Error('Başlık girilmeden teknik rapor kaydedilemez.')
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) throw new Error('Geçerli bir rapor tarihi girilmeden teknik rapor kaydedilemez.')
+      if (!customer.customerId && !customer.customerName.trim()) throw new Error('Firma / kurum adı girilmeden rapor kaydedilemez.')
+
+      const input_data = sanitizeJsonForDb({
         ...data,
         musteri_giris_tipi: customerMode === 'manual' ? 'Manuel Müşteri' : 'Kayıtlı Müşteri',
         manuel_musteri: customer.manualCustomer,
-      }
+      })
+      const calculation_result = sanitizeJsonForDb(calculated.calculation_result)
+      const safeMaterialList = sanitizeJsonForDb(materialList.length ? materialList : calculated.material_list)
+      inputDataForLog = input_data
+      resultDataForLog = calculation_result
       const payload = {
         rapor_no: report?.rapor_no ?? createReportNo(reportType),
         rapor_turu: reportType,
-        baslik: String(formData.get('baslik') || REPORT_TYPE_LABELS[reportType]),
+        baslik: title,
         customer_id: customer.customerId,
         customer_name_snapshot: customer.customerName,
         sube_id: subeId,
         lokasyon: String(formData.get(customerMode === 'manual' ? 'manual_lokasyon' : 'lokasyon') || ''),
         adres: customer.address,
-        rapor_tarihi: String(formData.get('rapor_tarihi') || stableReportDate || new Date().toISOString().slice(0, 10)),
+        rapor_tarihi: reportDate,
         hazirlayan_personel_id: String(formData.get('hazirlayan_personel_id') || '') || null,
         durum: 'Hesaplandı',
         standart_profili: String(formData.get('standart_profili') || 'MVP keşif destek hesabı'),
         input_data,
-        calculation_result: calculated.calculation_result,
-        material_list: materialList.length ? materialList : calculated.material_list,
-        notes: String(formData.get('notes') || ''),
+        calculation_result,
+        material_list: safeMaterialList,
+        notes: String(formData.get('notes') || '') || null,
         updated_by: auth.user?.id ?? null,
         ...(report ? {} : { created_by: auth.user?.id ?? null }),
       }
@@ -516,16 +563,32 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         ? supabase.from('teknik_raporlar').update(payload).eq('id', report.id).select('id').single()
         : supabase.from('teknik_raporlar').insert(payload).select('id').single()
       const { data: saved, error } = await query
-      if (error) throw error
+      if (error) throw new Error(supabaseErrorMessage(report ? 'update' : 'insert', error))
+      if (!saved?.id) throw new Error('Teknik rapor kaydedildi ancak kayıt ID bilgisi alınamadı.')
       router.push(submitIntent === 'print' ? `/teknik-raporlar/${saved.id}/yazdir` : `/teknik-raporlar/${saved.id}`)
     } catch (error) {
-      console.error('[teknik-raporlar][save] kayıt başarısız', {
-        error,
-        message: error instanceof Error ? error.message : String(error),
-        reportType,
-        payload: payloadForLog,
-      })
-      setMessage(error instanceof Error ? error.message : 'Kayıt tamamlanamadı.')
+      const serialized = serializeError(error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[teknik-raporlar][save] kayıt başarısız', {
+          error: serialized,
+          reportType,
+          submitIntent,
+          values: {
+            sube_id: subeId,
+            customerMode,
+            reportType,
+            baslik: String(formData.get('baslik') || ''),
+            rapor_tarihi: String(formData.get('rapor_tarihi') || ''),
+          },
+          inputData: inputDataForLog,
+          resultData: resultDataForLog,
+          payload: payloadForLog,
+        })
+      } else {
+        console.error('[teknik-raporlar][save] kayıt başarısız', { error: serialized, reportType, submitIntent })
+      }
+      const message = error instanceof Error ? error.message : 'Teknik rapor kaydedilemedi. Konsol detaylarını kontrol edin.'
+      setMessage(`Kayıt tamamlanamadı: ${message}`)
       setSaving(false)
     }
   }
