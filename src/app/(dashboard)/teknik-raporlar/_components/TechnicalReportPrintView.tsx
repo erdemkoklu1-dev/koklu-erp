@@ -208,13 +208,19 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
           </div>
           <table className="w-full text-xs">
             <tbody>
-              <tr><th>Kesit</th><td>{result.kesit_aciklama ?? '-'}</td><th>Kesit Alanı</th><td>{result.kesit_alani_m2 ?? 0} m²</td></tr>
+              <tr><th>Giriş Kesiti</th><td>{result.giris_kesit_aciklama ?? '-'}</td><th>Giriş Alanı</th><td>{result.giris_kesit_alani_m2 ?? 0} m²</td></tr>
+              <tr><th>Çıkış Kesiti</th><td>{result.cikis_kesit_aciklama ?? '-'}</td><th>Çıkış Alanı</th><td>{result.cikis_kesit_alani_m2 ?? 0} m²</td></tr>
               <tr><th>Giriş Ortalama Hız</th><td>{result.giris_ortalama_hiz_ms ?? 0} m/s</td><th>Çıkış Ortalama Hız</th><td>{result.cikis_ortalama_hiz_ms ?? 0} m/s</td></tr>
-              <tr><th>Min / Max Hız</th><td>{result.minimum_hiz_ms ?? 0} / {result.maksimum_hiz_ms ?? 0} m/s</td><th>Kayıp Oranı</th><td>%{result.kayip_orani_yuzde ?? 0}</td></tr>
+              <tr><th>Min / Max Hız</th><td>{result.minimum_hiz_ms ?? 0} / {result.maksimum_hiz_ms ?? 0} m/s</td><th>Kayıp Oranı</th><td>{result.debi_artisi_var ? 'Debi artışı / ölçüm tutarsızlığı' : `%${result.kayip_orani_yuzde ?? 0}`}</td></tr>
               <tr><th>Giriş Debisi</th><td>{result.giris_debi_m3_s ?? 0} m³/s · {result.giris_debi_m3_h ?? 0} m³/h</td><th>Çıkış Debisi</th><td>{result.cikis_debi_m3_s ?? 0} m³/s · {result.cikis_debi_m3_h ?? 0} m³/h</td></tr>
               <tr><th>Minimum Hız Eşiği</th><td>{result.minimum_hiz_esigi_ms ?? 0} m/s</td><th>Maksimum Kayıp Eşiği</th><td>%{result.maksimum_kayip_esigi_yuzde ?? 0}</td></tr>
             </tbody>
           </table>
+          {result.debi_artisi_var && (
+            <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs font-semibold text-amber-900">
+              Çıkış debisi giriş debisinden yüksek hesaplandı. Negatif kayıp oranı yazılmadı; debi artışı / ölçüm tutarsızlığı manuel değerlendirme gerektirir.
+            </div>
+          )}
           {input.giris_olcumleri && (
             <section className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
               <MeasurementPrintTable title="Giriş 5 Nokta Ölçümü" values={input.giris_olcumleri} />

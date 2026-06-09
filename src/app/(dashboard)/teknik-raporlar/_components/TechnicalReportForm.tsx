@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateAlarmNeeds, type AlarmInput } from '@/lib/technical-reports/alarm-calculator'
 import { calculateGeneralNeeds, type ExistingDeviceInput, type GeneralNeedsInput } from '@/lib/technical-reports/general-needs-calculator'
 import { calculateRoomIntegrity, type RoomIntegrityInput } from '@/lib/technical-reports/room-integrity-calculator'
-import { calculateVentilationTest, type VentilationEvaluationMode, type VentilationSectionType, type VentilationTestInput } from '@/lib/technical-reports/ventilation-test-calculator'
+import { calculateVentilationTest, type VentilationEvaluationMode, type VentilationSectionInput, type VentilationSectionType, type VentilationTestInput } from '@/lib/technical-reports/ventilation-test-calculator'
 import { calculateWaterSystem, WATER_SYSTEM_WARNING, type WaterSystemInput, type WaterRiskClass } from '@/lib/technical-reports/water-system-calculator'
 import { calculateWaterHydraulicReport, WATER_HYDRAULIC_WARNING } from '@/lib/technical-reports/water-hydraulic-calculator'
 import type { HydraulicPipeSegment, WaterCalculationMode, WaterHydraulicInput } from '@/lib/technical-reports/water-hydraulic-types'
@@ -325,6 +325,15 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         sol: num(form, `${prefix}_sol`),
         orta: num(form, `${prefix}_orta`),
       })
+      const section = (prefix: 'giris' | 'cikis') => ({
+        tip: String(form.get(`${prefix}_kesit_tipi`) || 'dikdortgen') as VentilationSectionType,
+        manuel_kesit_adi: String(form.get(`${prefix}_manuel_kesit_adi`) || ''),
+        dairesel_cap_mm: num(form, `${prefix}_dairesel_cap_mm`),
+        dikdortgen_en_mm: num(form, `${prefix}_dikdortgen_en_mm`),
+        dikdortgen_boy_mm: num(form, `${prefix}_dikdortgen_boy_mm`),
+        kare_kenar_mm: num(form, `${prefix}_kare_kenar_mm`),
+        manuel_kesit_alani_m2: num(form, `${prefix}_manuel_kesit_alani_m2`),
+      } satisfies VentilationSectionInput)
       return {
         firma_kurum: String(form.get('firma_kurum') || ''),
         test_tarihi: String(form.get('test_tarihi') || ''),
@@ -335,13 +344,8 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         cihaz_marka: String(form.get('cihaz_marka') || ''),
         cihaz_model: String(form.get('cihaz_model') || ''),
         cihaz_seri_no: String(form.get('cihaz_seri_no') || ''),
-        kesit_tipi: String(form.get('kesit_tipi') || 'dikdortgen') as VentilationSectionType,
-        manuel_kesit_adi: String(form.get('manuel_kesit_adi') || ''),
-        dairesel_cap_mm: num(form, 'dairesel_cap_mm'),
-        dikdortgen_en_mm: num(form, 'dikdortgen_en_mm'),
-        dikdortgen_boy_mm: num(form, 'dikdortgen_boy_mm'),
-        kare_kenar_mm: num(form, 'kare_kenar_mm'),
-        manuel_kesit_alani_m2: num(form, 'manuel_kesit_alani_m2'),
+        giris_kesit: section('giris'),
+        cikis_kesit: section('cikis'),
         havalandirma_uzunlugu_m: num(form, 'havalandirma_uzunlugu_m'),
         dirsek_sayisi: num(form, 'dirsek_sayisi'),
         giris_olcumleri: measurement('giris'),
@@ -466,6 +470,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
     setMessage('')
     const form = event.currentTarget
     const formData = new FormData(form)
+    let payloadForLog: Record<string, any> | null = null
     const submitIntent = String((event.nativeEvent as SubmitEvent).submitter?.getAttribute('value') || 'detail')
     const subeId = String(formData.get('sube_id') || '')
     if (!subeId) {
@@ -504,6 +509,7 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         updated_by: auth.user?.id ?? null,
         ...(report ? {} : { created_by: auth.user?.id ?? null }),
       }
+      payloadForLog = payload
       const query = report
         ? supabase.from('teknik_raporlar').update(payload).eq('id', report.id).select('id').single()
         : supabase.from('teknik_raporlar').insert(payload).select('id').single()
@@ -511,6 +517,12 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       if (error) throw error
       router.push(submitIntent === 'print' ? `/teknik-raporlar/${saved.id}/yazdir` : `/teknik-raporlar/${saved.id}`)
     } catch (error) {
+      console.error('[teknik-raporlar][save] kayıt başarısız', {
+        error,
+        message: error instanceof Error ? error.message : String(error),
+        reportType,
+        payload: payloadForLog,
+      })
       setMessage(error instanceof Error ? error.message : 'Kayıt tamamlanamadı.')
       setSaving(false)
     }
@@ -1098,9 +1110,19 @@ function largeInputCls() {
 }
 
 function VentilationFields({ inputData, report }: { inputData: any; report?: TechnicalReportRow }) {
-  const [sectionType, setSectionType] = useState<VentilationSectionType>(inputData.kesit_tipi ?? 'dikdortgen')
   const [virtualExit, setVirtualExit] = useState(Boolean(inputData.cikis_olcumu_yapilamadi ?? false))
   const [mode, setMode] = useState<VentilationEvaluationMode>(inputData.degerlendirme_modu ?? 'otomatik')
+  const legacySection = inputData.kesit_tipi
+    ? {
+        tip: inputData.kesit_tipi,
+        manuel_kesit_adi: inputData.manuel_kesit_adi,
+        dairesel_cap_mm: inputData.dairesel_cap_mm,
+        dikdortgen_en_mm: inputData.dikdortgen_en_mm,
+        dikdortgen_boy_mm: inputData.dikdortgen_boy_mm,
+        kare_kenar_mm: inputData.kare_kenar_mm,
+        manuel_kesit_alani_m2: inputData.manuel_kesit_alani_m2,
+      }
+    : undefined
   return (
     <section className="space-y-5 rounded-lg border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
       <div>
@@ -1123,36 +1145,14 @@ function VentilationFields({ inputData, report }: { inputData: any; report?: Tec
         <label className="text-sm font-medium">Seri No<input name="cihaz_seri_no" defaultValue={inputData.cihaz_seri_no ?? ''} className={largeInputCls()} /></label>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <VentilationSectionCard title="Giriş Kesiti" prefix="giris" values={inputData.giris_kesit ?? legacySection} fallbackType="dikdortgen" />
+        <VentilationSectionCard title="Çıkış Kesiti" prefix="cikis" values={inputData.cikis_kesit ?? legacySection} fallbackType="dairesel" />
+      </div>
+
       <div className="rounded-lg border p-4 dark:border-gray-700">
-        <h3 className="mb-3 text-sm font-semibold">Kanal / Menfez Kesiti</h3>
-        <input type="hidden" name="kesit_tipi" value={sectionType} />
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          {[
-            ['dairesel', 'Dairesel'],
-            ['dikdortgen', 'Dikdörtgen'],
-            ['kare', 'Kare'],
-            ['manuel', 'Manuel Alan'],
-          ].map(([value, label]) => (
-            <button key={value} type="button" onClick={() => setSectionType(value as VentilationSectionType)} className={`rounded-lg border px-4 py-3 text-sm font-semibold ${sectionType === value ? 'border-[#C8102E] bg-red-50 text-[#C8102E]' : 'dark:border-gray-600'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-          {sectionType === 'dairesel' && <label className="text-sm font-medium">Çap mm<input name="dairesel_cap_mm" type="number" min="0" defaultValue={inputData.dairesel_cap_mm ?? 250} className={largeInputCls()} /></label>}
-          {sectionType === 'dikdortgen' && (
-            <>
-              <label className="text-sm font-medium">Giriş / Çıkış Eni mm<input name="dikdortgen_en_mm" type="number" min="0" defaultValue={inputData.dikdortgen_en_mm ?? 400} className={largeInputCls()} /></label>
-              <label className="text-sm font-medium">Giriş / Çıkış Boyu mm<input name="dikdortgen_boy_mm" type="number" min="0" defaultValue={inputData.dikdortgen_boy_mm ?? 200} className={largeInputCls()} /></label>
-            </>
-          )}
-          {sectionType === 'kare' && <label className="text-sm font-medium">Kenar mm<input name="kare_kenar_mm" type="number" min="0" defaultValue={inputData.kare_kenar_mm ?? 300} className={largeInputCls()} /></label>}
-          {sectionType === 'manuel' && (
-            <>
-              <label className="text-sm font-medium">Manuel Kesit Adı<input name="manuel_kesit_adi" defaultValue={inputData.manuel_kesit_adi ?? ''} className={largeInputCls()} /></label>
-              <label className="text-sm font-medium">Kesit Alanı m²<input name="manuel_kesit_alani_m2" type="number" min="0" step="0.0001" defaultValue={inputData.manuel_kesit_alani_m2 ?? 0} className={largeInputCls()} /></label>
-            </>
-          )}
+        <h3 className="mb-3 text-sm font-semibold">Kanal Bilgileri</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="text-sm font-medium">Havalandırma Uzunluğu m<input name="havalandirma_uzunlugu_m" type="number" min="0" step="0.1" defaultValue={inputData.havalandirma_uzunlugu_m ?? 0} className={largeInputCls()} /></label>
           <label className="text-sm font-medium">Dirsek Sayısı<input name="dirsek_sayisi" type="number" min="0" defaultValue={inputData.dirsek_sayisi ?? 0} className={largeInputCls()} /></label>
         </div>
@@ -1177,6 +1177,44 @@ function VentilationFields({ inputData, report }: { inputData: any; report?: Tec
         <label className="text-sm font-medium md:col-span-3">Ölçüm Notları<textarea name="olcum_notlari" rows={3} defaultValue={inputData.olcum_notlari ?? ''} className={largeInputCls()} /></label>
       </div>
     </section>
+  )
+}
+
+function VentilationSectionCard({ title, prefix, values, fallbackType }: { title: string; prefix: 'giris' | 'cikis'; values?: Partial<VentilationSectionInput>; fallbackType: VentilationSectionType }) {
+  const [sectionType, setSectionType] = useState<VentilationSectionType>(values?.tip ?? fallbackType)
+  return (
+    <div className="rounded-lg border p-4 dark:border-gray-700">
+      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+      <input type="hidden" name={`${prefix}_kesit_tipi`} value={sectionType} />
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {[
+          ['dairesel', 'Dairesel'],
+          ['dikdortgen', 'Dikdörtgen'],
+          ['kare', 'Kare'],
+          ['manuel', 'Manuel Alan'],
+        ].map(([value, label]) => (
+          <button key={value} type="button" onClick={() => setSectionType(value as VentilationSectionType)} className={`rounded-lg border px-4 py-3 text-sm font-semibold ${sectionType === value ? 'border-[#C8102E] bg-red-50 text-[#C8102E]' : 'dark:border-gray-600'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+        {sectionType === 'dairesel' && <label className="text-sm font-medium">Çap mm<input name={`${prefix}_dairesel_cap_mm`} type="number" min="0" defaultValue={values?.dairesel_cap_mm ?? 250} className={largeInputCls()} /></label>}
+        {sectionType === 'dikdortgen' && (
+          <>
+            <label className="text-sm font-medium">En mm<input name={`${prefix}_dikdortgen_en_mm`} type="number" min="0" defaultValue={values?.dikdortgen_en_mm ?? 400} className={largeInputCls()} /></label>
+            <label className="text-sm font-medium">Boy mm<input name={`${prefix}_dikdortgen_boy_mm`} type="number" min="0" defaultValue={values?.dikdortgen_boy_mm ?? 200} className={largeInputCls()} /></label>
+          </>
+        )}
+        {sectionType === 'kare' && <label className="text-sm font-medium">Kenar mm<input name={`${prefix}_kare_kenar_mm`} type="number" min="0" defaultValue={values?.kare_kenar_mm ?? 300} className={largeInputCls()} /></label>}
+        {sectionType === 'manuel' && (
+          <>
+            <label className="text-sm font-medium">Manuel Kesit Adı<input name={`${prefix}_manuel_kesit_adi`} defaultValue={values?.manuel_kesit_adi ?? ''} className={largeInputCls()} /></label>
+            <label className="text-sm font-medium">Kesit Alanı m²<input name={`${prefix}_manuel_kesit_alani_m2`} type="number" min="0" step="0.0001" defaultValue={values?.manuel_kesit_alani_m2 ?? 0} className={largeInputCls()} /></label>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -1209,10 +1247,11 @@ function VentilationResultCards({ result }: { result: any }) {
   const cards = [
     ['Ortalama Hız', `${result.ortalama_hiz_ms ?? 0} m/s`],
     ['Min / Max Hız', `${result.minimum_hiz_ms ?? 0} / ${result.maksimum_hiz_ms ?? 0} m/s`],
-    ['Kesit Alanı', `${result.kesit_alani_m2 ?? 0} m²`],
+    ['Giriş Kesit Alanı', `${result.giris_kesit_alani_m2 ?? 0} m²`],
+    ['Çıkış Kesit Alanı', `${result.cikis_kesit_alani_m2 ?? 0} m²`],
     ['Giriş Debisi', `${result.giris_debi_m3_s ?? 0} m³/s · ${result.giris_debi_m3_h ?? 0} m³/h`],
     ['Çıkış Debisi', `${result.cikis_debi_m3_s ?? 0} m³/s · ${result.cikis_debi_m3_h ?? 0} m³/h`],
-    ['Kayıp Oranı', `%${result.kayip_orani_yuzde ?? 0}`],
+    ['Kayıp Oranı', result.debi_artisi_var ? 'Debi artışı' : `%${result.kayip_orani_yuzde ?? 0}`],
     ['Sonuç', result.degerlendirme ?? '-'],
   ]
   return (

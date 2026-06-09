@@ -23,6 +23,8 @@ export const technicalReportLabels: Record<string, string> = {
   tekniker_ad_soyad: 'Tekniker',
   ekipnet_no: 'Ekipnet No',
   kesit_tipi: 'Kesit Tipi',
+  giris_kesit: 'Giriş Kesiti',
+  cikis_kesit: 'Çıkış Kesiti',
   havalandirma_uzunlugu_m: 'Havalandırma Uzunluğu',
   dirsek_sayisi: 'Dirsek Sayısı',
   oda_eni: 'Oda Eni',
@@ -76,7 +78,7 @@ export function getCompactInputRows(input: Record<string, any>, reportType: stri
     yangin_alarm_ihtiyac: ['bina_tipi', 'sistem_tipi', 'kat_sayisi', 'toplam_alan', 'kullanim_amaci', 'mevcut_sistem_var'],
     genel_ihtiyac_raporu: ['bina_tipi', 'toplam_alan', 'kat_sayisi', 'oda_sayisi', 'calisan_sayisi', 'ziyaretci_yogunlugu', 'depo_var', 'mutfak_var', 'elektrik_pano_odasi_var', 'server_odasi_var', 'otopark_var', 'uretim_alani_var'],
     oda_sizdirmazlik_testi: ['oda_adi', 'test_tarihi', 'oda_eni', 'oda_boyu', 'oda_yuksekligi', 'hacim', 'net_korunan_hacim', 'gaz_tipi', 'hedef_tutma_suresi', 'sonuc'],
-    havalandirma_test_raporu: ['firma_kurum', 'test_tarihi', 'test_yapilan_mahal', 'sistem_tipi', 'tekniker_ad_soyad', 'ekipnet_no', 'kesit_tipi', 'havalandirma_uzunlugu_m', 'dirsek_sayisi'],
+    havalandirma_test_raporu: ['firma_kurum', 'test_tarihi', 'test_yapilan_mahal', 'sistem_tipi', 'tekniker_ad_soyad', 'ekipnet_no', 'giris_kesit', 'cikis_kesit', 'havalandirma_uzunlugu_m', 'dirsek_sayisi'],
   }
 
   return (keysByType[reportType] ?? Object.keys(input))

@@ -2,7 +2,7 @@ import type { MaterialListItem, TechnicalSetting } from './types'
 
 export type VentilationSectionType = 'dairesel' | 'dikdortgen' | 'kare' | 'manuel'
 export type VentilationEvaluationMode = 'otomatik' | 'manuel'
-export type VentilationEvaluation = 'Uygun' | 'Şartlı Uygun' | 'Uygun Değil' | 'Manuel Değerlendirme'
+export type VentilationEvaluation = 'Uygun' | 'Şartlı Uygun' | 'Uygun Değil' | 'Manuel Değerlendirme' | 'Manuel Değerlendirme Gerekli'
 
 export type VentilationMeasurementSet = {
   ust: number
@@ -10,6 +10,16 @@ export type VentilationMeasurementSet = {
   sag: number
   sol: number
   orta: number
+}
+
+export type VentilationSectionInput = {
+  tip: VentilationSectionType
+  manuel_kesit_adi: string
+  dairesel_cap_mm: number
+  dikdortgen_en_mm: number
+  dikdortgen_boy_mm: number
+  kare_kenar_mm: number
+  manuel_kesit_alani_m2: number
 }
 
 export type VentilationTestInput = {
@@ -22,13 +32,8 @@ export type VentilationTestInput = {
   cihaz_marka: string
   cihaz_model: string
   cihaz_seri_no: string
-  kesit_tipi: VentilationSectionType
-  manuel_kesit_adi: string
-  dairesel_cap_mm: number
-  dikdortgen_en_mm: number
-  dikdortgen_boy_mm: number
-  kare_kenar_mm: number
-  manuel_kesit_alani_m2: number
+  giris_kesit: VentilationSectionInput
+  cikis_kesit: VentilationSectionInput
   havalandirma_uzunlugu_m: number
   dirsek_sayisi: number
   giris_olcumleri: VentilationMeasurementSet
@@ -78,25 +83,25 @@ function minMax(input: VentilationMeasurementSet, fallback?: VentilationMeasurem
   }
 }
 
-function sectionArea(input: VentilationTestInput) {
-  if (input.kesit_tipi === 'dairesel') {
+function sectionArea(input: VentilationSectionInput) {
+  if (input.tip === 'dairesel') {
     const diameterM = input.dairesel_cap_mm / 1000
     return Math.PI * diameterM * diameterM / 4
   }
-  if (input.kesit_tipi === 'dikdortgen') {
+  if (input.tip === 'dikdortgen') {
     return (input.dikdortgen_en_mm / 1000) * (input.dikdortgen_boy_mm / 1000)
   }
-  if (input.kesit_tipi === 'kare') {
+  if (input.tip === 'kare') {
     const sideM = input.kare_kenar_mm / 1000
     return sideM * sideM
   }
   return input.manuel_kesit_alani_m2
 }
 
-function sectionLabel(input: VentilationTestInput) {
-  if (input.kesit_tipi === 'dairesel') return `Dairesel Ø${input.dairesel_cap_mm || 0} mm`
-  if (input.kesit_tipi === 'dikdortgen') return `Dikdörtgen ${input.dikdortgen_en_mm || 0} x ${input.dikdortgen_boy_mm || 0} mm`
-  if (input.kesit_tipi === 'kare') return `Kare ${input.kare_kenar_mm || 0} x ${input.kare_kenar_mm || 0} mm`
+function sectionLabel(input: VentilationSectionInput) {
+  if (input.tip === 'dairesel') return `Dairesel Ø${input.dairesel_cap_mm || 0} mm`
+  if (input.tip === 'dikdortgen') return `Dikdörtgen ${input.dikdortgen_en_mm || 0} x ${input.dikdortgen_boy_mm || 0} mm`
+  if (input.tip === 'kare') return `Kare ${input.kare_kenar_mm || 0} x ${input.kare_kenar_mm || 0} mm`
   return input.manuel_kesit_adi || 'Manuel kesit alanı'
 }
 
@@ -119,13 +124,17 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
     : measuredExitAverage
 
   const minMaxSpeed = minMax(input.giris_olcumleri, sanalCikisKullanildi ? undefined : input.cikis_olcumleri)
-  const kesitAlaniM2 = sectionArea(input)
-  const girisDebiM3S = girisOrtalamaHiz * kesitAlaniM2
-  const cikisDebiM3S = cikisOrtalamaHiz * kesitAlaniM2
-  const kayipOrani = girisDebiM3S > 0 ? ((girisDebiM3S - cikisDebiM3S) / girisDebiM3S) * 100 : 0
+  const girisKesitAlaniM2 = sectionArea(input.giris_kesit)
+  const cikisKesitAlaniM2 = sectionArea(input.cikis_kesit)
+  const girisDebiM3S = girisOrtalamaHiz * girisKesitAlaniM2
+  const cikisDebiM3S = cikisOrtalamaHiz * cikisKesitAlaniM2
+  const debiArtisiVar = cikisDebiM3S > girisDebiM3S && girisDebiM3S > 0
+  const kayipOrani = debiArtisiVar || girisDebiM3S <= 0 ? 0 : ((girisDebiM3S - cikisDebiM3S) / girisDebiM3S) * 100
 
   let degerlendirme: VentilationEvaluation = 'Uygun Değil'
-  if (input.degerlendirme_modu === 'manuel') {
+  if (debiArtisiVar) {
+    degerlendirme = 'Manuel Değerlendirme Gerekli'
+  } else if (input.degerlendirme_modu === 'manuel') {
     degerlendirme = 'Manuel Değerlendirme'
   } else if (cikisOrtalamaHiz >= minimumSpeed && kayipOrani <= maximumLossRatio && !sanalCikisKullanildi) {
     degerlendirme = 'Uygun'
@@ -134,6 +143,9 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
   }
 
   const oneriler: string[] = []
+  if (debiArtisiVar) {
+    oneriler.push('Çıkış debisi giriş debisinden yüksek hesaplandı. Negatif kayıp yazılmadı; debi artışı / ölçüm tutarsızlığı manuel olarak değerlendirilmelidir.')
+  }
   if (cikisOrtalamaHiz < minimumSpeed) {
     oneriler.push(`Çıkış ortalama hızı ${minimumSpeed} m/s altındadır; fan kapasitesi, filtre kirliliği ve kanal tıkanıklığı kontrol edilmelidir.`)
   }
@@ -147,13 +159,18 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
 
   const otomatik_degerlendirme = sanalCikisKullanildi
     ? 'Çıkış ölçümü yapılamadığı için sonuç tahmini sanal çıkış hesabına göre şartlı değerlendirilmiştir.'
+    : debiArtisiVar
+      ? 'Çıkış debisi giriş debisinden yüksek olduğu için otomatik uygunluk verilmedi; manuel değerlendirme gereklidir.'
     : `Ortalama çıkış hızı ve kayıp oranı teknik ayar eşikleriyle karşılaştırılarak ${degerlendirme.toLocaleLowerCase('tr-TR')} sonucu üretildi.`
 
   return {
     calculation_result: {
-      kesit_tipi: input.kesit_tipi,
-      kesit_aciklama: sectionLabel(input),
-      kesit_alani_m2: round(kesitAlaniM2, 4),
+      giris_kesit_tipi: input.giris_kesit.tip,
+      cikis_kesit_tipi: input.cikis_kesit.tip,
+      giris_kesit_aciklama: sectionLabel(input.giris_kesit),
+      cikis_kesit_aciklama: sectionLabel(input.cikis_kesit),
+      giris_kesit_alani_m2: round(girisKesitAlaniM2, 4),
+      cikis_kesit_alani_m2: round(cikisKesitAlaniM2, 4),
       giris_ortalama_hiz_ms: round(girisOrtalamaHiz),
       cikis_ortalama_hiz_ms: round(cikisOrtalamaHiz),
       ortalama_hiz_ms: round((girisOrtalamaHiz + cikisOrtalamaHiz) / 2),
@@ -164,6 +181,7 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
       cikis_debi_m3_s: round(cikisDebiM3S, 3),
       cikis_debi_m3_h: round(cikisDebiM3S * 3600),
       kayip_orani_yuzde: round(kayipOrani),
+      debi_artisi_var: debiArtisiVar,
       tahmini_kayip_orani_yuzde: round(estimatedLossRatio),
       sanal_cikis_kullanildi: sanalCikisKullanildi,
       minimum_hiz_esigi_ms: minimumSpeed,
