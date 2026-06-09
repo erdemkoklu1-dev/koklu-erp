@@ -41,7 +41,9 @@ export type VentilationTestInput = {
   cikis_olcumu_yapilamadi: boolean
   sanal_cikis_hesabi: boolean
   degerlendirme_modu: VentilationEvaluationMode
+  manuel_sonuc: VentilationEvaluation
   manuel_degerlendirme: string
+  debi_artisi_aciklama: string
   olcum_notlari: string
 }
 
@@ -131,11 +133,16 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
   const debiArtisiVar = cikisDebiM3S > girisDebiM3S && girisDebiM3S > 0
   const kayipOrani = debiArtisiVar || girisDebiM3S <= 0 ? 0 : ((girisDebiM3S - cikisDebiM3S) / girisDebiM3S) * 100
 
+  const hasFlowIncreaseExplanation = input.debi_artisi_aciklama.trim().length > 0 || input.manuel_degerlendirme.trim().length > 0
   let degerlendirme: VentilationEvaluation = 'Uygun Değil'
   if (debiArtisiVar) {
-    degerlendirme = 'Manuel Değerlendirme Gerekli'
+    if (input.degerlendirme_modu === 'manuel' && input.manuel_sonuc && (input.manuel_sonuc !== 'Uygun' || hasFlowIncreaseExplanation)) {
+      degerlendirme = input.manuel_sonuc
+    } else {
+      degerlendirme = 'Manuel Değerlendirme Gerekli'
+    }
   } else if (input.degerlendirme_modu === 'manuel') {
-    degerlendirme = 'Manuel Değerlendirme'
+    degerlendirme = input.manuel_sonuc || 'Manuel Değerlendirme'
   } else if (cikisOrtalamaHiz >= minimumSpeed && kayipOrani <= maximumLossRatio && !sanalCikisKullanildi) {
     degerlendirme = 'Uygun'
   } else if (cikisOrtalamaHiz >= minimumSpeed * 0.8 && kayipOrani <= maximumLossRatio + 10) {
@@ -144,7 +151,8 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
 
   const oneriler: string[] = []
   if (debiArtisiVar) {
-    oneriler.push('Çıkış debisi giriş debisinden yüksek hesaplandı. Negatif kayıp yazılmadı; debi artışı / ölçüm tutarsızlığı manuel olarak değerlendirilmelidir.')
+    oneriler.push('Çıkış debisi giriş debisinden yüksek hesaplanmıştır. Bu durum fan konumu, ilave hava girişi, kanal kaçakları, ölçüm noktası farklılığı veya kesit bilgisi nedeniyle oluşabilir. Ölçüm değerleri saha şartları dikkate alınarak değerlendirilmelidir.')
+    oneriler.push('Bu durumda sonuç için Manuel Değerlendirme Gerekli veya Şartlı Uygun önerilir; Uygun seçilecekse açıklama notu yazılmalıdır.')
   }
   if (cikisOrtalamaHiz < minimumSpeed) {
     oneriler.push(`Çıkış ortalama hızı ${minimumSpeed} m/s altındadır; fan kapasitesi, filtre kirliliği ve kanal tıkanıklığı kontrol edilmelidir.`)
@@ -160,7 +168,7 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
   const otomatik_degerlendirme = sanalCikisKullanildi
     ? 'Çıkış ölçümü yapılamadığı için sonuç tahmini sanal çıkış hesabına göre şartlı değerlendirilmiştir.'
     : debiArtisiVar
-      ? 'Çıkış debisi giriş debisinden yüksek olduğu için otomatik uygunluk verilmedi; manuel değerlendirme gereklidir.'
+      ? 'Çıkış debisi giriş debisinden yüksek hesaplanmıştır; negatif kayıp gösterilmedi. Sonuç saha şartları dikkate alınarak manuel değerlendirilmelidir.'
     : `Ortalama çıkış hızı ve kayıp oranı teknik ayar eşikleriyle karşılaştırılarak ${degerlendirme.toLocaleLowerCase('tr-TR')} sonucu üretildi.`
 
   return {
@@ -182,6 +190,9 @@ export function calculateVentilationTest(input: VentilationTestInput, settings: 
       cikis_debi_m3_h: round(cikisDebiM3S * 3600),
       kayip_orani_yuzde: round(kayipOrani),
       debi_artisi_var: debiArtisiVar,
+      debi_artisi_aciklama_zorunlu: debiArtisiVar && input.degerlendirme_modu === 'manuel' && input.manuel_sonuc === 'Uygun' && !hasFlowIncreaseExplanation,
+      debi_artisi_aciklama: input.debi_artisi_aciklama,
+      alternatif_sonuc_onerisi: debiArtisiVar ? 'Şartlı Uygun' : null,
       tahmini_kayip_orani_yuzde: round(estimatedLossRatio),
       sanal_cikis_kullanildi: sanalCikisKullanildi,
       minimum_hiz_esigi_ms: minimumSpeed,

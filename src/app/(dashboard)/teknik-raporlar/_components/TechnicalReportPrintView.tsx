@@ -218,7 +218,7 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
           </table>
           {result.debi_artisi_var && (
             <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs font-semibold text-amber-900">
-              Çıkış debisi giriş debisinden yüksek hesaplandı. Negatif kayıp oranı yazılmadı; debi artışı / ölçüm tutarsızlığı manuel değerlendirme gerektirir.
+              Çıkış debisi giriş debisinden yüksek hesaplanmıştır. Bu durum fan konumu, ilave hava girişi, kanal kaçakları, ölçüm noktası farklılığı veya kesit bilgisi nedeniyle oluşabilir. Ölçüm değerleri saha şartları dikkate alınarak değerlendirilmelidir.
             </div>
           )}
           {input.giris_olcumleri && (
@@ -243,6 +243,11 @@ export default function TechnicalReportPrintView({ report }: { report: Technical
           {result.manuel_degerlendirme && (
             <section className="mt-3 rounded-md border p-2 text-xs">
               <strong>Manuel Değerlendirme:</strong> {result.manuel_degerlendirme}
+            </section>
+          )}
+          {result.debi_artisi_aciklama && (
+            <section className="mt-3 rounded-md border p-2 text-xs">
+              <strong>Debi Artışı Açıklaması:</strong> {result.debi_artisi_aciklama}
             </section>
           )}
         </section>

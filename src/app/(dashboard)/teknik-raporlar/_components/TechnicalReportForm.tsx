@@ -353,7 +353,9 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         cikis_olcumu_yapilamadi: boolValue(form.get('cikis_olcumu_yapilamadi')),
         sanal_cikis_hesabi: boolValue(form.get('sanal_cikis_hesabi')),
         degerlendirme_modu: String(form.get('degerlendirme_modu') || 'otomatik') as VentilationEvaluationMode,
+        manuel_sonuc: String(form.get('manuel_sonuc') || 'Manuel Değerlendirme Gerekli') as VentilationTestInput['manuel_sonuc'],
         manuel_degerlendirme: String(form.get('manuel_degerlendirme') || ''),
+        debi_artisi_aciklama: String(form.get('debi_artisi_aciklama') || ''),
         olcum_notlari: String(form.get('olcum_notlari') || ''),
       } satisfies VentilationTestInput
     }
@@ -1173,7 +1175,13 @@ function VentilationFields({ inputData, report }: { inputData: any; report?: Tec
           Sanal çıkış hesabı
         </label>
         <label className="text-sm font-medium">Sonuç Modu<select name="degerlendirme_modu" value={mode} onChange={e => setMode(e.target.value as VentilationEvaluationMode)} className={largeInputCls()}><option value="otomatik">Otomatik</option><option value="manuel">Manuel Değerlendirme</option></select></label>
-        {mode === 'manuel' && <label className="text-sm font-medium md:col-span-3">Manuel Değerlendirme<textarea name="manuel_degerlendirme" rows={3} defaultValue={inputData.manuel_degerlendirme ?? ''} className={largeInputCls()} /></label>}
+        {mode === 'manuel' && (
+          <>
+            <label className="text-sm font-medium">Manuel Sonuç<select name="manuel_sonuc" defaultValue={inputData.manuel_sonuc ?? 'Manuel Değerlendirme Gerekli'} className={largeInputCls()}>{['Manuel Değerlendirme Gerekli','Şartlı Uygun','Uygun','Uygun Değil'].map(x => <option key={x}>{x}</option>)}</select></label>
+            <label className="text-sm font-medium md:col-span-3">Manuel Değerlendirme<textarea name="manuel_degerlendirme" rows={3} defaultValue={inputData.manuel_degerlendirme ?? ''} className={largeInputCls()} /></label>
+          </>
+        )}
+        <label className="text-sm font-medium md:col-span-3">Debi Artışı Açıklaması<textarea name="debi_artisi_aciklama" rows={3} defaultValue={inputData.debi_artisi_aciklama ?? ''} className={largeInputCls()} /></label>
         <label className="text-sm font-medium md:col-span-3">Ölçüm Notları<textarea name="olcum_notlari" rows={3} defaultValue={inputData.olcum_notlari ?? ''} className={largeInputCls()} /></label>
       </div>
     </section>
@@ -1264,8 +1272,9 @@ function VentilationResultCards({ result }: { result: any }) {
           </div>
         ))}
       </div>
-      <div className={`rounded-lg border p-3 text-xs ${result.sanal_cikis_kullanildi ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-green-200 bg-green-50 text-green-900'}`}>
+      <div className={`rounded-lg border p-3 text-xs ${result.sanal_cikis_kullanildi || result.debi_artisi_var ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-green-200 bg-green-50 text-green-900'}`}>
         {result.otomatik_degerlendirme}
+        {result.debi_artisi_var && <div className="mt-1 font-semibold">Önerilen sonuç: Manuel Değerlendirme Gerekli veya {result.alternatif_sonuc_onerisi}.</div>}
       </div>
       {Array.isArray(result.oneriler) && result.oneriler.length > 0 && (
         <ul className="list-disc space-y-1 rounded-lg border border-gray-200 bg-white p-3 pl-6 text-xs dark:border-gray-700 dark:bg-gray-900">
