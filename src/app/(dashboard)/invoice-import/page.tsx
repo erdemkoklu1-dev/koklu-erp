@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { matchCustomerForImport, type CustomerMatchCandidate } from '@/lib/customer-matching'
+import { inferCityFromAddress, suggestBranchByCity } from '@/lib/branches/branch-inference'
 
 type DeviceRow = {
   device_name: string
@@ -27,6 +28,8 @@ type CustomerData = {
   phone: string
   email: string
   address: string
+  il: string
+  sube_id: string
 }
 
 type ParsedData = {
@@ -89,11 +92,31 @@ export default function InvoiceImportPage() {
   const [preview, setPreview] = useState<string | null>(null)
   const [parsed, setParsed] = useState<ParsedData | null>(null)
   const [customer, setCustomer] = useState<CustomerData>({
-    full_name: '', type: 'company', tax_number: '', phone: '', email: '', address: '',
+    full_name: '', type: 'company', tax_number: '', phone: '', email: '', address: '', il: '', sube_id: '',
   })
+  const [subeler, setSubeler] = useState<Array<{ id: string; ad: string; sehir?: string | null }>>([])
+  const [branchInfo, setBranchInfo] = useState('')
   const [devices, setDevices] = useState<DeviceRow[]>([])
   const [savedCustomerId, setSavedCustomerId] = useState<string | null>(null)
   const [customerDecisionPopup, setCustomerDecisionPopup] = useState<CustomerDecisionPopup | null>(null)
+
+  useEffect(() => {
+    supabase.from('subeler').select('id, ad, sehir').eq('aktif', true).order('ad')
+      .then(({ data }: { data: any }) => setSubeler(data ?? []))
+  }, [])
+
+  function applyCustomerBranch(address: string, cityValue?: string) {
+    const city = cityValue || inferCityFromAddress(address) || ''
+    const suggestion = suggestBranchByCity(city, subeler)
+    setCustomer(p => ({
+      ...p,
+      il: city || p.il,
+      sube_id: suggestion.suggestedBranchId || p.sube_id,
+    }))
+    setBranchInfo(suggestion.suggestedBranchName
+      ? `Adres bilgisinden ${suggestion.city} tespit edildi. Şube ${suggestion.suggestedBranchName} olarak önerildi.`
+      : suggestion.reason)
+  }
 
   function handleFileSelect(f: File) {
     setFile(f)
@@ -170,14 +193,20 @@ export default function InvoiceImportPage() {
 
       setParsed(data)
       const c = data.customer ?? {}
+      const parsedAddress = c.address ?? ''
+      const parsedCity = c.city ?? inferCityFromAddress(parsedAddress) ?? ''
+      const suggestion = suggestBranchByCity(parsedCity, subeler)
       setCustomer({
         full_name: c.full_name ?? '',
         type: c.type === 'individual' ? 'individual' : 'company',
         tax_number: c.tax_number ?? '',
         phone: c.phone ?? '',
         email: c.email ?? '',
-        address: c.address ?? '',
+        address: parsedAddress,
+        il: parsedCity,
+        sube_id: suggestion.suggestedBranchId ?? '',
       })
+      if (suggestion.reason) setBranchInfo(suggestion.reason)
 
       const devs: DeviceRow[] = (data.devices ?? []).map((d: any) => {
         const invoiceDate = d.invoice_date ?? ''
@@ -284,6 +313,8 @@ export default function InvoiceImportPage() {
             phone: customer.phone || null,
             email: customer.email || null,
             address: customer.address || null,
+            il: customer.il || null,
+            sube_id: customer.sube_id || null,
             is_active: true,
           })
           .select('id')
@@ -502,9 +533,40 @@ export default function InvoiceImportPage() {
                 <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Adres</label>
                 <input
                   value={customer.address}
-                  onChange={e => setCustomer(p => ({ ...p, address: e.target.value }))}
+                  onChange={e => {
+                    const address = e.target.value
+                    setCustomer(p => ({ ...p, address }))
+                    applyCustomerBranch(address)
+                  }}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
                 />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">İl</label>
+                <input
+                  value={customer.il}
+                  onChange={e => {
+                    const city = e.target.value
+                    setCustomer(p => ({ ...p, il: city }))
+                    applyCustomerBranch(customer.address, city)
+                  }}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Şube</label>
+                <select
+                  value={customer.sube_id}
+                  onChange={e => {
+                    setCustomer(p => ({ ...p, sube_id: e.target.value }))
+                    setBranchInfo('Şube manuel olarak değiştirildi.')
+                  }}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800"
+                >
+                  <option value="">— Şube seçin</option>
+                  {subeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+                </select>
+                {branchInfo && <p className="mt-1 text-xs text-blue-700">{branchInfo}</p>}
               </div>
             </div>
           </div>

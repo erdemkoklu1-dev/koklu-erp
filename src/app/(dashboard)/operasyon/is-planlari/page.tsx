@@ -24,6 +24,11 @@ function branchName(value: unknown) {
   return (row as { ad?: string } | null)?.ad ?? '-'
 }
 
+function sourceRequest(value: unknown) {
+  const row = Array.isArray(value) ? value[0] : value
+  return row as { id?: string | null; talep_no?: string | null } | null
+}
+
 function withSube(href: string, subeId?: string | null) {
   if (!subeId) return href
   return `${href}${href.includes('?') ? '&' : '?'}sube=${encodeURIComponent(subeId)}`
@@ -39,7 +44,7 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
 
   let query = supabase
     .from('is_planlari')
-    .select('id, plan_no, baslik, customer_name_snapshot, plan_turu, durum, baslangic_tarihi, bitis_tarihi, tekrar_tipi, sonraki_is_tarihi, toplam_is_sayisi, tamamlanan_is_sayisi, iptal_is_sayisi, subeler(ad)')
+    .select('id, plan_no, baslik, customer_name_snapshot, plan_turu, durum, baslangic_tarihi, bitis_tarihi, tekrar_tipi, sonraki_is_tarihi, toplam_is_sayisi, tamamlanan_is_sayisi, iptal_is_sayisi, subeler(ad), musteri_talepleri!musteri_talepleri_is_plani_fk(id, talep_no)')
     .order('created_at', { ascending: false })
     .limit(200)
 
@@ -109,6 +114,7 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
             const pending = Math.max(total - done - canceled, 0)
             const progress = total > 0 ? Math.round((done / total) * 100) : 0
             const remaining = daysLeft(plan.sonraki_is_tarihi)
+            const request = sourceRequest(plan.musteri_talepleri)
 
             return (
               <article key={plan.id} className="rounded-lg border bg-white p-5 dark:border-gray-700 dark:bg-gray-800 print:mb-3 print:break-inside-avoid">
@@ -129,6 +135,14 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
                   <div><span className="text-gray-500">Tamamlanan:</span> {done}</div>
                   <div><span className="text-gray-500">İptal:</span> {canceled}</div>
                   <div><span className="text-gray-500">Sonraki:</span> {formatTRDate(plan.sonraki_is_tarihi)}</div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Kaynak:</span>{' '}
+                    {request?.id ? (
+                      <Link href={`/operasyon/talepler/${request.id}`} className="text-[#C8102E] hover:underline">
+                        Talep {request.talep_no ?? ''}
+                      </Link>
+                    ) : 'Manuel'}
+                  </div>
                 </div>
 
                 <div className="mt-4">

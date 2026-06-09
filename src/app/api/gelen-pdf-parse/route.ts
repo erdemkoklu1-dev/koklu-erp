@@ -62,6 +62,7 @@ async function enhanceWithAI(pdfBuffer: Buffer, parsed: Awaited<ReturnType<typeo
     if (ai.tedarikci_adi) parsed.satici_adi = ai.tedarikci_adi
     if (ai.tedarikci_vkn) parsed.satici_vkn = ai.tedarikci_vkn
     if (ai.tedarikci_adres) parsed.tedarikci_adres = ai.tedarikci_adres
+    if (ai.tedarikci_il) parsed.tedarikci_il = ai.tedarikci_il
     if (ai.fatura_no) parsed.fatura_no = ai.fatura_no
     if (ai.fatura_tarihi) parsed.fatura_tarihi = ai.fatura_tarihi
     if (ai.vade_tarihi) parsed.vade_tarihi = ai.vade_tarihi || null

@@ -1480,6 +1480,7 @@ export interface ParseResult {
   satici_adi?: string | null
   satici_vkn?: string | null
   tedarikci_adres?: string | null
+  tedarikci_il?: string | null
   gider_kategorisi?: string
   bakiye_notu?: string | null
 }

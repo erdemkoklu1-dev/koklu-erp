@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { calculateInvoiceTotals } from '@/lib/finance/calculations'
 import { formatCurrency } from '@/lib/finance/formatters'
+import { inferCityFromAddress, suggestBranchByCity } from '@/lib/branches/branch-inference'
 
 type LineItem = { description: string; quantity: string; unit: string; unit_price: string; kdv_rate: string }
 const emptyLine = (): LineItem => ({ description: '', quantity: '1', unit: 'adet', unit_price: '', kdv_rate: '20' })
 
 type BrokerLine = { broker_id: string; broker_name: string; commission_rate: string; commission_amount: string }
+type Sube = { id: string; ad: string; sehir?: string | null }
 
 const KDV_RATES = ['0', '10', '20']
 const UNITS = ['adet', 'saat', 'kg', 'm', 'set', 'paket']
@@ -25,6 +27,10 @@ export default function NewFaturaPage() {
   const [customerSearch, setCustomerSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [subeler, setSubeler] = useState<Sube[]>([])
+  const [availableSubeler, setAvailableSubeler] = useState<Sube[]>([])
+  const [branchLocked, setBranchLocked] = useState(false)
+  const [branchInfo, setBranchInfo] = useState('')
 
   // PDF parse state
   const [parseLoading, setParsing] = useState(false)
@@ -48,6 +54,14 @@ export default function NewFaturaPage() {
     customer_id: '',
     supplier_name: '',
     supplier_tax_no: '',
+    customer_name: '',
+    tax_number: '',
+    customer_phone: '',
+    customer_email: '',
+    customer_address: '',
+    customer_city: '',
+    customer_district: '',
+    sube_id: '',
     invoice_date: new Date().toISOString().split('T')[0],
     due_date: '',
     kdv_rate: '20',
@@ -58,11 +72,82 @@ export default function NewFaturaPage() {
   const [items, setItems] = useState<LineItem[]>([emptyLine()])
 
   useEffect(() => {
-    supabase.from('customers').select('id, full_name, tax_number').eq('is_active', true).order('full_name')
+    supabase.from('customers').select('id, full_name, tax_number, phone, email, address, il, sube_id').eq('is_active', true).order('full_name')
       .then(({ data }: { data: any }) => setCustomers(data ?? []))
     supabase.from('brokers').select('id, full_name, company_name').eq('is_active', true).order('full_name')
       .then(({ data }: { data: any }) => setAllBrokers(data ?? []))
+    supabase.from('subeler').select('id, ad, sehir').eq('aktif', true).order('ad')
+      .then(async ({ data }: { data: any }) => {
+        const all = (data ?? []) as Sube[]
+        setSubeler(all)
+
+        const { data: userData } = await supabase.auth.getUser()
+        const userId = userData.user?.id
+        if (!userId) {
+          setAvailableSubeler(all)
+          return
+        }
+
+        const [{ data: profile }, { data: branchRows }] = await Promise.all([
+          supabase.from('kullanici_profiller').select('sube_id, roller(ad)').eq('id', userId).single(),
+          supabase.from('kullanici_sube_yetkileri').select('sube_id').eq('kullanici_id', userId),
+        ])
+        const roleName = (profile?.roller as any)?.ad ?? ''
+        const isAdmin = roleName === 'Admin' || roleName === 'Super Admin' || roleName === 'Genel Admin'
+        const allowedIds = Array.from(new Set([
+          ...((branchRows ?? []).map((row: any) => row.sube_id).filter(Boolean) as string[]),
+          ...(profile?.sube_id ? [profile.sube_id as string] : []),
+        ]))
+        const visible = isAdmin ? all : all.filter(s => allowedIds.includes(s.id))
+        setAvailableSubeler(visible)
+        if (!isAdmin && visible.length === 1) {
+          setBranchLocked(true)
+          setForm(p => ({ ...p, sube_id: visible[0].id }))
+          setBranchInfo(`Tek şube yetkiniz olduğu için ${visible[0].ad} seçildi.`)
+        }
+      })
   }, [])
+
+  function applyBranchSuggestion(source: 'manual' | 'customer' | 'pdf', address?: string | null, city?: string | null, customerBranchId?: string | null) {
+    const branches = availableSubeler.length > 0 ? availableSubeler : subeler
+    if (branchLocked) return
+
+    if (source === 'customer' && customerBranchId && branches.some(s => s.id === customerBranchId)) {
+      const branch = branches.find(s => s.id === customerBranchId)
+      setForm(p => ({ ...p, sube_id: customerBranchId }))
+      setBranchInfo(`Kayıtlı müşteri şubesine göre ${branch?.ad ?? 'şube'} seçildi.`)
+      return
+    }
+
+    const inferredCity = city || inferCityFromAddress(address)
+    const suggestion = suggestBranchByCity(inferredCity, branches)
+    setForm(p => ({
+      ...p,
+      customer_city: inferredCity || p.customer_city,
+      sube_id: suggestion.suggestedBranchId || p.sube_id,
+    }))
+    setBranchInfo(suggestion.suggestedBranchName
+      ? `Adres bilgisinden ${suggestion.city} tespit edildi. Şube ${suggestion.suggestedBranchName} olarak önerildi.`
+      : suggestion.reason)
+  }
+
+  function pickCustomer(customer: any) {
+    setSelectedCustomer(customer)
+    setForm(p => ({
+      ...p,
+      customer_id: customer.id,
+      customer_name: customer.full_name ?? '',
+      tax_number: customer.tax_number ?? '',
+      customer_phone: customer.phone ?? '',
+      customer_email: customer.email ?? '',
+      customer_address: customer.address ?? '',
+      customer_city: customer.il ?? inferCityFromAddress(customer.address) ?? '',
+      sube_id: branchLocked ? p.sube_id : (customer.sube_id ?? p.sube_id),
+    }))
+    setCustomerSearch('')
+    setShowDropdown(false)
+    applyBranchSuggestion('customer', customer.address, customer.il, customer.sube_id)
+  }
 
   useEffect(() => {
     if (!selectedCustomer) { setOnKayitlar([]); setSelectedOnKayitIds(new Set()); setOnKayitEklendi(new Set()); return }
@@ -216,12 +301,23 @@ export default function NewFaturaPage() {
           parsedName.includes(c.full_name.toLowerCase().trim())
         )
         if (found) {
-          setSelectedCustomer(found)
-          setForm(p => ({ ...p, customer_id: found.id }))
+          pickCustomer(found)
         } else {
           setCustomerSearch(data.customer.full_name)
           setShowDropdown(true)
           setCustomerNotFound(true)
+          const pdfAddress = data.customer.address ?? ''
+          const pdfCity = data.customer.city ?? inferCityFromAddress(pdfAddress) ?? ''
+          setForm(p => ({
+            ...p,
+            customer_name: data.customer.full_name ?? p.customer_name,
+            tax_number: data.customer.tax_number ?? p.tax_number,
+            customer_phone: data.customer.phone ?? p.customer_phone,
+            customer_email: data.customer.email ?? p.customer_email,
+            customer_address: pdfAddress,
+            customer_city: pdfCity,
+          }))
+          applyBranchSuggestion('pdf', pdfAddress, pdfCity)
         }
       }
 
@@ -241,11 +337,16 @@ export default function NewFaturaPage() {
 
       // Tedarikçi (alış faturası için)
       if (data.supplier?.name) {
+        const supplierAddress = data.supplier.address ?? form.customer_address
+        const supplierCity = data.supplier.city ?? inferCityFromAddress(supplierAddress) ?? form.customer_city
         setForm(p => ({
           ...p,
           supplier_name: data.supplier.name,
           supplier_tax_no: data.supplier.tax_no ?? '',
+          customer_address: supplierAddress,
+          customer_city: supplierCity,
         }))
+        applyBranchSuggestion('pdf', supplierAddress, supplierCity)
       }
 
       // Kalemler
@@ -270,8 +371,12 @@ export default function NewFaturaPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (form.invoice_type === 'satis' && !form.customer_id) {
+    if (form.invoice_type === 'satis' && !form.customer_id && !(form.customer_name || customerSearch).trim()) {
       setError('Satış faturası için müşteri seçimi zorunludur.'); return
+    }
+    if (!form.sube_id) { setError('Şube seçilmelidir.'); return }
+    if (!branchLocked && availableSubeler.length > 0 && !availableSubeler.some(s => s.id === form.sube_id)) {
+      setError('Bu şubeye kayıt oluşturma yetkiniz yok.'); return
     }
     if (!form.invoice_date) { setError('Fatura tarihi zorunludur.'); return }
     if (items.every(i => !i.description.trim())) { setError('En az bir kalem ekleyin.'); return }
@@ -300,8 +405,19 @@ export default function NewFaturaPage() {
             year,
             invoice_type: form.invoice_type,
             customer_id: form.customer_id || null,
+            musteri_unvan: form.customer_name || customerSearch || null,
+            musteri_vergi_no: form.tax_number || null,
+            musteri_telefon: form.customer_phone || null,
+            musteri_email: form.customer_email || null,
+            musteri_adres: form.customer_address || null,
+            musteri_il: form.customer_city || null,
+            musteri_ilce: form.customer_district || null,
             supplier_name: form.supplier_name || null,
             supplier_tax_no: form.supplier_tax_no || null,
+            tedarikci_adres: form.customer_address || null,
+            tedarikci_il: form.customer_city || null,
+            tedarikci_ilce: form.customer_district || null,
+            sube_id: form.sube_id,
             invoice_date: form.invoice_date,
             due_date: form.due_date || null,
             subtotal: totals.subtotal,
@@ -499,10 +615,7 @@ export default function NewFaturaPage() {
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
                           onMouseDown={e => {
                             e.preventDefault()
-                            setSelectedCustomer(c)
-                            setForm(p => ({ ...p, customer_id: c.id }))
-                            setCustomerSearch('')
-                            setShowDropdown(false)
+                            pickCustomer(c)
                           }}>
                           <span className="font-medium">{c.full_name}</span>
                           {c.tax_number && <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{c.tax_number}</span>}
@@ -530,6 +643,99 @@ export default function NewFaturaPage() {
               </div>
             </div>
           )}
+
+          <div className="border-t pt-4 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Müşteri Bilgileri</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Müşteri Adı / Ünvan</label>
+                <input
+                  value={form.customer_name || customerSearch}
+                  onChange={e => {
+                    setCustomerSearch(e.target.value)
+                    setForm(p => ({ ...p, customer_name: e.target.value, customer_id: '' }))
+                    setSelectedCustomer(null)
+                  }}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Vergi / TC No</label>
+                <input
+                  value={form.tax_number}
+                  onChange={e => setForm(p => ({ ...p, tax_number: e.target.value }))}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Telefon</label>
+                <input
+                  value={form.customer_phone}
+                  onChange={e => setForm(p => ({ ...p, customer_phone: e.target.value }))}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">E-posta</label>
+                <input
+                  type="email"
+                  value={form.customer_email}
+                  onChange={e => setForm(p => ({ ...p, customer_email: e.target.value }))}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Adres</label>
+                <textarea
+                  value={form.customer_address}
+                  onChange={e => {
+                    const address = e.target.value
+                    const city = inferCityFromAddress(address)
+                    setForm(p => ({ ...p, customer_address: address, customer_city: city || p.customer_city }))
+                    applyBranchSuggestion('manual', address, city)
+                  }}
+                  rows={2}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">İl</label>
+                <input
+                  value={form.customer_city}
+                  onChange={e => {
+                    const city = e.target.value
+                    setForm(p => ({ ...p, customer_city: city }))
+                    applyBranchSuggestion('manual', form.customer_address, city)
+                  }}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">İlçe</label>
+                <input
+                  value={form.customer_district}
+                  onChange={e => setForm(p => ({ ...p, customer_district: e.target.value }))}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Şube <span className="text-red-500">*</span></label>
+                <select
+                  value={form.sube_id}
+                  disabled={branchLocked}
+                  onChange={e => {
+                    setForm(p => ({ ...p, sube_id: e.target.value }))
+                    setBranchInfo('Şube manuel olarak değiştirildi.')
+                  }}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] bg-white dark:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-500"
+                >
+                  <option value="">— Şube seçin</option>
+                  {availableSubeler.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+                </select>
+                {branchInfo && <p className="mt-1 text-xs text-blue-700">{branchInfo}</p>}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Ön Kayıtlar — müşteri seçilince göster */}

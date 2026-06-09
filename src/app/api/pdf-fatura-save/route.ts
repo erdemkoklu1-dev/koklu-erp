@@ -23,6 +23,7 @@ export type PdfInvoiceRow = {
   musteri_adi: string
   musteri_vkn?: string | null
   musteri_adresi?: string | null
+  musteri_il?: string | null
   kdv_matrahi?: number | null
   kdv_tutari?: number | null
   odenecek_tutar?: number | null
@@ -178,6 +179,8 @@ export async function POST(req: NextRequest) {
               type:       isBireysel ? 'individual' : 'company',
               tax_number: row.musteri_vkn  || null,
               address:    row.musteri_adresi || null,
+              il:         row.musteri_il || null,
+              sube_id:    row.sube_id || null,
               is_active:  true,
             })
             .select('id')
@@ -212,6 +215,10 @@ export async function POST(req: NextRequest) {
             invoice_number: row.fatura_no,
             invoice_type:   'satis',
             customer_id:    customerId,
+            musteri_unvan:  row.musteri_adi || null,
+            musteri_vergi_no: row.musteri_vkn || null,
+            musteri_adres:  row.musteri_adresi || null,
+            musteri_il:     row.musteri_il || null,
             invoice_date:   row.fatura_tarihi || null,
             due_date:       row.vade_tarihi   || null,
             subtotal,

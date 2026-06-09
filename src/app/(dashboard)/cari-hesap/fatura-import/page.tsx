@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { formatCurrency } from '@/lib/finance/formatters'
 import { useSearchParams } from 'next/navigation'
 import { detectBranch } from '@/lib/invoice-ai-parser'
+import { inferCityFromAddress } from '@/lib/branches/branch-inference'
 import { matchExistingSupplier, normalizeSupplierName, normalizeSupplierTaxNo, type SupplierMatchMethod } from '@/lib/gelen-fatura-supplier-matching'
 import { isOwnCompanySupplierName } from '@/lib/gelen-fatura-parser-v2/supplierClassifier'
 import { matchCustomerForImport, type CustomerMatchCandidate } from '@/lib/customer-matching'
@@ -683,12 +684,20 @@ function PdfFaturaImport() {
           })
         }
         // İl bilgisine göre şube otomatik ata — globalSubeId yoksa veya il biliniyorsa
-        const autoSubeId = inv.musteri_il
-          ? detectBranch(inv.musteri_il, subeler) ?? globalSubeId
+        const detectedCity = inv.musteri_il ?? inferCityFromAddress(inv.musteri_adresi) ?? null
+        const autoSubeId = detectedCity
+          ? detectBranch(detectedCity, subeler) ?? globalSubeId
           : globalSubeId
+        inv.musteri_il = detectedCity
 
         // Tarih boşsa hata mesajı ekle ama import'u engelleme
         let finalHata = rowStatus === 'hata' ? message : (inv.hata ?? null)
+        if (!autoSubeId && rowStatus !== 'duplicate') {
+          rowStatus = 'hata'
+          finalHata = detectedCity
+            ? `${detectedCity} için eşleşen şube bulunamadı. Şube seçiniz.`
+            : 'Şehir/şube tespit edilemedi. Şube seçiniz.'
+        }
         if (!finalHata && !inv.fatura_tarihi && rowStatus !== 'hata' && rowStatus !== 'duplicate') {
           finalHata = 'Manuel kontrol gerekli: tarih otomatik çıkarılamadı, lütfen düzenle'
         }
@@ -741,6 +750,7 @@ function PdfFaturaImport() {
           musteri_adi:    r.editedName.trim() || (r.musteri_adi ?? 'Bilinmiyor'),
           musteri_vkn:    r.editedVkn.trim() || r.musteri_vkn || null,
           musteri_adresi: r.musteri_adresi ?? null,
+          musteri_il:     r.musteri_il ?? null,
           kdv_matrahi:    r.kdv_matrahi ?? null,
           kdv_tutari:     r.kdv_tutari ?? null,
           odenecek_tutar: r.editedTutar ? parseFloat(r.editedTutar) : (r.odenecek_tutar ?? null),
@@ -1013,6 +1023,7 @@ function PdfFaturaImport() {
               <col className="w-48" />
               <col className="w-28" />
               <col className="w-24" />
+              <col className="w-24" />
               <col className="w-36" />
               <col className="w-20" />
               <col className="w-16" />
@@ -1028,6 +1039,7 @@ function PdfFaturaImport() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Fatura No</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tarih</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-28">Şube</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Şehir</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Kalem</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tutar</th>
                 <th className="px-4 py-3 w-8" />
@@ -1109,6 +1121,7 @@ function PdfFaturaImport() {
                         )}
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">{subeAdi}</td>
+                      <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-300">{row.musteri_il || '—'}</td>
                       <td className="px-4 py-2.5 text-right text-gray-600 dark:text-gray-300">
                         {isHata ? <span className="text-red-500 text-xs">{row.hata?.slice(0, 40)}</span> : (row.kalemler?.length ?? 0)}
                       </td>
@@ -1150,7 +1163,7 @@ function PdfFaturaImport() {
                     </tr>
                     {row.expanded && (row.kalemler?.length ?? 0) > 0 && (
                       <tr className={`${rowBg} border-t border-dashed`}>
-                      <td colSpan={11} className="px-6 pb-3 pt-1">
+                      <td colSpan={12} className="px-6 pb-3 pt-1">
                           <div className="w-full overflow-x-auto bg-white dark:bg-gray-800 border rounded-lg">
                             <table className="min-w-full text-xs">
                               <thead className="bg-gray-50 dark:bg-gray-700 border-b">
@@ -1408,6 +1421,7 @@ type GelenParsedInvoice = {
   satici_adi: string | null
   satici_vkn: string | null
   tedarikci_adres?: string | null
+  tedarikci_il?: string | null
   kdv_matrahi: number | null
   kdv_tutari: number | null
   odenecek_tutar: number | null
@@ -1938,7 +1952,7 @@ function GelenPdfFaturaImport() {
           parseStatus = 'manual_review'
         }
         // Kategori var + header tam → parse uyarıları olsa bile clean
-        const importStatus: GelenImportStatus = duplicateStatus === 'duplicate'
+        let importStatus: GelenImportStatus = duplicateStatus === 'duplicate'
           ? 'skipped_duplicate'
           : parseStatus === 'critical_error'
             ? 'blocked'
@@ -2001,6 +2015,18 @@ function GelenPdfFaturaImport() {
             mesaj: message,
           })
         }
+        const detectedCity = inv.tedarikci_il ?? inferCityFromAddress(inv.tedarikci_adres) ?? null
+        const autoSubeId = detectedCity
+          ? detectBranch(detectedCity, subeler) ?? globalSubeId
+          : globalSubeId
+        inv.tedarikci_il = detectedCity
+        if (!autoSubeId && rowStatus !== 'duplicate') {
+          rowStatus = 'hata'
+          importStatus = 'blocked'
+          message = detectedCity
+            ? `${detectedCity} için eşleşen şube bulunamadı. Şube seçiniz.`
+            : 'Şehir/şube tespit edilemedi. Şube seçiniz.'
+        }
         return {
           ...inv,
           hata: rowStatus === 'hata' ? message : inv.hata,
@@ -2020,7 +2046,7 @@ function GelenPdfFaturaImport() {
           editedVade: inv.vade_tarihi ?? '',
           editedTutar: inv.odenecek_tutar != null ? String(inv.odenecek_tutar) : '',
           editedKategori: initialCategory,
-          sube_id: globalSubeId,
+          sube_id: autoSubeId,
           expanded: false,
         }
       })
@@ -2058,6 +2084,7 @@ function GelenPdfFaturaImport() {
           gider_kategorisi: r.editedKategori,
           bakiye_notu:     r.bakiye_notu ?? null,
           tedarikci_adres: r.tedarikci_adres ?? null,
+          tedarikci_il:    r.tedarikci_il ?? null,
           sube_id:         r.sube_id ?? null,
         }))
 

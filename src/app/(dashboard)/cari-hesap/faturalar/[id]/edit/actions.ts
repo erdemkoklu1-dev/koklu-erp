@@ -40,8 +40,18 @@ interface BrokerInsert {
 interface InvoiceData {
   invoice_type: string
   customer_id: string | null
+  musteri_unvan?: string | null
+  musteri_vergi_no?: string | null
+  musteri_telefon?: string | null
+  musteri_email?: string | null
+  musteri_adres?: string | null
+  musteri_il?: string | null
+  musteri_ilce?: string | null
   supplier_name: string | null
   supplier_tax_no: string | null
+  tedarikci_adres?: string | null
+  tedarikci_il?: string | null
+  tedarikci_ilce?: string | null
   invoice_date: string
   due_date: string | null
   subtotal: number

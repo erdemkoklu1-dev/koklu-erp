@@ -1,6 +1,8 @@
 // Groq AI destekli fatura parse modülü
 // pdfjs-dist ile çıkarılan ham text → Groq → yapılandırılmış JSON
 
+import { suggestBranchByCity } from '@/lib/branches/branch-inference'
+
 type GroqResponse = { choices?: Array<{ message?: { content?: string } }> }
 
 async function callGroqApi(body: object): Promise<GroqResponse> {
@@ -327,6 +329,8 @@ export async function parseGelenFaturaWithAI(pdfText: string): Promise<AiParsedG
 
 // İl bilgisine göre şube otomatik atama
 export function detectBranch(il: string, subeler: Array<{ id: string; ad: string }>): string | null {
+  const inferred = suggestBranchByCity(il, subeler).suggestedBranchId
+  if (inferred) return inferred
   if (!il) return null
 
   const normalizedIl = il

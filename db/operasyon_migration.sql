@@ -44,6 +44,7 @@ create table if not exists public.is_planlari (
   aciklama                   text,
   customer_id                uuid references public.customers(id) on delete set null,
   customer_name_snapshot     text,
+  source_request_id          uuid references public.musteri_talepleri(id) on delete set null,
   sube_id                    uuid not null references public.subeler(id) on delete restrict,
   sorumlu_personel_id        uuid references public.personeller(id) on delete set null,
   plan_turu                  text not null,
@@ -91,6 +92,7 @@ create table if not exists public.planli_isler (
 
 alter table public.musteri_talepleri add column if not exists sube_id uuid references public.subeler(id) on delete restrict;
 alter table public.is_planlari add column if not exists sube_id uuid references public.subeler(id) on delete restrict;
+alter table public.is_planlari add column if not exists source_request_id uuid references public.musteri_talepleri(id) on delete set null;
 alter table public.planli_isler add column if not exists sube_id uuid references public.subeler(id) on delete restrict;
 
 update public.musteri_talepleri
@@ -207,6 +209,7 @@ create index if not exists musteri_talepleri_hedef_idx on public.musteri_taleple
 create index if not exists musteri_talepleri_created_idx on public.musteri_talepleri(created_at desc);
 
 create index if not exists is_planlari_customer_idx on public.is_planlari(customer_id);
+create index if not exists is_planlari_source_request_idx on public.is_planlari(source_request_id);
 create index if not exists is_planlari_sube_idx on public.is_planlari(sube_id);
 create index if not exists is_planlari_sorumlu_idx on public.is_planlari(sorumlu_personel_id);
 create index if not exists is_planlari_durum_idx on public.is_planlari(durum);

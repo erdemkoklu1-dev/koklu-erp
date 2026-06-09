@@ -16,6 +16,15 @@ function text(formData: FormData, key: string) {
   return value || null
 }
 
+function appendSourceDetails(notlar: string | null, phone: string | null, address: string | null) {
+  const details = [
+    phone ? `Telefon: ${phone}` : null,
+    address ? `Adres: ${address}` : null,
+  ].filter(Boolean)
+  if (details.length === 0) return notlar
+  return [notlar, details.join('\n')].filter(Boolean).join('\n\n')
+}
+
 function addInterval(date: Date, tekrarTipi: string, aralik: number) {
   const next = new Date(date)
   const step = Math.max(aralik, 1)
@@ -77,6 +86,10 @@ async function nextPlanNo() {
   return `IP-${year}-${String(nextNumber).padStart(5, '0')}`
 }
 
+function missingSourceRequestColumn(error: { message?: string; code?: string } | null) {
+  return error?.code === 'PGRST204' && error.message?.includes('source_request_id')
+}
+
 export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData: FormData): Promise<IsPlaniFormState> {
   const userId = await currentUserId()
   const svc = createServiceClient()
@@ -88,17 +101,37 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
   const planTuru = text(formData, 'plan_turu')
   const baslangic = text(formData, 'baslangic_tarihi')
   const bitis = text(formData, 'bitis_tarihi')
-  const tekrarTipi = text(formData, 'tekrar_tipi') ?? 'Tek seferlik'
-  const tekrarAraligi = Number(text(formData, 'tekrar_araligi') ?? '1') || 1
-  const isSayisi = Number(text(formData, 'is_sayisi') ?? '24') || 24
+  const planModu = text(formData, 'plan_modu') ?? 'periodic'
+  const isSingle = planModu === 'single'
+  const tekrarTipi = isSingle ? 'Tek seferlik' : text(formData, 'tekrar_tipi') ?? 'Tek seferlik'
+  const tekrarAraligi = isSingle ? 1 : Number(text(formData, 'tekrar_araligi') ?? '1') || 1
+  const isSayisi = isSingle ? 1 : Number(text(formData, 'is_sayisi') ?? '24') || 24
   const requestedSubeId = text(formData, 'sube_id')
   const subeId = resolveBranchFilter(access, requestedSubeId)
+  const sourceRequestId = text(formData, 'source_request_id')
+  const oncelik = text(formData, 'oncelik') ?? 'Normal'
+  const notlar = appendSourceDetails(text(formData, 'notlar'), text(formData, 'source_phone'), text(formData, 'source_address'))
 
   if (!baslik || !planTuru || !baslangic) {
     return { error: 'Başlık, plan türü ve başlangıç tarihi zorunludur.' }
   }
   if (!subeId) {
     return { error: 'Lütfen bu kaydın ait olduğu şubeyi seçin.' }
+  }
+
+  const { data: sourceRequest } = sourceRequestId
+    ? await svc
+      .from('musteri_talepleri')
+      .select('id, sube_id')
+      .eq('id', sourceRequestId)
+      .maybeSingle()
+    : { data: null }
+
+  if (sourceRequestId && !sourceRequest) {
+    return { error: 'Kaynak talep bulunamadı.' }
+  }
+  if (sourceRequest?.sube_id && sourceRequest.sube_id !== subeId) {
+    return { error: 'Kaynak talep ile iş planı şubesi uyumlu değil.' }
   }
 
   const { data: customer } = customerId
@@ -114,34 +147,50 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
 
   const dates = generateDates(baslangic, bitis, tekrarTipi, tekrarAraligi, isSayisi)
 
-  const { data: plan, error } = await svc
+  const planPayload = {
+    plan_no: await nextPlanNo(),
+    baslik,
+    aciklama: text(formData, 'aciklama'),
+    customer_id: customerId,
+    customer_name_snapshot: customer?.full_name ?? manualCustomerName,
+    sube_id: subeId,
+    sorumlu_personel_id: text(formData, 'sorumlu_personel_id'),
+    plan_turu: planTuru,
+    durum: text(formData, 'durum') ?? 'Aktif',
+    baslangic_tarihi: baslangic,
+    bitis_tarihi: bitis,
+    tekrar_tipi: tekrarTipi,
+    tekrar_araligi: tekrarAraligi,
+    sonraki_is_tarihi: dates[0] ?? baslangic,
+    toplam_is_sayisi: dates.length,
+    tamamlanan_is_sayisi: 0,
+    iptal_is_sayisi: 0,
+    source_request_id: sourceRequestId,
+    notlar,
+    created_by: userId,
+    updated_by: userId,
+  }
+
+  let { data: plan, error } = await svc
     .from('is_planlari')
-    .insert({
-      plan_no: await nextPlanNo(),
-      baslik,
-      aciklama: text(formData, 'aciklama'),
-      customer_id: customerId,
-      customer_name_snapshot: customer?.full_name ?? manualCustomerName,
-      sube_id: subeId,
-      sorumlu_personel_id: text(formData, 'sorumlu_personel_id'),
-      plan_turu: planTuru,
-      durum: text(formData, 'durum') ?? 'Aktif',
-      baslangic_tarihi: baslangic,
-      bitis_tarihi: bitis,
-      tekrar_tipi: tekrarTipi,
-      tekrar_araligi: tekrarAraligi,
-      sonraki_is_tarihi: dates[0] ?? baslangic,
-      toplam_is_sayisi: dates.length,
-      tamamlanan_is_sayisi: 0,
-      iptal_is_sayisi: 0,
-      notlar: text(formData, 'notlar'),
-      created_by: userId,
-      updated_by: userId,
-    })
+    .insert(planPayload)
     .select('id')
     .single()
 
+  if (missingSourceRequestColumn(error)) {
+    const { source_request_id: _sourceRequestId, ...fallbackPayload } = planPayload
+    const fallbackResult = await svc
+      .from('is_planlari')
+      .insert(fallbackPayload)
+      .select('id')
+      .single()
+    plan = fallbackResult.data
+    error = fallbackResult.error
+  }
+
   if (error) return { error: `İş planı oluşturulamadı: ${error.message}` }
+
+  if (!plan) return { error: 'İş planı oluşturuldu ancak kayıt bilgisi alınamadı.' }
 
   if (dates.length > 0) {
     const rows = dates.map((planlananTarih, index) => ({
@@ -153,10 +202,11 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
       planlanan_tarih: planlananTarih,
       hedef_tarih: planlananTarih,
       durum: 'Bekliyor',
-      oncelik: 'Normal',
+      oncelik,
       sube_id: subeId,
       atanan_personel_id: text(formData, 'sorumlu_personel_id'),
-      notlar: text(formData, 'notlar'),
+      ilgili_talep_id: sourceRequestId,
+      notlar,
       created_by: userId,
       updated_by: userId,
     }))
@@ -164,8 +214,22 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
     if (jobsError) return { error: `Planlı işler oluşturulamadı: ${jobsError.message}` }
   }
 
+  if (sourceRequestId) {
+    const { error: requestError } = await svc
+      .from('musteri_talepleri')
+      .update({
+        durum: 'İş Planına Aktarıldı',
+        ilgili_is_plani_id: plan.id,
+        updated_by: userId,
+      })
+      .eq('id', sourceRequestId)
+
+    if (requestError) return { error: `Kaynak talep güncellenemedi: ${requestError.message}` }
+  }
+
   revalidatePath('/operasyon')
   revalidatePath('/operasyon/is-planlari')
+  if (sourceRequestId) revalidatePath('/operasyon/talepler')
   redirect(`/operasyon/is-planlari/${plan.id}`)
 }
 

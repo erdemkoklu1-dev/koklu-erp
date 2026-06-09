@@ -26,6 +26,7 @@ export type GelenPdfRow = {
   satici_adi: string
   satici_vkn?: string | null    // maps to supplier_tax_no
   tedarikci_adres?: string | null
+  tedarikci_il?: string | null
   kdv_matrahi?: number | null
   kdv_tutari?: number | null
   odenecek_tutar?: number | null
@@ -152,6 +153,8 @@ export async function POST(req: NextRequest) {
             invoice_type:   'alis',
             supplier_name:  supplierName,
             supplier_tax_no:   row.satici_vkn || null,
+            tedarikci_adres: row.tedarikci_adres || null,
+            tedarikci_il:    row.tedarikci_il || null,
             invoice_date:   row.fatura_tarihi,
             due_date:       row.vade_tarihi || null,
             subtotal,

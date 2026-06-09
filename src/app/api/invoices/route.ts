@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { getCurrentAccess } from '@/lib/auth/authorization'
+import { EMPTY_BRANCH_ID, resolveBranchFilter } from '@/lib/auth/branch-scope'
 
 export async function GET() {
   try {
@@ -36,6 +38,11 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const access = await getCurrentAccess()
+    const branchId = resolveBranchFilter(access, invoice.sube_id)
+    if (branchId === EMPTY_BRANCH_ID || !branchId) {
+      return NextResponse.json({ error: 'Şube seçilmelidir' }, { status: 400 })
+    }
 
     // Fatura numarası üret
     const year = Number(invoice.year ?? new Date().getFullYear())
@@ -64,8 +71,19 @@ export async function POST(req: NextRequest) {
         invoice_number: String(invNum),
         invoice_type: invoice.invoice_type,
         customer_id: invoice.customer_id || null,
+        musteri_unvan: invoice.musteri_unvan || null,
+        musteri_vergi_no: invoice.musteri_vergi_no || null,
+        musteri_telefon: invoice.musteri_telefon || null,
+        musteri_email: invoice.musteri_email || null,
+        musteri_adres: invoice.musteri_adres || null,
+        musteri_il: invoice.musteri_il || null,
+        musteri_ilce: invoice.musteri_ilce || null,
         supplier_name: invoice.supplier_name || null,
         supplier_tax_no: invoice.supplier_tax_no || null,
+        tedarikci_adres: invoice.tedarikci_adres || null,
+        tedarikci_il: invoice.tedarikci_il || null,
+        tedarikci_ilce: invoice.tedarikci_ilce || null,
+        sube_id: branchId,
         invoice_date: invoice.invoice_date,
         due_date: invoice.due_date || null,
         subtotal: Number(invoice.subtotal) || 0,
