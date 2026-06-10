@@ -120,6 +120,82 @@ function supabaseErrorMessage(action: 'insert' | 'update', error: any) {
   return `[teknik_raporlar_${action}_failed] ${error?.message || 'Bilinmeyen Supabase hatası'} | code=${error?.code || '-'} | details=${error?.details || '-'} | hint=${error?.hint || '-'}`
 }
 
+function ventilationSectionForDb(section: VentilationSectionInput) {
+  return {
+    sectionType: section.tip,
+    unit: 'mm',
+    diameter: section.dairesel_cap_mm,
+    width: section.dikdortgen_en_mm,
+    height: section.dikdortgen_boy_mm || section.kare_kenar_mm,
+    manualArea: section.manuel_kesit_alani_m2,
+    calculatedArea: undefined,
+  }
+}
+
+function ventilationMeasurementsForDb(values: VentilationTestInput['giris_olcumleri']) {
+  return {
+    top: values.ust,
+    bottom: values.alt,
+    left: values.sol,
+    right: values.sag,
+    center: values.orta,
+  }
+}
+
+function enrichVentilationInputForDb(data: VentilationTestInput, customer: { customerId: string | null; customerName: string; address: string }) {
+  return {
+    ...data,
+    reportType: 'ventilation_test',
+    customer: {
+      id: customer.customerId,
+      name: customer.customerName || data.firma_kurum,
+      address: customer.address,
+    },
+    technician: {
+      name: data.tekniker_ad_soyad,
+      ekipnetNo: data.ekipnet_no,
+    },
+    testInfo: {
+      date: data.test_tarihi,
+      location: data.test_yapilan_mahal,
+      systemType: data.sistem_tipi,
+      deviceBrand: data.cihaz_marka,
+      deviceModel: data.cihaz_model,
+      deviceSerialNo: data.cihaz_seri_no,
+    },
+    inletSection: ventilationSectionForDb(data.giris_kesit),
+    outletSection: ventilationSectionForDb(data.cikis_kesit),
+    ductInfo: {
+      ductLength: data.havalandirma_uzunlugu_m,
+      elbowCount: data.dirsek_sayisi,
+    },
+    inletMeasurements: ventilationMeasurementsForDb(data.giris_olcumleri),
+    outletMeasurements: ventilationMeasurementsForDb(data.cikis_olcumleri),
+    outletMeasurementUnavailable: data.cikis_olcumu_yapilamadi,
+    useVirtualOutlet: data.sanal_cikis_hesabi,
+    notes: data.olcum_notlari,
+  }
+}
+
+function enrichVentilationResultForDb(result: any) {
+  return {
+    ...result,
+    inletAverageVelocity: result.giris_ortalama_hiz_ms,
+    outletAverageVelocity: result.cikis_ortalama_hiz_ms,
+    inletArea: result.giris_kesit_alani_m2,
+    outletArea: result.cikis_kesit_alani_m2,
+    inletFlowM3s: result.giris_debi_m3_s,
+    inletFlowM3h: result.giris_debi_m3_h,
+    outletFlowM3s: result.cikis_debi_m3_s,
+    outletFlowM3h: result.cikis_debi_m3_h,
+    flowComparison: result.debi_artisi_var ? 'flow_increase' : 'loss_ratio',
+    suitability: result.degerlendirme,
+    warnings: result.uyari ? [result.uyari] : [],
+    recommendations: result.oneriler ?? [],
+    evaluationText: result.otomatik_degerlendirme,
+  }
+}
+
 function nextIndexedId(prefix: string, existingIds: string[] = []) {
   const used = new Set(existingIds)
   let index = existingIds.length + 1
@@ -529,12 +605,18 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
       if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) throw new Error('Geçerli bir rapor tarihi girilmeden teknik rapor kaydedilemez.')
       if (!customer.customerId && !customer.customerName.trim()) throw new Error('Firma / kurum adı girilmeden rapor kaydedilemez.')
 
+      const reportInputData = reportType === 'havalandirma_test_raporu'
+        ? enrichVentilationInputForDb(data as VentilationTestInput, customer)
+        : data
+      const reportResultData = reportType === 'havalandirma_test_raporu'
+        ? enrichVentilationResultForDb(calculated.calculation_result)
+        : calculated.calculation_result
       const input_data = sanitizeJsonForDb({
-        ...data,
+        ...reportInputData,
         musteri_giris_tipi: customerMode === 'manual' ? 'Manuel Müşteri' : 'Kayıtlı Müşteri',
         manuel_musteri: customer.manualCustomer,
       })
-      const calculation_result = sanitizeJsonForDb(calculated.calculation_result)
+      const calculation_result = sanitizeJsonForDb(reportResultData)
       const safeMaterialList = sanitizeJsonForDb(materialList.length ? materialList : calculated.material_list)
       inputDataForLog = input_data
       resultDataForLog = calculation_result
