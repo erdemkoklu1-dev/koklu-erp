@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { TeslimatListeClient, type TeslimatRow } from './TeslimatListeClient'
 import { getCurrentAccess } from '@/lib/auth/authorization'
+import { TESLIMAT_CANCELLED_STATUS_ALIASES, normalizeTeslimatStatus, quotedTeslimatStatuses } from '@/lib/teslimat-status'
 
 type RawTeslimat = {
   id: string
@@ -24,12 +25,20 @@ export default async function TeslimatListePage({ searchParams }: { searchParams
     return query.in('sube_id', access.branchIds)
   }
 
-  const [{ data: rows }, { data: subeler }] = await Promise.all([
-    scope(supabase
+  let teslimatlarQuery = scope(supabase
       .from('teslimatlar')
       .select('id, teslimat_no, teslimat_tarihi, hedef_tarih, durum, customers(id, full_name), subeler(id, ad), personeller(id, ad, soyad)')
       .order('created_at', { ascending: false })
-      .limit(300)),
+      .limit(300))
+
+  if (params.durum === 'iptal') {
+    teslimatlarQuery = teslimatlarQuery.in('durum', [...TESLIMAT_CANCELLED_STATUS_ALIASES])
+  } else {
+    teslimatlarQuery = teslimatlarQuery.not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))
+  }
+
+  const [{ data: rows }, { data: subeler }] = await Promise.all([
+    teslimatlarQuery,
     supabase.from('subeler').select('id, ad').order('ad'),
   ])
 
@@ -54,7 +63,7 @@ export default async function TeslimatListePage({ searchParams }: { searchParams
       teslimat_no: r.teslimat_no ?? '',
       teslimat_tarihi: r.teslimat_tarihi ?? null,
       hedef_tarih: r.hedef_tarih ?? null,
-      durum: r.durum ?? 'taslak',
+      durum: normalizeTeslimatStatus(r.durum),
       customers: c,
       subeler: s,
       personeller: p,

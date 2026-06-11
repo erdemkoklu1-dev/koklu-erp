@@ -6,10 +6,11 @@ import { redirect } from 'next/navigation'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
-import { createOnKayitFromTeslimatKalem, createTeslimat, deleteTeslimat, normalizeTeslimatInput, syncTeslimatSideEffects, TeslimatDeleteError, updateTeslimat } from '@/lib/teslimatlar'
+import { createOnKayitFromTeslimatKalem, createTeslimat, deleteTeslimat, normalizeTeslimatInput, syncTeslimatSideEffects, updateTeslimat } from '@/lib/teslimatlar'
 import { getSetting } from '@/lib/settings'
 import { getTeslimFormData, teslimFormFileName } from '@/lib/teslim-form-data'
 import { TeslimFormPdfDocument } from '@/lib/teslim-form-pdf'
+import { getCurrentAccess } from '@/lib/auth/authorization'
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message
@@ -28,6 +29,7 @@ function revalidateTeslimatDeletePaths(id?: string) {
   revalidatePath('/teslimatlar/geri-teslim')
   revalidatePath('/teslimatlar/on-kayda-aktar')
   revalidatePath('/operasyon')
+  revalidatePath('/operasyon/teslimatlar')
   revalidatePath('/dashboard')
   if (id) revalidatePath(`/teslimatlar/${id}`)
 }
@@ -93,31 +95,25 @@ export async function deleteTeslimatAction(id: string) {
   if (!user) return { ok: false, message: 'Oturum gerekli.' }
 
   try {
-    const result = await deleteTeslimat(id, { userId: user.id })
+    const access = await getCurrentAccess()
+    if (!access) return { ok: false, message: 'Yetki bilgisi alınamadı.' }
+    const { data: teslimat, error: teslimatError } = await supabase
+      .from('teslimatlar')
+      .select('id, sube_id')
+      .eq('id', id)
+      .single()
+
+    if (teslimatError || !teslimat) return { ok: false, message: 'Teslimat kaydı bulunamadı.' }
+    if (!access.isAdmin && (!teslimat.sube_id || !access.branchIds.includes(teslimat.sube_id))) {
+      return { ok: false, message: 'Bu teslimatı silme yetkiniz yok.' }
+    }
+
+    await deleteTeslimat(id, { userId: user.id })
     revalidateTeslimatDeletePaths(id)
-    if (result.mode === 'soft') return { ok: true, message: 'Teslimat iptal edildi olarak işaretlendi.' }
     return { ok: true, message: 'Teslimat silindi.' }
   } catch (error) {
     console.error('[deleteTeslimatAction]', error)
-    if (error instanceof TeslimatDeleteError && error.code === 'SOFT_DELETE_REQUIRED') {
-      return { ok: false, code: error.code, message: error.message }
-    }
     return { ok: false, message: errorMessage(error, 'Teslimat silinirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.') }
-  }
-}
-
-export async function softDeleteTeslimatAction(id: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ok: false, message: 'Oturum gerekli.' }
-
-  try {
-    await deleteTeslimat(id, { mode: 'soft', userId: user.id })
-    revalidateTeslimatDeletePaths(id)
-    return { ok: true, message: 'Teslimat iptal edildi olarak işaretlendi.' }
-  } catch (error) {
-    console.error('[softDeleteTeslimatAction]', error)
-    return { ok: false, message: errorMessage(error, 'Teslimat iptal durumuna alınamadı.') }
   }
 }
 

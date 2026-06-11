@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { formatTRDate } from '@/lib/finance/formatters'
 import TabletModeButton from './TabletModeButton'
 import { getCurrentAccess } from '@/lib/auth/authorization'
+import { TESLIMAT_CANCELLED_STATUS_ALIASES, isCancelledTeslimatStatus, normalizeTeslimatStatus, quotedTeslimatStatuses } from '@/lib/teslimat-status'
 
 type TeslimatKalemRow = {
   id: string
@@ -31,11 +32,12 @@ const DURUM_BADGE: Record<string, { label: string; icon: string; cls: string }> 
   taslak:     { label: 'Taslak',     icon: '',   cls: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },
   sevkte:     { label: 'Sevkte',     icon: '🚚', cls: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
   tamamlandi: { label: 'Tamamlandı', icon: '✅', cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
-  iptal:      { label: 'İptal',      icon: '❌', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+  cancelled:  { label: 'İptal',      icon: '❌', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
 }
 
 function DurumBadge({ durum }: { durum: string }) {
-  const b = DURUM_BADGE[durum] ?? { label: durum, icon: '', cls: 'bg-gray-100 text-gray-700' }
+  const normalized = normalizeTeslimatStatus(durum)
+  const b = DURUM_BADGE[normalized] ?? { label: durum, icon: '', cls: 'bg-gray-100 text-gray-700' }
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${b.cls}`}>
       {b.icon && <span>{b.icon}</span>}
@@ -98,7 +100,7 @@ export default async function TeslimatlarPage() {
     { data: sonTeslimatlar },
     { data: subeRows },
   ] = await Promise.all([
-    scope(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today)),
+    scope(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today).not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))),
     scope(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte')),
     scope(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi'])),
     scope(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim'])),
@@ -118,13 +120,14 @@ export default async function TeslimatlarPage() {
     scope(supabase
       .from('teslimatlar')
       .select('id, teslimat_no, teslimat_tarihi, durum, customers(id, full_name), subeler(ad)')
+      .not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))
       .order('created_at', { ascending: false })
       .limit(8)),
     scope(supabase
       .from('teslimatlar')
       .select('sube_id, subeler(ad), durum')
       .neq('durum', 'tamamlandi')
-      .neq('durum', 'iptal')),
+      .not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))),
   ])
 
   const aktarilanKalemler = new Set((onKayitlar ?? []).map(k => kalemMarker(k.notlar)).filter(Boolean))
@@ -132,12 +135,14 @@ export default async function TeslimatlarPage() {
   const onKayitCount = ((onKayitKalemler ?? []) as TeslimatKalemRow[]).filter(row => {
     const t = row.teslimatlar
     const aciklama = `${t?.teslimat_no} - ${row.aciklama}`
-    return t?.durum === 'tamamlandi' && !aktarilanKalemler.has(row.id) && !aktarilanAciklamalar.has(aciklama)
+    return normalizeTeslimatStatus(t?.durum) === 'tamamlandi' && !aktarilanKalemler.has(row.id) && !aktarilanAciklamalar.has(aciklama)
   }).length
 
   const gecikenCount = (gecikenGeriCount ?? 0) + (gecikenEmanetCount ?? 0)
   const typedSubeRows = (subeRows ?? []) as SubeRow[]
-  const typedSonTeslimatlar = (sonTeslimatlar ?? []) as SonTeslimatRow[]
+  const typedSonTeslimatlar = ((sonTeslimatlar ?? []) as SonTeslimatRow[])
+    .map(row => ({ ...row, durum: normalizeTeslimatStatus(row.durum) }))
+    .filter(row => !isCancelledTeslimatStatus(row.durum))
 
   // Şube bazlı açık iş
   const subeMap = new Map<string, { ad: string; subeId: string; count: number }>()
@@ -191,7 +196,7 @@ export default async function TeslimatlarPage() {
             {typedSonTeslimatlar.map(row => {
               const customer = row.customers as CustomerJoin | null
               const sube = row.subeler as SubeJoin | null
-              const durumIcon = row.durum === 'tamamlandi' ? '✅' : row.durum === 'sevkte' ? '🚚' : row.durum === 'iptal' ? '❌' : '📦'
+              const durumIcon = row.durum === 'tamamlandi' ? '✅' : row.durum === 'sevkte' ? '🚚' : isCancelledTeslimatStatus(row.durum) ? '❌' : '📦'
               return (
                 <div key={row.id} className="flex items-center justify-between py-3">
                   <div className="flex items-center gap-3">

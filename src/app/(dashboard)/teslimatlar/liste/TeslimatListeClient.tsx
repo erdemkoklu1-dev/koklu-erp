@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { TeslimatSilButton } from '../TeslimatSilButton'
+import { isCancelledTeslimatStatus, normalizeTeslimatStatus } from '@/lib/teslimat-status'
 
 export type TeslimatRow = {
   id: string
@@ -23,7 +24,7 @@ const DURUM_BADGE: Record<string, { label: string; icon: string; cls: string }> 
   taslak:     { label: 'Taslak',     icon: '', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
   sevkte:     { label: 'Sevkte',     icon: '', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
   tamamlandi: { label: 'Tamamlandı', icon: '', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
-  iptal:      { label: 'İptal',      icon: '', cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+  cancelled:  { label: 'İptal',      icon: '', cls: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
 }
 
 function formatDate(v: string | null) {
@@ -32,14 +33,14 @@ function formatDate(v: string | null) {
 }
 
 function isGeciken(hedef: string | null, durum: string) {
-  if (!hedef || durum === 'tamamlandi' || durum === 'iptal') return false
+  if (!hedef || durum === 'tamamlandi' || isCancelledTeslimatStatus(durum)) return false
   return hedef < new Date().toISOString().slice(0, 10)
 }
 
 export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows: TeslimatRow[]; subeler: Sube[]; initialDurum?: string }) {
   const router = useRouter()
   const [q, setQ] = useState('')
-  const [durum, setDurum] = useState(initialDurum === 'bugun' ? '' : initialDurum)
+  const [durum, setDurum] = useState(initialDurum && initialDurum !== 'bugun' ? normalizeTeslimatStatus(initialDurum) : '')
   const [subeId, setSubeId] = useState('')
   const [baslangic, setBaslangic] = useState('')
   const [bitis, setBitis] = useState('')
@@ -50,19 +51,20 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
 
   const filtered = useMemo(() => {
     return rows.filter(row => {
-      if (!durum && row.durum === 'iptal') return false
+      const rowDurum = normalizeTeslimatStatus(row.durum)
+      if (!durum && isCancelledTeslimatStatus(rowDurum)) return false
       if (q) {
         const qL = q.toLocaleLowerCase('tr-TR')
         const name = (row.customers?.full_name ?? '').toLocaleLowerCase('tr-TR')
         const no = (row.teslimat_no ?? '').toLocaleLowerCase('tr-TR')
         if (!name.includes(qL) && !no.includes(qL)) return false
       }
-      if (durum && row.durum !== durum) return false
+      if (durum && rowDurum !== durum) return false
       if (sadeceBugun && row.teslimat_tarihi !== new Date().toISOString().slice(0, 10)) return false
       if (subeId && row.subeler?.id !== subeId) return false
       if (baslangic && row.teslimat_tarihi && row.teslimat_tarihi < baslangic) return false
       if (bitis && row.teslimat_tarihi && row.teslimat_tarihi > bitis) return false
-      if (sadeceGeciken && !isGeciken(row.hedef_tarih, row.durum)) return false
+      if (sadeceGeciken && !isGeciken(row.hedef_tarih, rowDurum)) return false
       return true
     })
   }, [rows, q, durum, subeId, baslangic, bitis, sadeceGeciken, sadeceBugun])
@@ -96,7 +98,7 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
           <option value="taslak">Taslak</option>
           <option value="sevkte">Sevkte</option>
           <option value="tamamlandi">Tamamlandı</option>
-          <option value="iptal">İptal</option>
+          <option value="cancelled">İptaller</option>
         </select>
         <select
           value={subeId}
@@ -167,8 +169,9 @@ export function TeslimatListeClient({ rows, subeler, initialDurum = '' }: { rows
           </thead>
           <tbody className="divide-y dark:divide-gray-700">
             {filtered.map(row => {
-              const geciken = isGeciken(row.hedef_tarih, row.durum)
-              const badge = DURUM_BADGE[row.durum] ?? { label: row.durum, icon: '', cls: 'bg-gray-100 text-gray-600' }
+              const rowDurum = normalizeTeslimatStatus(row.durum)
+              const geciken = isGeciken(row.hedef_tarih, rowDurum)
+              const badge = DURUM_BADGE[rowDurum] ?? { label: row.durum, icon: '', cls: 'bg-gray-100 text-gray-600' }
               return (
                 <tr
                   key={row.id}

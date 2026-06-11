@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { canReadModule, getCurrentAccess, getModulePermissionMap } from '@/lib/auth/authorization'
 import { applyBranchScope, EMPTY_BRANCH_ID, filterVisibleBranches } from '@/lib/auth/branch-scope'
+import { TESLIMAT_CANCELLED_STATUS_ALIASES, quotedTeslimatStatuses } from '@/lib/teslimat-status'
 
 type CardTone = 'default' | 'green' | 'yellow' | 'red' | 'blue'
 
@@ -156,7 +157,7 @@ export default async function DashboardPage() {
 
   const deliveryCount = canDeliveries
     ? await countRows(applyBranchScope(
-        svc.from('teslimatlar').select('*', { count: 'exact', head: true }).neq('durum', 'tamamlandi').neq('durum', 'iptal'),
+        svc.from('teslimatlar').select('*', { count: 'exact', head: true }).neq('durum', 'tamamlandi').not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES)),
         access,
       ))
     : 0

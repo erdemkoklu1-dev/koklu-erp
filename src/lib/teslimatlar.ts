@@ -1,4 +1,10 @@
 import { createServiceClient } from '@/lib/supabase/service'
+export {
+  TESLIMAT_CANCELLED_STATUS_ALIASES,
+  isCancelledTeslimatStatus,
+  normalizeTeslimatStatus,
+  quotedTeslimatStatuses,
+} from '@/lib/teslimat-status'
 
 export const HAREKET_TIPLERI = [
   'yeni_cihaz_teslim',
@@ -921,6 +927,11 @@ export async function deleteTeslimat(
   if (mode === 'soft') {
     await softDeleteTeslimat(id, analysis, options.userId)
     return { mode: 'soft' as const, analysis }
+  }
+
+  if (mode === 'auto') {
+    await physicallyDeleteTeslimat(id, analysis)
+    return { mode: 'physical' as const, analysis }
   }
 
   if (!analysis.physicalSafe) {

@@ -5,6 +5,7 @@ import OperationFilters from './_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { TESLIMAT_CANCELLED_STATUS_ALIASES, isCancelledTeslimatStatus, normalizeTeslimatStatus, quotedTeslimatStatuses } from '@/lib/teslimat-status'
 
 type SearchParams = Promise<{ sube?: string; baslangic?: string; bitis?: string; q?: string }>
 
@@ -21,6 +22,7 @@ type ActivityRow = {
   talep_no?: string | null
   plan_no?: string | null
   baslik?: string | null
+  durum?: string | null
   teslimat_tarihi?: string | null
   talep_tarihi?: string | null
   sonraki_is_tarihi?: string | null
@@ -86,7 +88,7 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
     { data: sonIsPlanlari },
   ] = await Promise.all([
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
-    applyDate(scoped(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today)), 'teslimat_tarihi', params.baslangic, params.bitis),
+    applyDate(scoped(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today).not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))), 'teslimat_tarihi', params.baslangic, params.bitis),
     applyDate(scoped(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte')), 'teslimat_tarihi', params.baslangic, params.bitis),
     scoped(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi'])),
     scoped(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim'])),
@@ -100,7 +102,7 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
     scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor')),
     scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı')),
     scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
-    scoped(supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum, customers(full_name), subeler(ad)').order('created_at', { ascending: false }).limit(5)),
+    scoped(supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum, customers(full_name), subeler(ad)').not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES)).order('created_at', { ascending: false }).limit(5)),
     scoped(supabase.from('musteri_talepleri').select('id, talep_no, baslik, durum, talep_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
     scoped(supabase.from('is_planlari').select('id, plan_no, baslik, durum, sonraki_is_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
   ])
@@ -164,7 +166,9 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
     },
   ]
 
-  const teslimatRows = (sonTeslimatlar ?? []) as ActivityRow[]
+  const teslimatRows = ((sonTeslimatlar ?? []) as ActivityRow[])
+    .map(row => ({ ...row, durum: normalizeTeslimatStatus(row.durum) }))
+    .filter(row => !isCancelledTeslimatStatus(row.durum))
   const talepRows = (sonTalepler ?? []) as ActivityRow[]
   const planRows = (sonIsPlanlari ?? []) as ActivityRow[]
 
