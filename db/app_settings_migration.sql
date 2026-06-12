@@ -20,5 +20,6 @@ insert into public.app_settings (key, value) values
   ('netgsm_usercode',    null),
   ('netgsm_password',    null),
   ('netgsm_msgheader',   'KOKLU'),
-  ('whatsapp_phone',     null)
+  ('whatsapp_phone',     null),
+  ('company_stamp_settings', '{"stampDataUrl":null,"stampFileName":null,"defaultStamped":false,"updatedAt":null}')
 on conflict (key) do nothing;

@@ -1,653 +1,737 @@
-Ekrandaki hata şunu gösteriyor:
+# GÖREV — Bakım ve Takip Formlarında Müşteri Onay Alanını Kaldırma, Kaşe/İmza Yükleme ve Kaşeli/Kaşesiz Çıktı Sistemi
 
-```text
-[teknik-raporlar][save] kayıt başarısız {}
-```
+## Amaç
 
-Ama hata objesi `{}` olarak loglanmış. Bu da gerçek hatanın yakalanmadığını gösteriyor. Yani şu an asıl sorun sadece kayıt hatası değil; **kayıt hatasının sebebi de görünmüyor.** Önce hata yakalama ve loglama düzeltilmeli, sonra kayıt payload / Supabase insert/update tarafı kontrol edilmeli.
+Programın oluşturduğu bakım formu ve müşteri takip formunda alt kısımda bulunan:
 
-Aşağıdaki görev dosyasını Claude Code’a verelim.
+- Müşteri Onay İmzası
+- Firma Yetkili İmza / Kaşe
+
+alanları yeniden düzenlenecek.
+
+Yeni istenen yapı:
+
+1. Bakım formu ve takip formundan “Müşteri Onay İmzası” alanı kaldırılacak.
+2. Sadece “Firma Yetkili İmza / Kaşe” alanı kalacak.
+3. Programda merkezi bir “Kaşe / İmza Yükle” alanı oluşturulacak.
+4. Kullanıcı kaşe görselini bir defa yükleyecek.
+5. Bu kaşe görseli bakım ve takip formlarında firma onay alanına otomatik basılacak.
+6. Kullanıcı isterse belgeyi kaşesiz olarak da üretebilecek.
+7. Kaşeli / kaşesiz çıktı için toggle eklenecek.
+8. Kaşe daha sonra değiştirilebilecek, silinebilecek veya pasifleştirilebilecek.
+9. Sistem bakım formu, takip formu, servis formu ve ileride diğer çıktılarda da aynı merkezi kaşe ayarını kullanabilecek.
+
+---
+
+## 1. Mevcut Formlarda Kaldırılacak Alan
+
+Bakım formu ve takip formunun alt kısmında bulunan şu alan kaldırılacak:
+
+```txt
+Müşteri Onay İmzası
+
+Ekteki bakım ve takip formlarında alt bölümde **“Müşteri Onay İmzası”** ve **“Firma Yetkili İmza / Kaşe”** alanları birlikte yer alıyor. Yeni yapıda müşteri onay alanını kaldırıp, firma kaşe/imza alanını merkezi yönetilen kaşe görseliyle otomatik dolduracağız.  
 
 ````md
-# GÖREV — Teknik Rapor Kaydetme Hatası: Havalandırma Test Raporu Kayıt Başarısız `{}` Düzeltmesi
+# GÖREV — Bakım ve Takip Formlarında Müşteri Onay Alanını Kaldırma, Kaşe/İmza Yükleme ve Kaşeli/Kaşesiz Çıktı Sistemi
 
-## Sorun
+## Amaç
 
-Havalandırma Test Raporu kaydedilirken Next.js runtime ekranında şu hata oluşuyor:
+Programın oluşturduğu bakım formu ve müşteri takip formunda alt kısımda bulunan:
+
+- Müşteri Onay İmzası
+- Firma Yetkili İmza / Kaşe
+
+alanları yeniden düzenlenecek.
+
+Yeni istenen yapı:
+
+1. Bakım formu ve takip formundan “Müşteri Onay İmzası” alanı kaldırılacak.
+2. Sadece “Firma Yetkili İmza / Kaşe” alanı kalacak.
+3. Programda merkezi bir “Kaşe / İmza Yükle” alanı oluşturulacak.
+4. Kullanıcı kaşe görselini bir defa yükleyecek.
+5. Bu kaşe görseli bakım ve takip formlarında firma onay alanına otomatik basılacak.
+6. Kullanıcı isterse belgeyi kaşesiz olarak da üretebilecek.
+7. Kaşeli / kaşesiz çıktı için toggle eklenecek.
+8. Kaşe daha sonra değiştirilebilecek, silinebilecek veya pasifleştirilebilecek.
+9. Sistem bakım formu, takip formu, servis formu ve ileride diğer çıktılarda da aynı merkezi kaşe ayarını kullanabilecek.
+
+---
+
+## 1. Mevcut Formlarda Kaldırılacak Alan
+
+Bakım formu ve takip formunun alt kısmında bulunan şu alan kaldırılacak:
 
 ```txt
-[teknik-raporlar][save] kayıt başarısız {}
+Müşteri Onay İmzası
 ````
 
-Hata yeri:
+Bu alan:
+
+* PDF’te görünmeyecek.
+* Yazdırma çıktısında görünmeyecek.
+* Boş imza kutusu olarak kalmayacak.
+* Alt alanda gereksiz yer kaplamayacak.
+
+---
+
+## 2. Kalacak Alan
+
+Sadece şu alan kalacak:
 
 ```txt
-src/app/(dashboard)/teknik-raporlar/_components/TechnicalReportForm.tsx
-onSubmit
-yaklaşık satır: 522
+Firma Yetkili İmza / Kaşe
 ```
 
-Kod parçasında catch bloğu şu şekilde görünüyor:
+Bu alan tek başına daha geniş ve kurumsal görünecek.
 
-```ts
-catch (error) {
-  console.error('[teknik-raporlar][save] kayıt başarısız', {
-    error,
-    message: error instanceof Error ? error.message : String(error),
-    reportType,
-  })
-}
-```
-
-Ancak logda hata `{}` olarak geliyor. Bu yüzden gerçek hata sebebi anlaşılmıyor.
-
-Bu görevde amaç:
-
-1. Teknik rapor kaydetme hatasını gerçek sebebiyle görünür hale getirmek.
-2. Havalandırma Test Raporu kaydının neden başarısız olduğunu bulmak.
-3. `ventilation_test` rapor tipinin `technical_reports` kayıt mimarisiyle uyumlu kaydedilmesini sağlamak.
-4. Eksik kolon / yanlış payload / yanlış status / yanlış route / yanlış Supabase response problemlerini düzeltmek.
-5. Kaydet, Kaydet ve Yazdır, PDF/Detay yönlendirme akışlarını çalışır hale getirmek.
-
----
-
-## 1. Önce Hata Loglama Düzeltilecek
-
-Mevcut catch bloğu gerçek Supabase hatasını göstermiyor.
-
-`TechnicalReportForm.tsx` içinde `onSubmit` fonksiyonunda catch şu hale getirilsin:
-
-```ts
-function serializeError(error: unknown) {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-    }
-  }
-
-  if (typeof error === 'object' && error !== null) {
-    return JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)))
-  }
-
-  return {
-    message: String(error),
-  }
-}
-```
-
-Sonra catch:
-
-```ts
-catch (error) {
-  console.error('[teknik-raporlar][save] kayıt başarısız', {
-    error: serializeError(error),
-    reportType,
-    submitIntent,
-    values,
-    inputData,
-    resultData,
-  })
-
-  setSubmitError(
-    error instanceof Error
-      ? error.message
-      : 'Teknik rapor kaydedilemedi. Konsol detaylarını kontrol edin.'
-  )
-}
-```
-
-Ama dikkat: `values`, `inputData`, `resultData` çok büyükse sadece geliştirme ortamında loglansın.
-
-```ts
-if (process.env.NODE_ENV === 'development') {
-  console.error(...)
-}
-```
-
----
-
-## 2. Supabase Hatası Throw Edilmeli
-
-Eğer kayıt fonksiyonunda şu yapı varsa:
-
-```ts
-const { data, error } = await supabase
-  .from('technical_reports')
-  .insert(payload)
-
-if (error) {
-  throw error
-}
-```
-
-Supabase error objesi bazen düz `{}` gibi görünebilir. Bu yüzden özel hata üret:
-
-```ts
-if (error) {
-  throw new Error(
-    `[technical_reports_insert_failed] ${error.message || 'Bilinmeyen Supabase hatası'} | code=${error.code || '-'} | details=${error.details || '-'} | hint=${error.hint || '-'}`
-  )
-}
-```
-
-Update için de aynı mantık uygulanmalı.
-
----
-
-## 3. Kaydetme Fonksiyonu Bulunacak
-
-Şu dosyaları kontrol et:
+Önerilen görünüm:
 
 ```txt
-src/app/(dashboard)/teknik-raporlar/_components/TechnicalReportForm.tsx
-src/lib/technical-reports/actions.ts
-src/lib/technical-reports/technical-reports.ts
-src/app/api/technical-reports/route.ts
-src/app/(dashboard)/teknik-raporlar/actions.ts
+Firma Yetkili İmza / Kaşe
+
+[ Yüklenen kaşe / imza görseli ]
+
+KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI SANAYİ VE TİCARET LTD. ŞTİ.
 ```
 
-Gerçek kayıt nerede yapılıyorsa orada Supabase insert/update response açıkça kontrol edilmeli.
-
----
-
-## 4. `ventilation_test` Payload Kontrolü
-
-Havalandırma Test Raporu kaydedilirken payload şu yapıya uygun olmalı:
-
-```ts
-const payload = {
-  report_type: 'ventilation_test',
-  title: values.title || 'Havalandırma Test Raporu',
-  report_date: values.report_date,
-  customer_id: values.customer_id || null,
-  manual_customer_name: values.manual_customer_name || values.customer_name || null,
-  sube_id: values.sube_id || values.branch_id || null,
-  status: values.status || 'calculated',
-  input_data: inputData,
-  result_data: resultData,
-  notes: values.notes || null,
-}
-```
-
-Aşağıdaki hatalar kontrol edilsin:
-
-* `sube_id` boş mu?
-* `report_type` boş mu?
-* `title` boş mu?
-* `report_date` geçerli mi?
-* `input_data` JSON serialize edilebilir mi?
-* `result_data` JSON serialize edilebilir mi?
-* `customer_id` geçersiz string mi?
-* `manual_customer_name` yoksa müşteri zorunluluğu hata veriyor mu?
-* `status` DB constraint ile uyumlu mu?
-
----
-
-## 5. JSON Serialize Kontrolü
-
-`input_data` ve `result_data` içinde şunlar olmamalı:
-
-* `undefined`
-* `NaN`
-* `Infinity`
-* function
-* class instance
-* File object
-* DOM object
-
-Kaydetmeden önce temizleme helper’ı ekle:
-
-```ts
-export function sanitizeJsonForDb<T>(value: T): T {
-  return JSON.parse(
-    JSON.stringify(value, (_key, val) => {
-      if (typeof val === 'number' && !Number.isFinite(val)) return null
-      if (typeof val === 'undefined') return null
-      return val
-    })
-  )
-}
-```
-
-Kullanım:
-
-```ts
-const safeInputData = sanitizeJsonForDb(inputData)
-const safeResultData = sanitizeJsonForDb(resultData)
-```
-
-Payload içinde bunlar kullanılmalı.
-
----
-
-## 6. Schema Kontrolü
-
-Supabase `technical_reports` tablosunda şu kolonlar var mı kontrol et:
+Kaşe kapalıysa veya kaşe yüklenmemişse:
 
 ```txt
-id
-report_no
-report_type
-title
-customer_id
-manual_customer_name
-sube_id
-report_date
-status
-input_data
-result_data
-notes
-created_by
-created_at
-updated_at
-deleted_at
+Firma Yetkili İmza / Kaşe
+
+....................................................
 ```
 
-Eksik kolon varsa idempotent migration ekle:
+---
+
+## 3. Kaşe / İmza Yönetim Alanı
+
+Yeni ayar bölümü oluşturulacak.
+
+Önerilen konum:
+
+```txt
+Yönetim > Firma Ayarları > Kaşe ve İmza Ayarları
+```
+
+Eğer firma ayarları sayfası yoksa:
+
+```txt
+Yönetim > Belge / Çıktı Ayarları
+```
+
+bölümü oluşturulabilir.
+
+Bu bölümde şu alanlar olacak:
+
+* Kaşe / imza görseli yükle
+* Mevcut kaşe önizlemesi
+* Kaşeyi değiştir
+* Kaşeyi sil
+* Varsayılan kaşeli çıktı
+* Varsayılan kaşesiz çıktı
+* Kaşe genişliği
+* Kaşe yüksekliği
+* Kaşe opaklığı
+* Kaşe aktif / pasif
+
+---
+
+## 4. Desteklenecek Dosya Türleri
+
+Kaşe yükleme alanı şu dosya türlerini kabul etmeli:
+
+```txt
+PNG
+JPG
+JPEG
+WEBP
+```
+
+Önerilen maksimum boyut:
+
+```txt
+2 MB
+```
+
+Kullanıcıya açıklama göster:
+
+```txt
+En iyi sonuç için arka planı şeffaf PNG formatında kaşe/imza görseli yükleyin.
+```
+
+---
+
+## 5. Kaşe Görseli Storage Yapısı
+
+Kaşe görseli Supabase Storage veya mevcut dosya sisteminde saklanacak.
+
+Önerilen bucket:
+
+```txt
+company-assets
+```
+
+Önerilen klasör:
+
+```txt
+company-assets/stamps/
+```
+
+Örnek dosya yolu:
+
+```txt
+company-assets/stamps/koklu-stamp.png
+```
+
+Storage private ise PDF üretimi sırasında signed URL veya base64 kullan.
+
+---
+
+## 6. Veritabanı Ayarları
+
+Mevcut firma ayarları tablosu varsa yeni kolonlar oraya eklenmeli.
+
+Muhtemel tablolar:
+
+```txt
+firma_ayarlari
+company_settings
+app_settings
+settings
+```
+
+Mevcut tablo yoksa yeni tablo oluşturulabilir.
+
+Önerilen tablo:
 
 ```sql
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS report_type text;
+CREATE TABLE IF NOT EXISTS public.company_stamp_settings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS title text;
+  sube_id uuid NULL REFERENCES public.subeler(id),
 
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS customer_id uuid;
+  title text DEFAULT 'Firma Kaşesi',
+  stamp_image_url text NULL,
+  stamp_image_path text NULL,
 
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS manual_customer_name text;
+  is_active boolean DEFAULT true,
+  is_default boolean DEFAULT true,
 
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS sube_id uuid;
+  stamp_enabled_by_default boolean DEFAULT true,
+  stamp_width_mm numeric DEFAULT 55,
+  stamp_height_mm numeric DEFAULT 30,
+  stamp_opacity numeric DEFAULT 1,
 
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS report_date date;
-
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS status text DEFAULT 'draft';
-
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS input_data jsonb DEFAULT '{}'::jsonb;
-
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS result_data jsonb DEFAULT '{}'::jsonb;
-
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS notes text;
-
-ALTER TABLE public.technical_reports
-ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 ```
 
-Ancak mevcut kolon adları farklıysa yeni kolon eklemeden önce mevcut mimariye uyum sağla. Örneğin `branch_id` kullanılıyorsa `sube_id` ile çakışma yaratma.
-
----
-
-## 7. Rapor Tipi Constraint Kontrolü
-
-DB’de `report_type` için check constraint varsa `ventilation_test` kabul edilmiyor olabilir.
-
-Kontrol et:
+Eğer mevcut firma ayarları tablosuna kolon eklenecekse:
 
 ```sql
-SELECT conname, pg_get_constraintdef(oid)
-FROM pg_constraint
-WHERE conrelid = 'public.technical_reports'::regclass;
+ALTER TABLE public.firma_ayarlari
+ADD COLUMN IF NOT EXISTS stamp_image_url text;
+
+ALTER TABLE public.firma_ayarlari
+ADD COLUMN IF NOT EXISTS stamp_image_path text;
+
+ALTER TABLE public.firma_ayarlari
+ADD COLUMN IF NOT EXISTS stamp_enabled_by_default boolean DEFAULT true;
+
+ALTER TABLE public.firma_ayarlari
+ADD COLUMN IF NOT EXISTS stamp_width_mm numeric DEFAULT 55;
+
+ALTER TABLE public.firma_ayarlari
+ADD COLUMN IF NOT EXISTS stamp_height_mm numeric DEFAULT 30;
+
+ALTER TABLE public.firma_ayarlari
+ADD COLUMN IF NOT EXISTS stamp_opacity numeric DEFAULT 1;
 ```
 
-Eğer constraint içinde sadece eski rapor tipleri varsa `ventilation_test` eklenmeli.
-
-Örnek:
-
-```sql
-ALTER TABLE public.technical_reports
-DROP CONSTRAINT IF EXISTS technical_reports_report_type_check;
-```
-
-Sonra mevcut tüm tipleri kapsayacak şekilde yeniden ekle veya constraint kaldırılmışsa uygulama tarafında validate et.
-
-Rapor tipleri şunları içermeli:
-
-```txt
-fire_alarm_need
-general_need
-room_integrity_test
-fire_cabinet_pump
-water_system
-ventilation_test
-```
-
-Gerçek projedeki mevcut değerler korunmalı.
+Önce mevcut schema kontrol edilecek, gereksiz yeni tablo açılmayacak.
 
 ---
 
-## 8. Status Constraint Kontrolü
+## 7. Şube Bazlı Kaşe Desteği
 
-DB’de `status` için constraint varsa `calculated` kabul edilmiyor olabilir.
+Sistem Erzincan ve İstanbul şubeleriyle çalıştığı için yapı şube bazlı kaşeye uygun olmalı.
 
-Mevcut sistemde kullanılan status değerlerini kontrol et:
+Kural:
 
-```sql
-SELECT DISTINCT status FROM public.technical_reports;
-```
+1. Belgenin şubesine özel kaşe varsa onu kullan.
+2. Şube özel kaşe yoksa genel firma kaşesini kullan.
+3. Hiç kaşe yoksa boş imza çizgisi göster.
 
-Eğer constraint varsa şu değerler desteklenmeli:
-
-```txt
-draft
-calculated
-approved
-cancelled
-archived
-```
-
-veya mevcut sistemde ne kullanılıyorsa ona uy.
-
-Havalandırma kaydında bilinmeyen status gönderme.
-
-En güvenli varsayılan:
-
-```ts
-status: 'calculated'
-```
-
-Eğer DB bunu kabul etmiyorsa:
-
-```ts
-status: 'draft'
-```
-
-veya mevcut teknik raporların kullandığı status kullanılmalı.
+İlk aşamada tek genel kaşe yeterli olabilir, ancak kod yapısı şube bazlı kaşeye engel olmamalı.
 
 ---
 
-## 9. Şube Yetkisi / Şube Boşluğu Kontrolü
+## 8. Kaşeli / Kaşesiz Çıktı Toggle
 
-Kaydetmeden önce şu kontrol yapılmalı:
-
-```ts
-if (!values.sube_id && !values.branch_id) {
-  throw new Error('Şube seçilmeden teknik rapor kaydedilemez.')
-}
-```
-
-Tek şubeli kullanıcıda şube otomatik atanmalı.
-
-Admin için şube seçimi zorunlu olmalı.
-
----
-
-## 10. Müşteri / Manuel Müşteri Kontrolü
-
-Havalandırma testi çoğu zaman sistemde kayıtlı olmayan firmaya yapılabilir.
-
-Bu nedenle kayıtlı müşteri zorunlu olmamalı.
-
-Şu kurallardan biri yeterli olmalı:
-
-* `customer_id` var
-* `manual_customer_name` var
-* `customer_name` var
-
-Kaydetmeden önce:
-
-```ts
-const hasCustomer =
-  Boolean(values.customer_id) ||
-  Boolean(values.manual_customer_name?.trim()) ||
-  Boolean(values.customer_name?.trim())
-
-if (!hasCustomer) {
-  throw new Error('Firma / kurum adı girilmeden rapor kaydedilemez.')
-}
-```
-
----
-
-## 11. Havalandırma Giriş / Çıkış Kesit Ayrımı Kayda Dahil Edilmeli
-
-Önceki görevde belirtilen yeni yapı kayıt payload’ına dahil edilmeli.
-
-`input_data` içinde şu yapı olmalı:
-
-```ts
-input_data: {
-  reportType: 'ventilation_test',
-  customer: {...},
-  technician: {...},
-  testInfo: {...},
-  inletSection: {
-    sectionType,
-    unit,
-    diameter,
-    width,
-    height,
-    manualArea,
-    calculatedArea,
-  },
-  outletSection: {
-    sectionType,
-    unit,
-    diameter,
-    width,
-    height,
-    manualArea,
-    calculatedArea,
-  },
-  ductInfo: {
-    ductLength,
-    elbowCount,
-  },
-  inletMeasurements: {
-    top,
-    bottom,
-    left,
-    right,
-    center,
-  },
-  outletMeasurements: {
-    top,
-    bottom,
-    left,
-    right,
-    center,
-  },
-  outletMeasurementUnavailable,
-  useVirtualOutlet,
-  notes,
-}
-```
-
-`result_data` içinde:
-
-```ts
-result_data: {
-  inletAverageVelocity,
-  outletAverageVelocity,
-  inletArea,
-  outletArea,
-  inletFlowM3s,
-  inletFlowM3h,
-  outletFlowM3s,
-  outletFlowM3h,
-  flowComparison,
-  suitability,
-  warnings,
-  recommendations,
-  evaluationText,
-}
-```
-
----
-
-## 12. Insert Sonrası ID Alınmalı
-
-Kaydetme sonrası yönlendirme için DB’den gerçek ID alınmalı.
-
-Yanlış:
-
-```ts
-await supabase.from('technical_reports').insert(payload)
-router.push(`/teknik-raporlar/${payload.id}`)
-```
-
-Doğru:
-
-```ts
-const { data, error } = await supabase
-  .from('technical_reports')
-  .insert(payload)
-  .select('id')
-  .single()
-
-if (error) {
-  throw new Error(`[technical_reports_insert_failed] ${error.message}`)
-}
-
-if (!data?.id) {
-  throw new Error('Teknik rapor kaydedildi ancak kayıt ID bilgisi alınamadı.')
-}
-
-router.push(
-  submitIntent === 'print'
-    ? `/teknik-raporlar/${data.id}/yazdir`
-    : `/teknik-raporlar/${data.id}`
-)
-```
-
----
-
-## 13. Kaydet ve Yazdır Akışı
-
-Ekranda `Kaydet ve Yazdır` butonu var.
-
-Bu buton:
-
-1. Raporu kaydetmeli.
-2. ID almalı.
-3. Yazdır sayfasına yönlendirmeli.
-
-Route:
-
-```txt
-/teknik-raporlar/[id]/yazdir
-```
-
-Eğer bu route yoksa oluşturulmalı veya mevcut yazdır route’una yönlendirilmeli.
-
----
-
-## 14. Kullanıcıya Hata Mesajı Göster
-
-Şu an sadece `Kayıt tamamlanamadı` yazıyor. Daha açıklayıcı olmalı.
+Bakım formu ve takip formu yazdırma/PDF ekranlarına toggle eklenecek.
 
 Örnek:
 
 ```txt
-Kayıt tamamlanamadı: Şube seçilmeden teknik rapor kaydedilemez.
+[✓] Kaşeli çıktı oluştur
 ```
 
 veya:
 
 ```txt
-Kayıt tamamlanamadı: technical_reports tablosunda input_data kolonu bulunamadı.
+Çıktı türü:
+[ Kaşeli ] [ Kaşesiz ]
 ```
 
-Production ortamında teknik mesaj kısaltılabilir ama development ortamında net gösterilmeli.
+Varsayılan değer firma ayarından gelecek.
+
+```txt
+Varsayılan: Kaşeli çıktı
+```
+
+Kullanıcı çıktı almadan önce bunu değiştirebilecek.
 
 ---
 
-## 15. Kabul Kriterleri
+## 9. PDF Route Mantığı
 
-* [ ] Kayıt hatası `{}` olarak görünmüyor.
-* [ ] Gerçek Supabase hata mesajı console’da görünüyor.
-* [ ] Kullanıcıya anlaşılır hata mesajı veriliyor.
-* [ ] Havalandırma Test Raporu kaydedilebiliyor.
-* [ ] Kaydet sonrası rapor detayına gidiyor.
-* [ ] Kaydet ve Yazdır sonrası yazdır sayfasına gidiyor.
-* [ ] `input_data` ve `result_data` JSON olarak kaydediliyor.
-* [ ] `ventilation_test` report_type DB tarafından kabul ediliyor.
-* [ ] Şube boşsa kullanıcıya net hata veriliyor.
-* [ ] Manuel müşteriyle rapor kaydedilebiliyor.
-* [ ] Kayıtlı müşteriyle rapor kaydedilebiliyor.
+PDF veya yazdır route’unda kaşe durumu query parametreyle yönetilebilir.
+
+Örnek:
+
+```txt
+/servis-formlari/[id]/bakim-formu/pdf?stamp=1
+/servis-formlari/[id]/bakim-formu/pdf?stamp=0
+
+/servis-formlari/[id]/takip-formu/pdf?stamp=1
+/servis-formlari/[id]/takip-formu/pdf?stamp=0
+```
+
+Mantık:
+
+```ts
+const withStamp =
+  searchParams?.stamp != null
+    ? searchParams.stamp === '1'
+    : companyStampSettings.stamp_enabled_by_default
+```
+
+---
+
+## 10. Ortak Firma Kaşe Bileşeni
+
+Her formda ayrı ayrı kaşe kodu yazılmasın.
+
+Yeni ortak bileşen oluştur:
+
+```txt
+src/components/print/CompanyStampApproval.tsx
+```
+
+Props:
+
+```ts
+type CompanyStampApprovalProps = {
+  withStamp: boolean
+  stampUrl?: string | null
+  companyName?: string | null
+  title?: string
+  stampWidthMm?: number
+  stampHeightMm?: number
+  opacity?: number
+}
+```
+
+Örnek kullanım:
+
+```tsx
+<CompanyStampApproval
+  withStamp={withStamp}
+  stampUrl={stampSettings?.stamp_image_url}
+  companyName="KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI SAN. TİC. LTD. ŞTİ."
+  title="Firma Yetkili İmza / Kaşe"
+  stampWidthMm={stampSettings?.stamp_width_mm ?? 55}
+  stampHeightMm={stampSettings?.stamp_height_mm ?? 30}
+  opacity={stampSettings?.stamp_opacity ?? 1}
+/>
+```
+
+---
+
+## 11. Ortak Kaşe Ayarı Okuma Helper’ı
+
+Yeni helper oluştur:
+
+```txt
+src/lib/company-settings/get-company-stamp-settings.ts
+```
+
+Fonksiyon:
+
+```ts
+export async function getCompanyStampSettings(subeId?: string | null) {
+  // 1. Şube bazlı aktif kaşe ara
+  // 2. Yoksa genel aktif kaşeyi getir
+  // 3. Yoksa null dön
+}
+```
+
+Dönüş tipi:
+
+```ts
+export type CompanyStampSettings = {
+  stampImageUrl: string | null
+  stampImagePath: string | null
+  enabledByDefault: boolean
+  widthMm: number
+  heightMm: number | null
+  opacity: number
+}
+```
+
+---
+
+## 12. Bakım Formu Güncellemesi
+
+Bakım formunda mevcut iki imza kutusu kaldırılıp tek alan bırakılacak.
+
+Eski yapı:
+
+```txt
+Müşteri Onay İmzası        Firma Yetkili İmza / Kaşe
+```
+
+Yeni yapı:
+
+```txt
+Firma Yetkili İmza / Kaşe
+
+[Kaşe görseli veya boş imza çizgisi]
+```
+
+Bakım formu alt kısmında geniş alan olacak.
+
+Önerilen tasarım:
+
+* İnce kırmızı üst çizgi
+* Başlık: Firma Yetkili İmza / Kaşe
+* Orta kısımda kaşe görseli
+* Kaşesiz çıktıdaysa kesikli imza çizgisi
+* Altında firma unvanı
+
+---
+
+## 13. Takip Formu Güncellemesi
+
+Müşteri takip formunda da aynı düzen uygulanacak.
+
+Eski yapı:
+
+```txt
+Müşteri Onay İmzası        Firma Yetkili İmza / Kaşe
+```
+
+Yeni yapı:
+
+```txt
+Firma Yetkili İmza / Kaşe
+
+[Kaşe görseli veya boş imza çizgisi]
+```
+
+Takip formunda müşteri onay alanı tamamen kaldırılacak.
+
+---
+
+## 14. Kaşe Görseli Boyutu
+
+Varsayılan kaşe boyutu:
+
+```txt
+Genişlik: 55 mm
+Yükseklik: 30 mm
+```
+
+CSS:
+
+```css
+.companyStampImage {
+  max-width: 55mm;
+  max-height: 30mm;
+  object-fit: contain;
+  opacity: var(--stamp-opacity, 1);
+}
+```
+
+Ekran önizleme için:
+
+```css
+.companyStampImagePreview {
+  max-width: 240px;
+  max-height: 140px;
+  object-fit: contain;
+}
+```
+
+---
+
+## 15. Kaşe Yoksa Davranış
+
+Kaşe yüklü değilse ve kullanıcı kaşeli çıktı seçerse uyarı göster:
+
+```txt
+Firma kaşe/imza görseli yüklenmedi. Belge kaşesiz oluşturulacak.
+```
+
+PDF bozulmamalı.
+
+Bu durumda firma onay alanı boş imza çizgisiyle görünmeli.
+
+---
+
+## 16. Kaşe Silme
+
+Kaşe silme butonu olacak.
+
+Silme sırasında kullanıcıya onay sor:
+
+```txt
+Yüklü kaşe/imza görselini silmek istediğinize emin misiniz?
+```
+
+Silme sonrası:
+
+* DB’de kaşe URL/path null yapılır.
+* Storage dosyası mümkünse silinir.
+* Çıktılar kaşesiz üretilir.
+* Varsayılan kaşeli çıktı açık olsa bile kaşe olmadığı için boş alan basılır.
+
+---
+
+## 17. Kaşe Değiştirme
+
+Yeni kaşe yüklendiğinde:
+
+* Eski kaşe pasifleştirilebilir veya silinebilir.
+* Yeni kaşe aktif yapılır.
+* Önizleme anında güncellenir.
+* Sonraki formlarda yeni kaşe kullanılır.
+
+---
+
+## 18. Yetki Kontrolü
+
+Kaşe görselini sadece yetkili kullanıcı değiştirebilmeli.
+
+Yetki önerisi:
+
+```txt
+settings.company_stamp.update
+```
+
+Kurallar:
+
+* Admin değiştirebilir.
+* Yönetici değiştirebilir.
+* Teknik personel kaşe yükleyemez.
+* Teknik personel sadece çıktı alırken kaşeli/kaşesiz seçebilir.
+
+---
+
+## 19. Etkilenecek Dosyalar
+
+Projede şu dosyalar aranmalı:
+
+```txt
+src/lib/service-form-pdf.tsx
+src/lib/bakim-form-pdf.tsx
+src/lib/takip-form-pdf.tsx
+src/components/service-forms/*
+src/components/print/*
+src/app/(dashboard)/servis-formlari/[id]/yazdir/page.tsx
+src/app/(dashboard)/servis-formlari/[id]/pdf/route.ts
+src/app/(dashboard)/musteriler/[id]/takip-formu/*
+src/app/(dashboard)/cihazlar/*
+```
+
+Gerçek dosya adları projeden bulunmalı.
+
+---
+
+## 20. Form Önizleme Ekranı
+
+Bakım/takip formu görüntüleme ekranında üstte çıktı ayarları olabilir:
+
+```txt
+Çıktı Ayarları
+[✓] Firma kaşesi ile oluştur
+[PDF İndir] [Yazdır]
+```
+
+Toggle değişince önizleme anında değişmeli.
+
+---
+
+## 21. PDF Kalitesi
+
+Kaşe görseli PDF çıktısında net görünmeli.
+
+Kontrol edilecekler:
+
+* Public URL erişimi
+* Private storage ise signed URL
+* Server-side PDF üretiminde görsel erişimi
+* Base64 fallback
+* Görsel oranının bozulmaması
+* Türkçe karakterlerin bozulmaması
+
+---
+
+## 22. Kabul Kriterleri
+
+### Bakım Formu
+
+* [ ] Müşteri Onay İmzası kaldırıldı.
+* [ ] Firma Yetkili İmza / Kaşe alanı kaldı.
+* [ ] Kaşeli çıktı seçildiğinde kaşe görseli görünüyor.
+* [ ] Kaşesiz çıktı seçildiğinde kaşe görünmüyor.
+* [ ] Boş imza çizgisi düzgün görünüyor.
+
+### Takip Formu
+
+* [ ] Müşteri Onay İmzası kaldırıldı.
+* [ ] Firma Yetkili İmza / Kaşe alanı kaldı.
+* [ ] Kaşe görseli otomatik basılıyor.
+* [ ] Kaşesiz çıktı alınabiliyor.
+
+### Kaşe Yönetimi
+
+* [ ] Kaşe/imza yükleme alanı var.
+* [ ] PNG/JPG/WEBP yüklenebiliyor.
+* [ ] Yüklenen kaşe önizleniyor.
+* [ ] Kaşe değiştirilebiliyor.
+* [ ] Kaşe silinebiliyor.
+* [ ] Varsayılan kaşeli/kaşesiz çıktı ayarı var.
+
+### Teknik
+
+* [ ] Ortak CompanyStampApproval bileşeni oluşturuldu.
+* [ ] Ortak getCompanyStampSettings helper’ı oluşturuldu.
+* [ ] PDF ve yazdırma aynı ayarı kullanıyor.
+* [ ] Storage bağlantısı çalışıyor.
+* [ ] Yetki kontrolü var.
 * [ ] TypeScript geçiyor.
 * [ ] Build geçiyor.
 
 ---
 
-## 16. Test Senaryosu
+## 23. Test Senaryoları
 
-1. Havalandırma Test Raporu aç.
-2. Manuel firma adı gir.
-3. Şube seç.
-4. Tekniker adı gir.
-5. Giriş kesiti ve çıkış kesiti gir.
-6. En az 3 giriş ölçümü gir.
-7. Hesapla.
-8. Kaydet.
+### Test 1 — Kaşe yükle
+
+1. Yönetim > Firma Ayarları > Kaşe ve İmza Ayarları aç.
+2. PNG kaşe görseli yükle.
+3. Kaydet.
 
 Beklenen:
 
-* Kayıt başarılı.
-* Rapor arşivinde görünür.
-* Detay sayfası açılır.
+* Kaşe önizlemede görünür.
+* DB’ye URL/path yazılır.
 
-İkinci test:
+### Test 2 — Bakım formu kaşeli çıktı
 
-1. Aynı formda Kaydet ve Yazdır’a bas.
+1. Bir bakım formu aç.
+2. Kaşeli çıktı toggle açık olsun.
+3. PDF indir.
 
 Beklenen:
 
-* Rapor kaydedilir.
-* Yazdır sayfası açılır.
+* Müşteri Onay İmzası yok.
+* Firma Yetkili İmza / Kaşe alanında kaşe var.
+
+### Test 3 — Bakım formu kaşesiz çıktı
+
+1. Aynı bakım formunda kaşeli çıktı toggle kapat.
+2. PDF indir.
+
+Beklenen:
+
+* Kaşe görünmez.
+* Firma onay alanında boş imza çizgisi görünür.
+
+### Test 4 — Takip formu
+
+1. Takip formu oluştur.
+2. Kaşeli PDF indir.
+
+Beklenen:
+
+* Müşteri Onay İmzası yok.
+* Firma kaşesi görünüyor.
+
+### Test 5 — Kaşe silme
+
+1. Firma ayarlarından kaşeyi sil.
+2. Bakım formu PDF indir.
+
+Beklenen:
+
+* PDF bozulmaz.
+* Firma onay alanı boş görünür.
 
 ---
 
-## 17. Görev Sonu Raporu
+## 24. Dokunulmayacak Alanlar
+
+Bu görevde şunlara dokunma:
+
+* Fatura parser
+* Cari hesap
+* Teknik hesap rapor formülleri
+* Teslimatlar
+* Operasyon talepleri
+* İş planları
+* Müşteri import
+* Cihaz SKT hesapları
+* Servis formu kayıt mantığı
+
+Sadece:
+
+* Bakım formu çıktısı
+* Takip formu çıktısı
+* Servis formu yazdır/PDF çıktılarındaki imza alanları
+* Firma kaşe/imza ayarı
+* Kaşe upload/storage
+* Kaşeli/kaşesiz çıktı toggle
+* Ortak firma kaşe bileşeni
+
+---
+
+## 25. Görev Sonu Raporu
 
 İş bitince şunları yaz:
 
-* Kayıt hatasının gerçek sebebi neydi?
-* Hata `{}` olarak neden görünüyordu?
-* Hangi dosyada loglama düzeltildi?
-* Supabase insert/update nerede düzeltildi?
-* Payload hangi yapıya getirildi?
-* Migration gerekti mi?
-* `ventilation_test` report_type kabul edildi mi?
-* Kaydet ve Yazdır çalışıyor mu?
+* Müşteri Onay İmzası hangi formlardan kaldırıldı?
+* Firma Yetkili İmza / Kaşe alanı nasıl güncellendi?
+* Kaşe yükleme alanı hangi sayfaya eklendi?
+* Kaşe hangi storage bucket/path altında tutuluyor?
+* Kaşe ayarları hangi tabloda/kolonlarda tutuluyor?
+* Kaşeli/kaşesiz çıktı toggle nasıl çalışıyor?
+* Bakım formunda test edildi mi?
+* Takip formunda test edildi mi?
+* PDF çıktıda kaşe net görünüyor mu?
+* Hangi dosyalar değişti?
+* Migration gerekiyorsa hangi SQL çalıştırılmalı?
 * TypeScript sonucu
 * Build sonucu
 
 ````
 
-Kısa Claude prompt’u:
+Claude Code için kısa prompt:
 
 ```text
 GOREV.md dosyasını oku ve sadece bu görevi uygula.
 
-Sorun:
-Havalandırma Test Raporu kaydederken Next.js console error oluşuyor:
-[teknik-raporlar][save] kayıt başarısız {}
-
-Hata TechnicalReportForm.tsx onSubmit içinde, yaklaşık satır 522.
-
-Öncelik:
-1. Catch bloğu gerçek hatayı gösterecek şekilde düzelt. Hata {} görünmesin.
-2. Supabase insert/update error objesini message/code/details/hint ile Error olarak throw et.
-3. technical_reports payload’ını kontrol et.
-4. ventilation_test report_type DB tarafından kabul ediliyor mu kontrol et.
-5. input_data/result_data JSON serialize edilebilir mi kontrol et; NaN/undefined temizle.
-6. Şube, manuel müşteri, report_date, title gibi zorunlu alanları net validate et.
-7. Kaydet ve Kaydet-Yazdır akışında insert sonrası .select('id').single() ile gerçek ID al.
-8. Kayıt başarılı olunca detay/yazdır route’una yönlendir.
-9. Gerekirse idempotent migration ekle.
-10. TypeScript ve build kontrolü yap.
-
-Dokunma:
-Fatura parser, cari hesap, operasyon, teslimatlar ve diğer teknik hesap modülleri.
-````
-
-Bu görevde Claude’un ilk yapması gereken şey **hata logunu `{}` olmaktan çıkarmak**. Çünkü şu an gerçek sebep görünmüyor; muhtemelen `report_type` constraint, `input_data/result_data` kolon eksikliği, `sube_id` boşluğu veya `NaN` içeren JSON payload yüzünden Supabase insert patlıyor.

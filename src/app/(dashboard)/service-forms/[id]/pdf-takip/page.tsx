@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { Fragment } from 'react'
 import PrintActions from '../PrintActions'
+import CompanyStampApproval from '../../_components/CompanyStampApproval'
+import { getCompanyStampSettings } from '@/lib/company-stamp'
 
 function toTrDate(value: string | null) {
   if (!value) return '-'
@@ -102,6 +104,7 @@ export default async function ServiceFormTakipPdfPage({ params }: { params: Prom
   const totalDevices = trackingRows.reduce((sum, row) => sum + row.quantity, 0)
   const customer = form.customers as any
   const controlLabel = form.control_number ? `${form.control_number}. Kontrol` : 'Dolum / Genel Bakım'
+  const stampSettings = await getCompanyStampSettings(form.sube_id ?? null)
 
   const thStyle: React.CSSProperties = {
     border: `1px solid ${C.redDark}`,
@@ -125,7 +128,11 @@ export default async function ServiceFormTakipPdfPage({ params }: { params: Prom
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      <PrintActions backHref={`/service-forms/${id}`} />
+      <PrintActions
+        backHref={`/service-forms/${id}`}
+        defaultStamped={stampSettings.defaultStamped}
+        hasStamp={Boolean(stampSettings.stampDataUrl)}
+      />
       <style>{`
         @page { size: A4 portrait; margin: 0; }
         @media print {
@@ -291,15 +298,12 @@ export default async function ServiceFormTakipPdfPage({ params }: { params: Prom
           </div>
         </div>
 
-        {/* Signature */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          {(['Müşteri Onay İmzası', 'Firma Yetkili İmza / Kaşe'] as string[]).map(label => (
-            <div key={label} style={{ border: `1px solid ${C.border}`, borderRadius: '3px', padding: '10px 12px', minHeight: '70px' }}>
-              <div style={{ fontSize: '8pt', fontWeight: 700, color: C.darkGray }}>{label}</div>
-              <div style={{ marginTop: '50px', borderBottom: `1px dashed ${C.lightGray}` }} />
-            </div>
-          ))}
-        </div>
+        <CompanyStampApproval
+          settings={stampSettings}
+          borderColor={C.border}
+          textColor={C.darkGray}
+          lineColor={C.lightGray}
+        />
 
         {/* Footer */}
         <div style={{

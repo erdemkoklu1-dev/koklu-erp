@@ -9,6 +9,7 @@ const TABS = [
   { id: 'rol-yetkileri', href: '/yonetim/roller', label: 'Rol Yetkileri', adminOnly: true },
   { id: 'sube-yetkileri', href: '/yonetim/kullanicilar', label: 'Şube Yetkileri', adminOnly: true },
   { id: 'modul-yetkileri', href: '/yonetim/roller', label: 'Modül Yetkileri', adminOnly: true },
+  { id: 'firma-ayarlari', href: '/yonetim/firma-ayarlari', label: 'Firma Ayarları', adminOnly: true },
   { id: 'sistem-ayarlari', href: '/yonetim/sistem', label: 'Sistem Ayarları', adminOnly: true },
   { id: 'teknik-ayarlari', href: '/teknik-raporlar/ayarlar', label: 'Teknik Ayarlar', adminOnly: true },
   { id: 'loglar', href: '/yonetim/kayitlar', label: 'Loglar / İşlem Geçmişi', adminOnly: true },
