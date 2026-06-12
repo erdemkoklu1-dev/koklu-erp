@@ -319,16 +319,6 @@ export default async function ProformaPdfPage({ params }: { params: Promise<{ id
           </table>
         </div>
 
-        {/* ── İMZA ALANI ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '12px' }}>
-          {(['SATICI', 'ALICI'] as const).map(taraf => (
-            <div key={taraf} style={{ border: '1px solid #ccc', borderRadius: '3px', padding: '8px 10px', minHeight: '60px' }}>
-              <div style={{ fontSize: '9px', fontWeight: '700', marginBottom: '20px' }}>{taraf}</div>
-              <div style={{ borderTop: '1px solid #aaa', paddingTop: '3px', fontSize: '8px', color: '#888' }}>İmza / Kaşe</div>
-            </div>
-          ))}
-        </div>
-
         {/* ── FOOTER ── */}
         <div style={{ borderTop: '1px solid #ddd', paddingTop: '6px', textAlign: 'center', fontSize: '8px', color: '#888', lineHeight: '1.6' }}>
           <div style={{ fontWeight: '700', color: '#C8102E', marginBottom: '2px' }}>
