@@ -1,0 +1,322 @@
+-- =====================================================================
+-- DİKKAT:
+-- Bu dosya TASLAKTIR.
+-- Bu sprintte (Sprint 1.5) Supabase üzerinde ÇALIŞTIRILMAYACAKTIR.
+-- RLS aktif etmezden önce tenant_audit_checks.sql sonucu TEMİZ olmalıdır
+-- (tüm firma_id IS NULL = 0, tüm uyumsuzluk sorguları 0 satır).
+--
+-- Tüm policy/ALTER satırları bilerek YORUM olarak bırakılmıştır.
+-- Hiçbir satır otomatik uygulanmaz. Kopyalayıp çalıştırmadan önce her
+-- tablo ayrı ayrı doğrulanmalıdır.
+--
+-- ÖN KOŞULLAR (tenant_migration.sql ile zaten oluşturuldu):
+--   public.current_firma_id()  -> auth.uid() kullanıcısının firma_id'si
+--   public.is_super_admin()    -> kullanıcı Super Admin mi
+--
+-- NOT (kritik):
+--   * service_role anahtarı RLS'i BYPASS eder. Uygulamadaki
+--     createServiceClient() rotaları RLS açılsa bile filtrelenmez;
+--     bu yüzden bu rotalarda manuel firma kontrolü KORUNMALIDIR.
+--   * Aşağıdaki tablolardan bazılarında modül migration'ları sırasında
+--     zaten "auth.uid() is not null" gibi İZİN VERİCİ (permissive) RLS
+--     policy'leri açılmıştır. Tenant sertleştirmesi bu policy'lerin
+--     "DROP POLICY" ile kaldırılıp tenant policy ile değiştirilmesini
+--     gerektirir. Önce mevcut policy envanteri çıkarılmalıdır:
+--
+--       -- SELECT schemaname, tablename, policyname, cmd, qual, with_check
+--       -- FROM pg_policies WHERE schemaname = 'public' ORDER BY tablename;
+-- =====================================================================
+
+
+-- =====================================================================
+-- GENEL ŞABLON (her tablo için tekrarlanır)
+-- =====================================================================
+--
+-- ALTER TABLE public.<tablo> ENABLE ROW LEVEL SECURITY;
+--
+-- -- Mevcut izin verici policy varsa önce kaldır:
+-- -- DROP POLICY IF EXISTS "<eski_policy_adi>" ON public.<tablo>;
+--
+-- CREATE POLICY <tablo>_tenant_select ON public.<tablo>
+--   FOR SELECT
+--   USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+--
+-- CREATE POLICY <tablo>_tenant_insert ON public.<tablo>
+--   FOR INSERT
+--   WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+--
+-- CREATE POLICY <tablo>_tenant_update ON public.<tablo>
+--   FOR UPDATE
+--   USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--   WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+--
+-- CREATE POLICY <tablo>_tenant_delete ON public.<tablo>
+--   FOR DELETE
+--   USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+
+-- =====================================================================
+-- customers
+-- =====================================================================
+-- ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY customers_tenant_select ON public.customers
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY customers_tenant_insert ON public.customers
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY customers_tenant_update ON public.customers
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY customers_tenant_delete ON public.customers
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- devices
+-- =====================================================================
+-- ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY devices_tenant_select ON public.devices
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY devices_tenant_insert ON public.devices
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY devices_tenant_update ON public.devices
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY devices_tenant_delete ON public.devices
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- service_forms
+-- =====================================================================
+-- ALTER TABLE public.service_forms ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY service_forms_tenant_select ON public.service_forms
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY service_forms_tenant_insert ON public.service_forms
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY service_forms_tenant_update ON public.service_forms
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY service_forms_tenant_delete ON public.service_forms
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- invoices
+-- =====================================================================
+-- ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY invoices_tenant_select ON public.invoices
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY invoices_tenant_insert ON public.invoices
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY invoices_tenant_update ON public.invoices
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY invoices_tenant_delete ON public.invoices
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- invoice_items
+-- =====================================================================
+-- ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY invoice_items_tenant_select ON public.invoice_items
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY invoice_items_tenant_insert ON public.invoice_items
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY invoice_items_tenant_update ON public.invoice_items
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY invoice_items_tenant_delete ON public.invoice_items
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- payments
+-- =====================================================================
+-- ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY payments_tenant_select ON public.payments
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY payments_tenant_insert ON public.payments
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY payments_tenant_update ON public.payments
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY payments_tenant_delete ON public.payments
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- teslimatlar
+-- =====================================================================
+-- ALTER TABLE public.teslimatlar ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY teslimatlar_tenant_select ON public.teslimatlar
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teslimatlar_tenant_insert ON public.teslimatlar
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teslimatlar_tenant_update ON public.teslimatlar
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teslimatlar_tenant_delete ON public.teslimatlar
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- teslimat_kalemleri
+-- =====================================================================
+-- ALTER TABLE public.teslimat_kalemleri ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY teslimat_kalemleri_tenant_select ON public.teslimat_kalemleri
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teslimat_kalemleri_tenant_insert ON public.teslimat_kalemleri
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teslimat_kalemleri_tenant_update ON public.teslimat_kalemleri
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teslimat_kalemleri_tenant_delete ON public.teslimat_kalemleri
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- teklifler
+-- =====================================================================
+-- ALTER TABLE public.teklifler ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY teklifler_tenant_select ON public.teklifler
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teklifler_tenant_insert ON public.teklifler
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teklifler_tenant_update ON public.teklifler
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teklifler_tenant_delete ON public.teklifler
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- teklif_kalemleri
+-- =====================================================================
+-- ALTER TABLE public.teklif_kalemleri ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY teklif_kalemleri_tenant_select ON public.teklif_kalemleri
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teklif_kalemleri_tenant_insert ON public.teklif_kalemleri
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teklif_kalemleri_tenant_update ON public.teklif_kalemleri
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teklif_kalemleri_tenant_delete ON public.teklif_kalemleri
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- proforma_faturalar
+-- =====================================================================
+-- ALTER TABLE public.proforma_faturalar ENABLE ROW LEVEL SECURITY;
+-- -- Mevcut izin verici policy önce kaldırılmalı:
+-- -- DROP POLICY IF EXISTS "proforma_auth_all" ON public.proforma_faturalar;
+-- CREATE POLICY proforma_faturalar_tenant_select ON public.proforma_faturalar
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY proforma_faturalar_tenant_insert ON public.proforma_faturalar
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY proforma_faturalar_tenant_update ON public.proforma_faturalar
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY proforma_faturalar_tenant_delete ON public.proforma_faturalar
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- proforma_fatura_kalemleri
+-- =====================================================================
+-- UYARI: Bu tabloda firma_id KOLONU EKSİK olabilir (tenant_migration.sql
+-- yanlışlıkla 'proforma_kalemleri' adını hedeflemiştir). RLS açmadan ÖNCE:
+--   -- ALTER TABLE public.proforma_fatura_kalemleri
+--   --   ADD COLUMN IF NOT EXISTS firma_id uuid REFERENCES public.firmalar(id);
+--   -- UPDATE public.proforma_fatura_kalemleri k
+--   --   SET firma_id = (SELECT firma_id FROM public.proforma_faturalar p WHERE p.id = k.proforma_id)
+--   --   WHERE firma_id IS NULL;
+-- ALTER TABLE public.proforma_fatura_kalemleri ENABLE ROW LEVEL SECURITY;
+-- -- DROP POLICY IF EXISTS "proforma_kalem_auth_all" ON public.proforma_fatura_kalemleri;
+-- CREATE POLICY proforma_kalem_tenant_select ON public.proforma_fatura_kalemleri
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY proforma_kalem_tenant_insert ON public.proforma_fatura_kalemleri
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY proforma_kalem_tenant_update ON public.proforma_fatura_kalemleri
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY proforma_kalem_tenant_delete ON public.proforma_fatura_kalemleri
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- teknik_raporlar
+-- =====================================================================
+-- ALTER TABLE public.teknik_raporlar ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY teknik_raporlar_tenant_select ON public.teknik_raporlar
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teknik_raporlar_tenant_insert ON public.teknik_raporlar
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teknik_raporlar_tenant_update ON public.teknik_raporlar
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY teknik_raporlar_tenant_delete ON public.teknik_raporlar
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- musteri_talepleri
+-- =====================================================================
+-- ALTER TABLE public.musteri_talepleri ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY musteri_talepleri_tenant_select ON public.musteri_talepleri
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY musteri_talepleri_tenant_insert ON public.musteri_talepleri
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY musteri_talepleri_tenant_update ON public.musteri_talepleri
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY musteri_talepleri_tenant_delete ON public.musteri_talepleri
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- is_planlari
+-- =====================================================================
+-- ALTER TABLE public.is_planlari ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY is_planlari_tenant_select ON public.is_planlari
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY is_planlari_tenant_insert ON public.is_planlari
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY is_planlari_tenant_update ON public.is_planlari
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY is_planlari_tenant_delete ON public.is_planlari
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- planli_isler
+-- =====================================================================
+-- ALTER TABLE public.planli_isler ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY planli_isler_tenant_select ON public.planli_isler
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY planli_isler_tenant_insert ON public.planli_isler
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY planli_isler_tenant_update ON public.planli_isler
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY planli_isler_tenant_delete ON public.planli_isler
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- brokers
+-- =====================================================================
+-- ALTER TABLE public.brokers ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY brokers_tenant_select ON public.brokers
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY brokers_tenant_insert ON public.brokers
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY brokers_tenant_update ON public.brokers
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY brokers_tenant_delete ON public.brokers
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- araci_cari_hareketleri
+-- =====================================================================
+-- ALTER TABLE public.araci_cari_hareketleri ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY araci_cari_tenant_select ON public.araci_cari_hareketleri
+--   FOR SELECT USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY araci_cari_tenant_insert ON public.araci_cari_hareketleri
+--   FOR INSERT WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY araci_cari_tenant_update ON public.araci_cari_hareketleri
+--   FOR UPDATE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() )
+--             WITH CHECK ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+-- CREATE POLICY araci_cari_tenant_delete ON public.araci_cari_hareketleri
+--   FOR DELETE USING ( firma_id = public.current_firma_id() OR public.is_super_admin() );
+
+-- =====================================================================
+-- TASLAK SONU — hiçbir satır çalıştırılmamalıdır.
+-- =====================================================================

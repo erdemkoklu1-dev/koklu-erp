@@ -1,737 +1,623 @@
-# GÖREV — Bakım ve Takip Formlarında Müşteri Onay Alanını Kaldırma, Kaşe/İmza Yükleme ve Kaşeli/Kaşesiz Çıktı Sistemi
+# GÖREV — Sprint 1.5: Tenant Güvenlik Denetimi, Kaçak Sorgu Tespiti ve RLS Hazırlık
 
 ## Amaç
 
-Programın oluşturduğu bakım formu ve müşteri takip formunda alt kısımda bulunan:
+Köklü ERP’nin ticari SaaS altyapısı için tenant/firma ayrımı kademeli olarak kuruldu.
 
-- Müşteri Onay İmzası
-- Firma Yetkili İmza / Kaşe
+Tamamlananlar:
 
-alanları yeniden düzenlenecek.
+* `firmalar` tablosu oluşturuldu.
+* Varsayılan `Köklü Yangın` firması oluşturuldu.
+* `kullanici_profiller.firma_id` dolu.
+* `subeler.firma_id` dolu.
+* Kritik tablolara `firma_id` eklendi.
+* Mevcut kayıtlar Köklü firmasına bağlandı.
+* Yeni müşteri oluşturunca `customers.firma_id` doluyor.
+* Yeni cihaz oluşturunca `devices.firma_id` doluyor.
+* Servis formu, teklif, teslimat, teknik rapor, operasyon, fatura, ödeme, aracı cari kayıtlarında `firma_id` boş kayıt kalmadı.
+* EXOPANEL müşterisi geçici olarak test firmasına taşınarak görünürlük testi yapıldı.
+* Normal kullanıcıda farklı firmaya ait müşteri listede görünmedi.
+* Doğrudan URL erişim testi başarılı geçti.
+* EXOPANEL tekrar Köklü firmasına geri alındı.
+* TypeScript ve build daha önce başarılı geçti.
 
-Yeni istenen yapı:
+Bu sprintin amacı:
 
-1. Bakım formu ve takip formundan “Müşteri Onay İmzası” alanı kaldırılacak.
-2. Sadece “Firma Yetkili İmza / Kaşe” alanı kalacak.
-3. Programda merkezi bir “Kaşe / İmza Yükle” alanı oluşturulacak.
-4. Kullanıcı kaşe görselini bir defa yükleyecek.
-5. Bu kaşe görseli bakım ve takip formlarında firma onay alanına otomatik basılacak.
-6. Kullanıcı isterse belgeyi kaşesiz olarak da üretebilecek.
-7. Kaşeli / kaşesiz çıktı için toggle eklenecek.
-8. Kaşe daha sonra değiştirilebilecek, silinebilecek veya pasifleştirilebilecek.
-9. Sistem bakım formu, takip formu, servis formu ve ileride diğer çıktılarda da aynı merkezi kaşe ayarını kullanabilecek.
-
----
-
-## 1. Mevcut Formlarda Kaldırılacak Alan
-
-Bakım formu ve takip formunun alt kısmında bulunan şu alan kaldırılacak:
-
-```txt
-Müşteri Onay İmzası
-
-Ekteki bakım ve takip formlarında alt bölümde **“Müşteri Onay İmzası”** ve **“Firma Yetkili İmza / Kaşe”** alanları birlikte yer alıyor. Yeni yapıda müşteri onay alanını kaldırıp, firma kaşe/imza alanını merkezi yönetilen kaşe görseliyle otomatik dolduracağız.  
-
-````md
-# GÖREV — Bakım ve Takip Formlarında Müşteri Onay Alanını Kaldırma, Kaşe/İmza Yükleme ve Kaşeli/Kaşesiz Çıktı Sistemi
-
-## Amaç
-
-Programın oluşturduğu bakım formu ve müşteri takip formunda alt kısımda bulunan:
-
-- Müşteri Onay İmzası
-- Firma Yetkili İmza / Kaşe
-
-alanları yeniden düzenlenecek.
-
-Yeni istenen yapı:
-
-1. Bakım formu ve takip formundan “Müşteri Onay İmzası” alanı kaldırılacak.
-2. Sadece “Firma Yetkili İmza / Kaşe” alanı kalacak.
-3. Programda merkezi bir “Kaşe / İmza Yükle” alanı oluşturulacak.
-4. Kullanıcı kaşe görselini bir defa yükleyecek.
-5. Bu kaşe görseli bakım ve takip formlarında firma onay alanına otomatik basılacak.
-6. Kullanıcı isterse belgeyi kaşesiz olarak da üretebilecek.
-7. Kaşeli / kaşesiz çıktı için toggle eklenecek.
-8. Kaşe daha sonra değiştirilebilecek, silinebilecek veya pasifleştirilebilecek.
-9. Sistem bakım formu, takip formu, servis formu ve ileride diğer çıktılarda da aynı merkezi kaşe ayarını kullanabilecek.
+1. Uygulama katmanında hâlâ tenant filtresi eksik kalan sorguları tespit etmek.
+2. Service role kullanılan API route’larında tenant güvenlik kontrolü var mı denetlemek.
+3. RLS açmadan önce riskli noktaları listelemek.
+4. `firma_id IS NULL` kalmadığını tekrar doğrulamak.
+5. RLS policy taslaklarını hazırlamak, ancak bu sprintte RLS’i aktif etmemek.
+6. `firma_id NOT NULL` için hazır olmayan tabloları tespit etmek, ancak bu sprintte NOT NULL yapmamak.
+7. Ticari SaaS’a geçiş öncesi tenant güvenlik raporu üretmek.
 
 ---
 
-## 1. Mevcut Formlarda Kaldırılacak Alan
+## 1. Çok Önemli Kısıtlar
 
-Bakım formu ve takip formunun alt kısmında bulunan şu alan kaldırılacak:
-
-```txt
-Müşteri Onay İmzası
-````
-
-Bu alan:
-
-* PDF’te görünmeyecek.
-* Yazdırma çıktısında görünmeyecek.
-* Boş imza kutusu olarak kalmayacak.
-* Alt alanda gereksiz yer kaplamayacak.
-
----
-
-## 2. Kalacak Alan
-
-Sadece şu alan kalacak:
+Bu görevde kesinlikle şunlar yapılmayacak:
 
 ```txt
-Firma Yetkili İmza / Kaşe
+RLS policy aktif etme.
+ALTER TABLE ... ENABLE ROW LEVEL SECURITY yapma.
+firma_id kolonlarını NOT NULL yapma.
+Mevcut kayıt silme.
+Mevcut müşteri/fatura/cihaz verisi taşıma.
+Fatura parser mantığını değiştirme.
+KDV/toplam/iskonto hesaplarını değiştirme.
+Teknik rapor formüllerini değiştirme.
+Teslimat iptal/silme mantığını değiştirme.
+Aracı komisyon formülünü değiştirme.
 ```
 
-Bu alan tek başına daha geniş ve kurumsal görünecek.
+Bu sprint **denetim ve hazırlık sprintidir**.
 
-Önerilen görünüm:
+---
+
+## 2. İncelenecek Ana Dosyalar
+
+Aşağıdaki klasör ve dosyalar taranacak:
 
 ```txt
-Firma Yetkili İmza / Kaşe
-
-[ Yüklenen kaşe / imza görseli ]
-
-KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI SANAYİ VE TİCARET LTD. ŞTİ.
+src/app/(dashboard)/**
+src/app/api/**
+src/lib/**
+src/lib/auth/tenant-scope.ts
+src/lib/auth/branch-scope.ts
+src/lib/supabase/**
 ```
 
-Kaşe kapalıysa veya kaşe yüklenmemişse:
+Özellikle şu dosyalar dikkatli incelenecek:
 
 ```txt
-Firma Yetkili İmza / Kaşe
+src/app/api/invoices/route.ts
+src/app/api/odeme-kaydet/route.ts
+src/app/api/toplu-odeme/route.ts
+src/app/api/pdf-fatura-save/route.ts
+src/app/api/gelen-fatura-import/route.ts
+src/app/api/gelen-pdf-save/route.ts
+src/app/api/efatura-import/route.ts
 
-....................................................
+src/app/(dashboard)/customers/**
+src/app/(dashboard)/devices/**
+src/app/(dashboard)/cihazlar/**
+src/app/(dashboard)/service-forms/**
+src/app/(dashboard)/teslimatlar/**
+src/app/(dashboard)/fiyat-teklifleri/**
+src/app/(dashboard)/cari-hesap/**
+src/app/(dashboard)/operasyon/**
+src/app/(dashboard)/teknik-raporlar/**
+src/app/(dashboard)/araclar/**
+src/app/(dashboard)/dashboard/page.tsx
 ```
 
 ---
 
-## 3. Kaşe / İmza Yönetim Alanı
+## 3. Tenant Helper Kontrolü
 
-Yeni ayar bölümü oluşturulacak.
-
-Önerilen konum:
+Önce mevcut tenant helper dosyasını incele:
 
 ```txt
-Yönetim > Firma Ayarları > Kaşe ve İmza Ayarları
+src/lib/auth/tenant-scope.ts
 ```
 
-Eğer firma ayarları sayfası yoksa:
+Aşağıdaki fonksiyonların doğru çalıştığını doğrula:
 
 ```txt
-Yönetim > Belge / Çıktı Ayarları
+requireCurrentFirmaId()
+getCurrentTenantAccess()
+applyTenantScope()
+filterVisibleTenantRows()
+assertBranchBelongsToFirma()
+assertCustomerBelongsToFirma()
 ```
 
-bölümü oluşturulabilir.
+Eksik varsa, mevcut mimariyi bozmadan tamamla.
 
-Bu bölümde şu alanlar olacak:
-
-* Kaşe / imza görseli yükle
-* Mevcut kaşe önizlemesi
-* Kaşeyi değiştir
-* Kaşeyi sil
-* Varsayılan kaşeli çıktı
-* Varsayılan kaşesiz çıktı
-* Kaşe genişliği
-* Kaşe yüksekliği
-* Kaşe opaklığı
-* Kaşe aktif / pasif
-
----
-
-## 4. Desteklenecek Dosya Türleri
-
-Kaşe yükleme alanı şu dosya türlerini kabul etmeli:
+Beklenen kurallar:
 
 ```txt
-PNG
-JPG
-JPEG
-WEBP
+Normal kullanıcı:
+  sadece kendi kullanici_profiller.firma_id kapsamındaki kayıtları görür ve işler.
+
+Super Admin:
+  ileride tüm firmaları görebilir, ancak mevcut tek firma kullanımını bozmaz.
+
+Şube kullanıcısı:
+  önce firma filtresi, sonra şube filtresi uygulanır.
 ```
 
-Önerilen maksimum boyut:
+Filtre sırası:
 
 ```txt
-2 MB
-```
-
-Kullanıcıya açıklama göster:
-
-```txt
-En iyi sonuç için arka planı şeffaf PNG formatında kaşe/imza görseli yükleyin.
+1. Tenant / firma scope
+2. Şube scope
+3. Sayfa filtreleri
+4. Arama / tarih / durum filtreleri
 ```
 
 ---
 
-## 5. Kaşe Görseli Storage Yapısı
+## 4. Kaçak Sorgu Denetimi
 
-Kaşe görseli Supabase Storage veya mevcut dosya sisteminde saklanacak.
-
-Önerilen bucket:
+Kod tabanında aşağıdaki pattern’leri ara:
 
 ```txt
-company-assets
+.from('customers')
+.from("customers")
+.from('devices')
+.from("devices")
+.from('service_forms')
+.from("service_forms")
+.from('invoices')
+.from("invoices")
+.from('payments')
+.from("payments")
+.from('teslimatlar')
+.from("teslimatlar")
+.from('teklifler')
+.from("teklifler")
+.from('teknik_raporlar')
+.from("teknik_raporlar")
+.from('musteri_talepleri')
+.from("musteri_talepleri")
+.from('is_planlari')
+.from("is_planlari")
+.from('brokers')
+.from("brokers")
+.from('araci_cari_hareketleri')
+.from("araci_cari_hareketleri")
 ```
 
-Önerilen klasör:
+Her sorgu için kontrol et:
 
 ```txt
-company-assets/stamps/
+Liste sorgusunda tenant filtresi var mı?
+Detay sorgusunda tenant filtresi var mı?
+PDF/yazdırma sorgusunda tenant kontrolü var mı?
+Silme/güncelleme işleminde kayıt aynı firmaya ait mi kontrol ediliyor mu?
+Service role kullanılıyorsa manuel tenant kontrolü var mı?
 ```
 
-Örnek dosya yolu:
-
-```txt
-company-assets/stamps/koklu-stamp.png
-```
-
-Storage private ise PDF üretimi sırasında signed URL veya base64 kullan.
+Eğer sorgu public ayar tablosu veya global lookup ise tenant filtresi gerekmeyebilir. Ancak bu durum raporda belirtilmeli.
 
 ---
 
-## 6. Veritabanı Ayarları
+## 5. Service Role API Güvenlik Denetimi
 
-Mevcut firma ayarları tablosu varsa yeni kolonlar oraya eklenmeli.
+`createServiceClient()` kullanılan route’ları özellikle denetle.
 
-Muhtemel tablolar:
+Service role RLS’i bypass edebileceği için bu route’larda mutlaka manuel firma kontrolü olmalı.
+
+Aranacak pattern:
 
 ```txt
-firma_ayarlari
-company_settings
-app_settings
-settings
+createServiceClient()
 ```
 
-Mevcut tablo yoksa yeni tablo oluşturulabilir.
+Her service role route için şu soruları cevapla:
 
-Önerilen tablo:
-
-```sql
-CREATE TABLE IF NOT EXISTS public.company_stamp_settings (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  sube_id uuid NULL REFERENCES public.subeler(id),
-
-  title text DEFAULT 'Firma Kaşesi',
-  stamp_image_url text NULL,
-  stamp_image_path text NULL,
-
-  is_active boolean DEFAULT true,
-  is_default boolean DEFAULT true,
-
-  stamp_enabled_by_default boolean DEFAULT true,
-  stamp_width_mm numeric DEFAULT 55,
-  stamp_height_mm numeric DEFAULT 30,
-  stamp_opacity numeric DEFAULT 1,
-
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+```txt
+Bu route hangi tabloya okuma/yazma yapıyor?
+Kullanıcının firma_id değeri alınıyor mu?
+İşlem yapılan kayıt kullanıcının firmasına ait mi kontrol ediliyor mu?
+Yeni kayıt oluşturuluyorsa firma_id yazılıyor mu?
+Güncelleme/silme işleminde firma_id kontrolü var mı?
 ```
 
-Eğer mevcut firma ayarları tablosuna kolon eklenecekse:
+Örnek güvenli yapı:
 
-```sql
-ALTER TABLE public.firma_ayarlari
-ADD COLUMN IF NOT EXISTS stamp_image_url text;
+```ts
+const firmaId = await requireCurrentFirmaId()
 
-ALTER TABLE public.firma_ayarlari
-ADD COLUMN IF NOT EXISTS stamp_image_path text;
+const { data: invoice } = await supabase
+  .from('invoices')
+  .select('id, firma_id')
+  .eq('id', invoiceId)
+  .maybeSingle()
 
-ALTER TABLE public.firma_ayarlari
-ADD COLUMN IF NOT EXISTS stamp_enabled_by_default boolean DEFAULT true;
-
-ALTER TABLE public.firma_ayarlari
-ADD COLUMN IF NOT EXISTS stamp_width_mm numeric DEFAULT 55;
-
-ALTER TABLE public.firma_ayarlari
-ADD COLUMN IF NOT EXISTS stamp_height_mm numeric DEFAULT 30;
-
-ALTER TABLE public.firma_ayarlari
-ADD COLUMN IF NOT EXISTS stamp_opacity numeric DEFAULT 1;
+if (!invoice || invoice.firma_id !== firmaId) {
+  return NextResponse.json(
+    { error: 'Bu kayıt kullanıcının firmasına ait değil.' },
+    { status: 403 }
+  )
+}
 ```
-
-Önce mevcut schema kontrol edilecek, gereksiz yeni tablo açılmayacak.
 
 ---
 
-## 7. Şube Bazlı Kaşe Desteği
+## 6. Detay ve PDF Route Kontrolü
 
-Sistem Erzincan ve İstanbul şubeleriyle çalıştığı için yapı şube bazlı kaşeye uygun olmalı.
+Aşağıdaki türde route’lar özellikle kontrol edilecek:
+
+```txt
+[id]/page.tsx
+[id]/edit/page.tsx
+[id]/pdf/page.tsx
+[id]/yazdir/page.tsx
+[id]/delete-action.ts
+[id]/copy/route.ts
+[id]/quote/route.ts
+```
 
 Kural:
 
-1. Belgenin şubesine özel kaşe varsa onu kullan.
-2. Şube özel kaşe yoksa genel firma kaşesini kullan.
-3. Hiç kaşe yoksa boş imza çizgisi göster.
+```txt
+ID ile gelen kayıt önce firma_id kontrolünden geçmeli.
+Kayıt bulunamazsa veya başka firmaya aitse güvenli hata verilmeli.
+```
 
-İlk aşamada tek genel kaşe yeterli olabilir, ancak kod yapısı şube bazlı kaşeye engel olmamalı.
+Yanlış örnek:
+
+```ts
+const { data } = await supabase
+  .from('customers')
+  .select('*')
+  .eq('id', id)
+  .single()
+```
+
+Doğru örnek:
+
+```ts
+let query = supabase
+  .from('customers')
+  .select('*')
+  .eq('id', id)
+
+query = applyTenantScope(query, access)
+
+const { data } = await query.maybeSingle()
+```
 
 ---
 
-## 8. Kaşeli / Kaşesiz Çıktı Toggle
+## 7. Dashboard Denetimi
 
-Bakım formu ve takip formu yazdırma/PDF ekranlarına toggle eklenecek.
+Dashboard sorgularında tenant filtresi eksik kalmamalı.
+
+Kontrol edilecek kartlar:
+
+```txt
+Toplam müşteri
+Toplam cihaz
+SKT yaklaşan/geçen cihazlar
+Servis formu sayıları
+Fatura toplamları
+Tahsilat/borç kartları
+Teklif sayıları
+Teslimat özetleri
+Operasyon talepleri
+Teknik rapor sayıları
+Aracı cari özetleri
+```
+
+Her kart için:
+
+```txt
+Firma filtresi uygulanıyor mu?
+Şube filtresi uygulanıyorsa firma filtresinden sonra mı uygulanıyor?
+Teknik personel finansal kartları görmeme kuralı bozulmuş mu?
+```
+
+---
+
+## 8. SQL Denetim Scripti Oluştur
+
+Yeni bir dosya oluştur:
+
+```txt
+db/tenant_audit_checks.sql
+```
+
+Bu dosya sadece kontrol sorguları içermeli. Veri değiştirmemeli.
+
+İçeriğinde şu kontroller olmalı:
+
+### 8.1 Firma ID boş kayıt kontrolü
+
+```sql
+SELECT 'customers' AS tablo, COUNT(*) AS bos_kayit FROM public.customers WHERE firma_id IS NULL
+UNION ALL
+SELECT 'devices', COUNT(*) FROM public.devices WHERE firma_id IS NULL
+UNION ALL
+SELECT 'service_forms', COUNT(*) FROM public.service_forms WHERE firma_id IS NULL
+UNION ALL
+SELECT 'invoices', COUNT(*) FROM public.invoices WHERE firma_id IS NULL
+UNION ALL
+SELECT 'invoice_items', COUNT(*) FROM public.invoice_items WHERE firma_id IS NULL
+UNION ALL
+SELECT 'payments', COUNT(*) FROM public.payments WHERE firma_id IS NULL
+UNION ALL
+SELECT 'teslimatlar', COUNT(*) FROM public.teslimatlar WHERE firma_id IS NULL
+UNION ALL
+SELECT 'teslimat_kalemleri', COUNT(*) FROM public.teslimat_kalemleri WHERE firma_id IS NULL
+UNION ALL
+SELECT 'teklifler', COUNT(*) FROM public.teklifler WHERE firma_id IS NULL
+UNION ALL
+SELECT 'teklif_kalemleri', COUNT(*) FROM public.teklif_kalemleri WHERE firma_id IS NULL
+UNION ALL
+SELECT 'teknik_raporlar', COUNT(*) FROM public.teknik_raporlar WHERE firma_id IS NULL
+UNION ALL
+SELECT 'musteri_talepleri', COUNT(*) FROM public.musteri_talepleri WHERE firma_id IS NULL
+UNION ALL
+SELECT 'is_planlari', COUNT(*) FROM public.is_planlari WHERE firma_id IS NULL
+UNION ALL
+SELECT 'planli_isler', COUNT(*) FROM public.planli_isler WHERE firma_id IS NULL
+UNION ALL
+SELECT 'brokers', COUNT(*) FROM public.brokers WHERE firma_id IS NULL
+UNION ALL
+SELECT 'araci_cari_hareketleri', COUNT(*) FROM public.araci_cari_hareketleri WHERE firma_id IS NULL;
+```
+
+Eğer bazı tablolar yoksa yorum satırı olarak bırakılabilir.
+
+### 8.2 Şube-firma uyumsuzluğu kontrolü
+
+```sql
+SELECT 'customers' AS tablo, c.id, c.firma_id, c.sube_id, s.firma_id AS sube_firma_id
+FROM public.customers c
+JOIN public.subeler s ON s.id = c.sube_id
+WHERE c.firma_id IS DISTINCT FROM s.firma_id;
+```
+
+Benzer kontroller şu tablolar için de eklenmeli:
+
+```txt
+invoices
+teslimatlar
+teklifler
+service_forms
+musteri_talepleri
+is_planlari
+```
+
+### 8.3 Müşteri-firma uyumsuzluğu kontrolü
+
+Örneğin cihazlar:
+
+```sql
+SELECT d.id, d.customer_id, d.firma_id, c.firma_id AS customer_firma_id
+FROM public.devices d
+JOIN public.customers c ON c.id = d.customer_id
+WHERE d.firma_id IS DISTINCT FROM c.firma_id;
+```
+
+Benzer kontroller:
+
+```txt
+service_forms.customer_id
+invoices.customer_id
+teslimatlar.customer_id
+teklifler.customer_id
+```
+
+---
+
+## 9. RLS Policy Taslak Dosyası Hazırla, Ancak Çalıştırma
+
+Yeni dosya oluştur:
+
+```txt
+db/tenant_rls_policy_draft.sql
+```
+
+Bu dosya **taslak** olacak. Başında çok net uyarı olacak:
+
+```sql
+-- DİKKAT:
+-- Bu dosya taslaktır.
+-- Bu sprintte Supabase üzerinde çalıştırılmayacak.
+-- RLS aktif etmezden önce tenant_audit_checks.sql sonucu temiz olmalıdır.
+```
+
+Taslakta şu mantık hazırlanabilir:
+
+```sql
+-- ÖRNEK TASLAK
+-- ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY customers_tenant_select
+-- ON public.customers
+-- FOR SELECT
+-- USING (
+--   firma_id = public.current_firma_id()
+--   OR public.is_super_admin()
+-- );
+```
+
+Ama bu dosyada hiçbir şey otomatik uygulanmamalı. Tüm policy satırları yorum satırı olarak kalabilir.
+
+Kapsanacak tablolar:
+
+```txt
+customers
+devices
+service_forms
+invoices
+invoice_items
+payments
+teslimatlar
+teslimat_kalemleri
+teklifler
+teklif_kalemleri
+proforma_faturalar
+teknik_raporlar
+musteri_talepleri
+is_planlari
+planli_isler
+brokers
+araci_cari_hareketleri
+```
+
+---
+
+## 10. NOT NULL Hazırlık Raporu
+
+Bu sprintte `firma_id NOT NULL` yapılmayacak.
+
+Ancak hangi tabloların hazır olduğu raporlanacak.
+
+Rapor formatı:
+
+```txt
+Tablo adı
+firma_id boş kayıt sayısı
+İlişki uyumsuzluğu var mı?
+Yeni kayıt akışında firma_id yazılıyor mu?
+NOT NULL için hazır mı?
+```
 
 Örnek:
 
 ```txt
-[✓] Kaşeli çıktı oluştur
+customers
+bos_kayit: 0
+ilişki uyumsuzluğu: yok
+yeni kayıt testi: geçti
+NOT NULL hazır: evet
 ```
 
-veya:
+Eğer emin olunamıyorsa:
 
 ```txt
-Çıktı türü:
-[ Kaşeli ] [ Kaşesiz ]
+NOT NULL hazır: hayır / tekrar test gerekli
 ```
 
-Varsayılan değer firma ayarından gelecek.
+---
+
+## 11. Test Firması Görünürlük Testi Dokümantasyonu
+
+Aşağıdaki test akışı dokümante edilecek:
 
 ```txt
-Varsayılan: Kaşeli çıktı
+1. Test Yangın Firması oluşturuldu.
+2. EXOPANEL müşterisi geçici olarak test firmasına taşındı.
+3. Normal Köklü admin kullanıcısında müşteri listesinde görünmedi.
+4. Doğrudan URL erişimi güvenli şekilde engellendi.
+5. EXOPANEL tekrar Köklü firmasına alındı.
 ```
 
-Kullanıcı çıktı almadan önce bunu değiştirebilecek.
-
----
-
-## 9. PDF Route Mantığı
-
-PDF veya yazdır route’unda kaşe durumu query parametreyle yönetilebilir.
-
-Örnek:
+Bu test sonucu yeni bir dosyaya yazılabilir:
 
 ```txt
-/servis-formlari/[id]/bakim-formu/pdf?stamp=1
-/servis-formlari/[id]/bakim-formu/pdf?stamp=0
-
-/servis-formlari/[id]/takip-formu/pdf?stamp=1
-/servis-formlari/[id]/takip-formu/pdf?stamp=0
+db/tenant_visibility_test_report.md
 ```
 
-Mantık:
-
-```ts
-const withStamp =
-  searchParams?.stamp != null
-    ? searchParams.stamp === '1'
-    : companyStampSettings.stamp_enabled_by_default
-```
-
----
-
-## 10. Ortak Firma Kaşe Bileşeni
-
-Her formda ayrı ayrı kaşe kodu yazılmasın.
-
-Yeni ortak bileşen oluştur:
+İçerik:
 
 ```txt
-src/components/print/CompanyStampApproval.tsx
-```
-
-Props:
-
-```ts
-type CompanyStampApprovalProps = {
-  withStamp: boolean
-  stampUrl?: string | null
-  companyName?: string | null
-  title?: string
-  stampWidthMm?: number
-  stampHeightMm?: number
-  opacity?: number
-}
-```
-
-Örnek kullanım:
-
-```tsx
-<CompanyStampApproval
-  withStamp={withStamp}
-  stampUrl={stampSettings?.stamp_image_url}
-  companyName="KÖKLÜ YANGIN SÖNDÜRME CİHAZLARI SAN. TİC. LTD. ŞTİ."
-  title="Firma Yetkili İmza / Kaşe"
-  stampWidthMm={stampSettings?.stamp_width_mm ?? 55}
-  stampHeightMm={stampSettings?.stamp_height_mm ?? 30}
-  opacity={stampSettings?.stamp_opacity ?? 1}
-/>
+Test edilen kayıt
+Eski firma_id
+Yeni geçici firma_id
+Liste görünürlüğü sonucu
+Detay URL sonucu
+Geri alma sonucu
+Son karar
 ```
 
 ---
 
-## 11. Ortak Kaşe Ayarı Okuma Helper’ı
+## 12. Kodda Düzeltme Yapılacaksa Sınır
 
-Yeni helper oluştur:
+Bu görev esasen denetimdir. Ancak açıkça eksik tenant filtresi bulunursa küçük ve sınırlı düzeltme yapılabilir.
+
+Düzeltme yapılabilecek alanlar:
 
 ```txt
-src/lib/company-settings/get-company-stamp-settings.ts
+Eksik .eq('firma_id', firmaId)
+Eksik applyTenantScope
+Eksik firma_id insert alanı
+Eksik firma/şube/müşteri uyum kontrolü
 ```
 
-Fonksiyon:
-
-```ts
-export async function getCompanyStampSettings(subeId?: string | null) {
-  // 1. Şube bazlı aktif kaşe ara
-  // 2. Yoksa genel aktif kaşeyi getir
-  // 3. Yoksa null dön
-}
-```
-
-Dönüş tipi:
-
-```ts
-export type CompanyStampSettings = {
-  stampImageUrl: string | null
-  stampImagePath: string | null
-  enabledByDefault: boolean
-  widthMm: number
-  heightMm: number | null
-  opacity: number
-}
-```
-
----
-
-## 12. Bakım Formu Güncellemesi
-
-Bakım formunda mevcut iki imza kutusu kaldırılıp tek alan bırakılacak.
-
-Eski yapı:
+Düzeltme yapılmayacak alanlar:
 
 ```txt
-Müşteri Onay İmzası        Firma Yetkili İmza / Kaşe
+Modül iş mantığı
+Hesaplama formülleri
+Parser
+PDF tasarım
+UI redesign
+RLS
+NOT NULL
 ```
 
-Yeni yapı:
+---
+
+## 13. Kabul Kriterleri
+
+* [ ] `tenant_audit_checks.sql` oluşturuldu.
+* [ ] `tenant_rls_policy_draft.sql` oluşturuldu, ancak çalıştırılmadı.
+* [ ] `tenant_visibility_test_report.md` oluşturuldu.
+* [ ] Service role API route’ları tenant açısından denetlendi.
+* [ ] Dashboard tenant filtresi denetlendi.
+* [ ] Detay/PDF/yazdırma route’ları denetlendi.
+* [ ] `firma_id IS NULL` kayıt kontrolü temiz.
+* [ ] Şube-firma uyumsuzluk kontrolü temiz veya raporlandı.
+* [ ] Müşteri-firma uyumsuzluk kontrolü temiz veya raporlandı.
+* [ ] NOT NULL hazırlık raporu çıkarıldı.
+* [ ] RLS için hangi tablolar hazır, hangileri beklemeli raporlandı.
+* [ ] TypeScript geçti.
+* [ ] Build geçti.
+* [ ] RLS aktif edilmedi.
+* [ ] NOT NULL yapılmadı.
+
+---
+
+## 14. Testler
+
+Çalıştır:
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+Ayrıca localhost’ta hızlı kontrol:
 
 ```txt
-Firma Yetkili İmza / Kaşe
-
-[Kaşe görseli veya boş imza çizgisi]
+/customers
+/customers/[id]
+/service-forms
+/service-forms/[id]
+/teslimatlar
+/fiyat-teklifleri
+/cari-hesap
+/teknik-raporlar
+/operasyon
+/araclar
+/dashboard
 ```
 
-Bakım formu alt kısmında geniş alan olacak.
-
-Önerilen tasarım:
-
-* İnce kırmızı üst çizgi
-* Başlık: Firma Yetkili İmza / Kaşe
-* Orta kısımda kaşe görseli
-* Kaşesiz çıktıdaysa kesikli imza çizgisi
-* Altında firma unvanı
-
----
-
-## 13. Takip Formu Güncellemesi
-
-Müşteri takip formunda da aynı düzen uygulanacak.
-
-Eski yapı:
+Her sayfada:
 
 ```txt
-Müşteri Onay İmzası        Firma Yetkili İmza / Kaşe
-```
-
-Yeni yapı:
-
-```txt
-Firma Yetkili İmza / Kaşe
-
-[Kaşe görseli veya boş imza çizgisi]
-```
-
-Takip formunda müşteri onay alanı tamamen kaldırılacak.
-
----
-
-## 14. Kaşe Görseli Boyutu
-
-Varsayılan kaşe boyutu:
-
-```txt
-Genişlik: 55 mm
-Yükseklik: 30 mm
-```
-
-CSS:
-
-```css
-.companyStampImage {
-  max-width: 55mm;
-  max-height: 30mm;
-  object-fit: contain;
-  opacity: var(--stamp-opacity, 1);
-}
-```
-
-Ekran önizleme için:
-
-```css
-.companyStampImagePreview {
-  max-width: 240px;
-  max-height: 140px;
-  object-fit: contain;
-}
+Liste geliyor mu?
+Detay açılıyor mu?
+Console hatası var mı?
+Tenant filtresi nedeniyle yanlış boş ekran var mı?
 ```
 
 ---
 
-## 15. Kaşe Yoksa Davranış
-
-Kaşe yüklü değilse ve kullanıcı kaşeli çıktı seçerse uyarı göster:
-
-```txt
-Firma kaşe/imza görseli yüklenmedi. Belge kaşesiz oluşturulacak.
-```
-
-PDF bozulmamalı.
-
-Bu durumda firma onay alanı boş imza çizgisiyle görünmeli.
-
----
-
-## 16. Kaşe Silme
-
-Kaşe silme butonu olacak.
-
-Silme sırasında kullanıcıya onay sor:
-
-```txt
-Yüklü kaşe/imza görselini silmek istediğinize emin misiniz?
-```
-
-Silme sonrası:
-
-* DB’de kaşe URL/path null yapılır.
-* Storage dosyası mümkünse silinir.
-* Çıktılar kaşesiz üretilir.
-* Varsayılan kaşeli çıktı açık olsa bile kaşe olmadığı için boş alan basılır.
-
----
-
-## 17. Kaşe Değiştirme
-
-Yeni kaşe yüklendiğinde:
-
-* Eski kaşe pasifleştirilebilir veya silinebilir.
-* Yeni kaşe aktif yapılır.
-* Önizleme anında güncellenir.
-* Sonraki formlarda yeni kaşe kullanılır.
-
----
-
-## 18. Yetki Kontrolü
-
-Kaşe görselini sadece yetkili kullanıcı değiştirebilmeli.
-
-Yetki önerisi:
-
-```txt
-settings.company_stamp.update
-```
-
-Kurallar:
-
-* Admin değiştirebilir.
-* Yönetici değiştirebilir.
-* Teknik personel kaşe yükleyemez.
-* Teknik personel sadece çıktı alırken kaşeli/kaşesiz seçebilir.
-
----
-
-## 19. Etkilenecek Dosyalar
-
-Projede şu dosyalar aranmalı:
-
-```txt
-src/lib/service-form-pdf.tsx
-src/lib/bakim-form-pdf.tsx
-src/lib/takip-form-pdf.tsx
-src/components/service-forms/*
-src/components/print/*
-src/app/(dashboard)/servis-formlari/[id]/yazdir/page.tsx
-src/app/(dashboard)/servis-formlari/[id]/pdf/route.ts
-src/app/(dashboard)/musteriler/[id]/takip-formu/*
-src/app/(dashboard)/cihazlar/*
-```
-
-Gerçek dosya adları projeden bulunmalı.
-
----
-
-## 20. Form Önizleme Ekranı
-
-Bakım/takip formu görüntüleme ekranında üstte çıktı ayarları olabilir:
-
-```txt
-Çıktı Ayarları
-[✓] Firma kaşesi ile oluştur
-[PDF İndir] [Yazdır]
-```
-
-Toggle değişince önizleme anında değişmeli.
-
----
-
-## 21. PDF Kalitesi
-
-Kaşe görseli PDF çıktısında net görünmeli.
-
-Kontrol edilecekler:
-
-* Public URL erişimi
-* Private storage ise signed URL
-* Server-side PDF üretiminde görsel erişimi
-* Base64 fallback
-* Görsel oranının bozulmaması
-* Türkçe karakterlerin bozulmaması
-
----
-
-## 22. Kabul Kriterleri
-
-### Bakım Formu
-
-* [ ] Müşteri Onay İmzası kaldırıldı.
-* [ ] Firma Yetkili İmza / Kaşe alanı kaldı.
-* [ ] Kaşeli çıktı seçildiğinde kaşe görseli görünüyor.
-* [ ] Kaşesiz çıktı seçildiğinde kaşe görünmüyor.
-* [ ] Boş imza çizgisi düzgün görünüyor.
-
-### Takip Formu
-
-* [ ] Müşteri Onay İmzası kaldırıldı.
-* [ ] Firma Yetkili İmza / Kaşe alanı kaldı.
-* [ ] Kaşe görseli otomatik basılıyor.
-* [ ] Kaşesiz çıktı alınabiliyor.
-
-### Kaşe Yönetimi
-
-* [ ] Kaşe/imza yükleme alanı var.
-* [ ] PNG/JPG/WEBP yüklenebiliyor.
-* [ ] Yüklenen kaşe önizleniyor.
-* [ ] Kaşe değiştirilebiliyor.
-* [ ] Kaşe silinebiliyor.
-* [ ] Varsayılan kaşeli/kaşesiz çıktı ayarı var.
-
-### Teknik
-
-* [ ] Ortak CompanyStampApproval bileşeni oluşturuldu.
-* [ ] Ortak getCompanyStampSettings helper’ı oluşturuldu.
-* [ ] PDF ve yazdırma aynı ayarı kullanıyor.
-* [ ] Storage bağlantısı çalışıyor.
-* [ ] Yetki kontrolü var.
-* [ ] TypeScript geçiyor.
-* [ ] Build geçiyor.
-
----
-
-## 23. Test Senaryoları
-
-### Test 1 — Kaşe yükle
-
-1. Yönetim > Firma Ayarları > Kaşe ve İmza Ayarları aç.
-2. PNG kaşe görseli yükle.
-3. Kaydet.
-
-Beklenen:
-
-* Kaşe önizlemede görünür.
-* DB’ye URL/path yazılır.
-
-### Test 2 — Bakım formu kaşeli çıktı
-
-1. Bir bakım formu aç.
-2. Kaşeli çıktı toggle açık olsun.
-3. PDF indir.
-
-Beklenen:
-
-* Müşteri Onay İmzası yok.
-* Firma Yetkili İmza / Kaşe alanında kaşe var.
-
-### Test 3 — Bakım formu kaşesiz çıktı
-
-1. Aynı bakım formunda kaşeli çıktı toggle kapat.
-2. PDF indir.
-
-Beklenen:
-
-* Kaşe görünmez.
-* Firma onay alanında boş imza çizgisi görünür.
-
-### Test 4 — Takip formu
-
-1. Takip formu oluştur.
-2. Kaşeli PDF indir.
-
-Beklenen:
-
-* Müşteri Onay İmzası yok.
-* Firma kaşesi görünüyor.
-
-### Test 5 — Kaşe silme
-
-1. Firma ayarlarından kaşeyi sil.
-2. Bakım formu PDF indir.
-
-Beklenen:
-
-* PDF bozulmaz.
-* Firma onay alanı boş görünür.
-
----
-
-## 24. Dokunulmayacak Alanlar
-
-Bu görevde şunlara dokunma:
-
-* Fatura parser
-* Cari hesap
-* Teknik hesap rapor formülleri
-* Teslimatlar
-* Operasyon talepleri
-* İş planları
-* Müşteri import
-* Cihaz SKT hesapları
-* Servis formu kayıt mantığı
-
-Sadece:
-
-* Bakım formu çıktısı
-* Takip formu çıktısı
-* Servis formu yazdır/PDF çıktılarındaki imza alanları
-* Firma kaşe/imza ayarı
-* Kaşe upload/storage
-* Kaşeli/kaşesiz çıktı toggle
-* Ortak firma kaşe bileşeni
-
----
-
-## 25. Görev Sonu Raporu
+## 15. Görev Sonu Raporu
 
 İş bitince şunları yaz:
 
-* Müşteri Onay İmzası hangi formlardan kaldırıldı?
-* Firma Yetkili İmza / Kaşe alanı nasıl güncellendi?
-* Kaşe yükleme alanı hangi sayfaya eklendi?
-* Kaşe hangi storage bucket/path altında tutuluyor?
-* Kaşe ayarları hangi tabloda/kolonlarda tutuluyor?
-* Kaşeli/kaşesiz çıktı toggle nasıl çalışıyor?
-* Bakım formunda test edildi mi?
-* Takip formunda test edildi mi?
-* PDF çıktıda kaşe net görünüyor mu?
-* Hangi dosyalar değişti?
-* Migration gerekiyorsa hangi SQL çalıştırılmalı?
-* TypeScript sonucu
-* Build sonucu
-
-````
-
-Claude Code için kısa prompt:
-
-```text
-GOREV.md dosyasını oku ve sadece bu görevi uygula.
-
+```txt
+Tenant audit sonucunda hangi dosyalar incelendi?
+Eksik tenant filtresi bulundu mu?
+Bulunduysa hangi dosyalarda düzeltildi?
+Service role kullanılan route’larda güvenlik durumu nedir?
+Dashboard tenant filtresi durumu nedir?
+PDF/yazdırma route’ları güvenli mi?
+tenant_audit_checks.sql sonucu nedir?
+tenant_rls_policy_draft.sql oluşturuldu mu?
+RLS bu sprintte aktif edildi mi? Cevap hayır olmalı.
+NOT NULL bu sprintte yapıldı mı? Cevap hayır olmalı.
+Hangi tablolar RLS için hazır görünüyor?
+Hangi tablolar ek test istiyor?
+TypeScript sonucu
+Build sonucu
+```
