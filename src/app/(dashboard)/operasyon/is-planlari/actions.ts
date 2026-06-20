@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { resolveBranchFilter } from '@/lib/auth/branch-scope'
+import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export type IsPlaniFormState = {
   error?: string
@@ -94,6 +95,7 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
   const userId = await currentUserId()
   const svc = createServiceClient()
   const access = await getCurrentAccess()
+  const firmaId = await requireCurrentFirmaId()
 
   const baslik = text(formData, 'baslik')
   const customerId = text(formData, 'customer_id')
@@ -119,10 +121,13 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
     return { error: 'Lütfen bu kaydın ait olduğu şubeyi seçin.' }
   }
 
+  await assertBranchBelongsToFirma(subeId, firmaId)
+  await assertCustomerBelongsToFirma(customerId, firmaId)
+
   const { data: sourceRequest } = sourceRequestId
     ? await svc
       .from('musteri_talepleri')
-      .select('id, sube_id')
+      .select('id, sube_id, firma_id')
       .eq('id', sourceRequestId)
       .maybeSingle()
     : { data: null }
@@ -134,8 +139,12 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
     return { error: 'Kaynak talep ile iş planı şubesi uyumlu değil.' }
   }
 
+  if (sourceRequest?.firma_id && sourceRequest.firma_id !== firmaId) {
+    return { error: 'Kaynak talep kullanıcının firmasına ait değil.' }
+  }
+
   const { data: customer } = customerId
-    ? await svc.from('customers').select('full_name, sube_id').eq('id', customerId).single()
+    ? await svc.from('customers').select('full_name, sube_id, firma_id').eq('id', customerId).single()
     : { data: null }
 
   if (customerId && !customer) {
@@ -169,6 +178,7 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
     notlar,
     created_by: userId,
     updated_by: userId,
+    firma_id: firmaId,
   }
 
   let { data: plan, error } = await svc
@@ -209,6 +219,7 @@ export async function createIsPlaniAction(_prevState: IsPlaniFormState, formData
       notlar,
       created_by: userId,
       updated_by: userId,
+      firma_id: firmaId,
     }))
     const { error: jobsError } = await svc.from('planli_isler').insert(rows)
     if (jobsError) return { error: `Planlı işler oluşturulamadı: ${jobsError.message}` }

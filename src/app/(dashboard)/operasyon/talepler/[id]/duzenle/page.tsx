@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentAccess, type CurrentAccess } from '@/lib/auth/authorization'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import OperationShell from '../../../_components/OperationShell'
 import TalepDuzenleForm from './TalepDuzenleForm'
 
@@ -15,11 +16,13 @@ export default async function TalepDuzenlePage({ params }: { params: Promise<{ i
   const { id } = await params
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
-  const { data: talep, error } = await supabase
+  const tenantAccess = await getCurrentTenantAccessFromSession()
+  let talepQuery = supabase
     .from('musteri_talepleri')
     .select('id, baslik, aciklama, kategori, oncelik, durum, hedef_tarih, kaynak, notlar, sube_id')
     .eq('id', id)
-    .maybeSingle()
+  talepQuery = applyTenantScope(talepQuery, tenantAccess)
+  const { data: talep, error } = await talepQuery.maybeSingle()
 
   if (error) throw new Error(`Talep düzenleme bilgisi alınamadı: ${error.message}`)
   if (!talep || !canAccessTalep(access, talep.sube_id)) notFound()

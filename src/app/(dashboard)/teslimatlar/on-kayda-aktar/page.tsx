@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { OnKaydaAktarClient } from './OnKaydaAktarClient'
 
 type TeslimatJoin = {
@@ -16,19 +17,20 @@ function kalemMarker(notlar: string | null | undefined) {
 
 export default async function OnKaydaAktarPage() {
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const [{ data: kalemler }, { data: onKayitlar }] = await Promise.all([
-    supabase
+    applyTenantScope(supabase
       .from('teslimat_kalemleri')
       .select('*, teslimatlar(id, teslimat_no, teslimat_tarihi, durum, customers(full_name))')
       .eq('faturalanir_mi', true)
       .gt('toplam_tutar', 0)
       .order('created_at', { ascending: false })
-      .limit(300),
-    supabase
+      .limit(300), tenantAccess),
+    applyTenantScope(supabase
       .from('on_kayitlar')
       .select('id, aciklama, notlar')
       .ilike('notlar', '%Teslimat kalemi:%')
-      .limit(1000),
+      .limit(1000), tenantAccess),
   ])
 
   const aktarilanKalemler = new Set((onKayitlar ?? []).map(k => kalemMarker(k.notlar)).filter(Boolean))

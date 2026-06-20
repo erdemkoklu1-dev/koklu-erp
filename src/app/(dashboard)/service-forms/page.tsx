@@ -2,14 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatTRDate } from '@/lib/finance/formatters'
 import PrintButton from '@/components/PrintButton'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function ServiceFormsPage() {
   const supabase = await createClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data: forms } = await supabase
+  let formsQuery = supabase
     .from('service_forms')
     .select('*, customers(full_name)')
     .order('created_at', { ascending: false })
+  formsQuery = applyTenantScope(formsQuery, tenantAccess)
+  const { data: forms } = await formsQuery
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-700">

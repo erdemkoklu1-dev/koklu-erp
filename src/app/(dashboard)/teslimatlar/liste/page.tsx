@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { TeslimatListeClient, type TeslimatRow } from './TeslimatListeClient'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { TESLIMAT_CANCELLED_STATUS_ALIASES, normalizeTeslimatStatus, quotedTeslimatStatuses } from '@/lib/teslimat-status'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type RawTeslimat = {
   id: string
@@ -19,7 +20,9 @@ export default async function TeslimatListePage({ searchParams }: { searchParams
   const params = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   function scope(query: any) {
+    query = applyTenantScope(query, tenantAccess)
     if (!access || access.isAdmin) return query
     if (access.branchIds.length === 0) return query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
     return query.in('sube_id', access.branchIds)
@@ -39,14 +42,14 @@ export default async function TeslimatListePage({ searchParams }: { searchParams
 
   const [{ data: rows }, { data: subeler }] = await Promise.all([
     teslimatlarQuery,
-    supabase.from('subeler').select('id, ad').order('ad'),
+    applyTenantScope(supabase.from('subeler').select('id, ad').order('ad'), tenantAccess),
   ])
 
   // Kalem sayısını ayrı sorguda çek
   const rawRows = (rows ?? []) as RawTeslimat[]
   const ids = rawRows.map(r => r.id)
   const { data: kalemRows } = ids.length > 0
-    ? await supabase.from('teslimat_kalemleri').select('teslimat_id').in('teslimat_id', ids)
+    ? await applyTenantScope(supabase.from('teslimat_kalemleri').select('teslimat_id').in('teslimat_id', ids), tenantAccess)
     : { data: [] }
 
   const kalemCountMap = new Map<string, number>()

@@ -4,6 +4,7 @@ import { matchExistingSupplier } from '@/lib/gelen-fatura-supplier-matching'
 import { isOwnCompanySupplierName } from '@/lib/gelen-fatura-parser-v2/supplierClassifier'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { EMPTY_BRANCH_ID, resolveBranchFilter } from '@/lib/auth/branch-scope'
+import { assertBranchBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export type GelenPdfItem = {
   urun_adi: string
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const firmaId = await requireCurrentFirmaId()
     const access = await getCurrentAccess()
 
     function incomingBranchId(requested?: string | null) {
@@ -63,6 +65,7 @@ export async function POST(req: NextRequest) {
       .from('invoices')
       .select('invoice_number')
       .eq('invoice_type', 'alis')
+      .eq('firma_id', firmaId)
     const existingNos = new Set((existingInvoices ?? []).map(i => normNo(i.invoice_number)))
 
     // Mevcut tedarikçi isimleri (alış faturaları + manuel tedarikçiler)
@@ -146,6 +149,8 @@ export async function POST(req: NextRequest) {
           notesParts.push(ibanStr)
         }
 
+        const subeId = incomingBranchId(row.sube_id)
+        await assertBranchBelongsToFirma(subeId, firmaId)
         const { data: inv, error: invErr } = await supabase
           .from('invoices')
           .insert({
@@ -167,7 +172,8 @@ export async function POST(req: NextRequest) {
             status:         'kesildi',
             description:    `PDF Gelen Fatura${row.senaryo ? `: ${row.senaryo}` : ''}`,
             notes:          notesParts.join(' | ') || null,
-            sube_id:        incomingBranchId(row.sube_id),
+            sube_id:        subeId,
+            firma_id:       firmaId,
           })
           .select('id')
           .single()
@@ -192,6 +198,7 @@ export async function POST(req: NextRequest) {
             discount_amount: k.iskonto_tutari || 0,
             kdv_rate:        k.kdv_orani     || 20,
             notes:           null,
+            firma_id:        firmaId,
           }))
 
           const { error: itemErr } = await supabase.from('invoice_items').insert(itemRows)

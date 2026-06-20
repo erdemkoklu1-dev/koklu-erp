@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { deleteTeklifAction } from './actions'
 
 export function TeklifSilButton({ id, teklifNo, className }: { id: string; teklifNo: string; className?: string }) {
   const [modal, setModal]       = useState(false)
@@ -13,19 +13,9 @@ export function TeklifSilButton({ id, teklifNo, className }: { id: string; tekli
   async function handleSil() {
     setSiliniyor(true)
     setError('')
-    const supabase = createClient()
-    const { error: kalemErr } = await supabase.from('teklif_kalemleri').delete().eq('teklif_id', id)
-    if (kalemErr) {
-      setError('Teklif kalemleri silinemedi. Yetkinizi kontrol edin veya yoneticiye basvurun.')
-      setSiliniyor(false)
-      return
-    }
-
-    const { error: teklifErr } = await supabase.from('teklifler').delete().eq('id', id)
-    if (teklifErr) {
-      setError(teklifErr.code === '23503'
-        ? 'Bu teklif bagli kayitlar nedeniyle silinemiyor.'
-        : 'Teklif silinemedi. Yetkinizi kontrol edin veya yoneticiye basvurun.')
+    const result = await deleteTeklifAction(id)
+    if (!result.ok) {
+      setError(result.message)
       setSiliniyor(false)
       return
     }

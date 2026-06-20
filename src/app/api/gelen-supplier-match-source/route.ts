@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export async function GET() {
   const supabase = createServiceClient()
+  const firmaId = await requireCurrentFirmaId()
 
   const invoiceQuery = supabase
     .from('invoices')
     .select('id, invoice_number, supplier_name, supplier_tax_no, invoice_date, total_amount')
     .eq('invoice_type', 'alis')
+    .eq('firma_id', firmaId)
     .not('supplier_name', 'is', null)
 
   const manualSupplierQuery = supabase

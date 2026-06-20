@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { resolveBranchFilter } from '@/lib/auth/branch-scope'
+import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, assertDevicesBelongToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 import { normalizeTalepStatus } from './status'
 
 export type TalepFormState = {
@@ -63,6 +64,7 @@ export async function createTalepAction(_prevState: TalepFormState, formData: Fo
   const userId = await currentUserId()
   const svc = createServiceClient()
   const access = await getCurrentAccess()
+  const firmaId = await requireCurrentFirmaId()
 
   const customerId = text(formData, 'customer_id')
   const manualCustomerName = text(formData, 'manual_customer_name')
@@ -81,9 +83,13 @@ export async function createTalepAction(_prevState: TalepFormState, formData: Fo
     return { error: 'Lütfen bu kaydın ait olduğu şubeyi seçin.' }
   }
 
+  await assertBranchBelongsToFirma(subeId, firmaId)
+  await assertCustomerBelongsToFirma(customerId, firmaId)
+  await assertDevicesBelongToFirma([cihazId], firmaId)
+
   const [{ data: customer }, { data: cihaz }] = await Promise.all([
     customerId
-      ? svc.from('customers').select('full_name, sube_id').eq('id', customerId).single()
+      ? svc.from('customers').select('full_name, sube_id, firma_id').eq('id', customerId).single()
       : Promise.resolve({ data: null }),
     cihazId
       ? svc.from('devices').select('custom_device_name, capacity, serial_number, device_types(name)').eq('id', cihazId).single()
@@ -118,6 +124,7 @@ export async function createTalepAction(_prevState: TalepFormState, formData: Fo
       durum: dbTalepDurum(text(formData, 'durum')),
       hedef_tarih: text(formData, 'hedef_tarih'),
       sube_id: subeId,
+      firma_id: firmaId,
       sorumlu_personel_id: text(formData, 'sorumlu_personel_id'),
       kaynak: text(formData, 'kaynak') ?? 'Telefon',
       notlar: text(formData, 'notlar'),

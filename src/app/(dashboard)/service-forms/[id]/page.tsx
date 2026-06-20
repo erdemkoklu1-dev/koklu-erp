@@ -2,16 +2,19 @@ import DeleteButton from './DeleteButton'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function ServiceFormDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data: form } = await supabase
+  let formQuery = supabase
     .from('service_forms')
     .select('*, customers(full_name, phone, address, tax_number)')
     .eq('id', id)
-    .single()
+  formQuery = applyTenantScope(formQuery, tenantAccess)
+  const { data: form } = await formQuery.maybeSingle()
 
   if (!form) notFound()
 

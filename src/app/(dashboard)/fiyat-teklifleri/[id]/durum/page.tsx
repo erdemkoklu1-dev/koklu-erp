@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import { getTeklifDurumAction, updateTeklifDurumAction } from '../../actions'
 
 type Durum = 'taslak' | 'gonderildi' | 'bekliyor' | 'kazanildi' | 'kaybedildi' | 'iptal'
 
@@ -19,7 +19,6 @@ const DURUM_OPTIONS: { value: Durum; label: string; className: string }[] = [
 export default function DurumGuncellemePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const supabase = createClient()
 
   const [mevcutDurum, setMevcutDurum] = useState<Durum>('taslak')
   const [secilenDurum, setSecilenDurum] = useState<Durum>('taslak')
@@ -28,21 +27,32 @@ export default function DurumGuncellemePage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase.from('teklifler').select('durum, teklif_no').eq('id', id).single()
-      .then(({ data }: { data: any }) => {
-        if (data) {
-          setMevcutDurum(data.durum as Durum)
-          setSecilenDurum(data.durum as Durum)
-          setTeklifNo(data.teklif_no)
+    if (!id) {
+      setError('Teklif bulunamadı.')
+      return
+    }
+    getTeklifDurumAction(id)
+      .then(result => {
+        if (!result.ok) {
+          setError(result.message)
+          return
         }
+        setMevcutDurum(result.teklif.durum as Durum)
+        setSecilenDurum(result.teklif.durum as Durum)
+        setTeklifNo(result.teklif.teklif_no)
       })
   }, [id])
 
   async function handleSave() {
     setSaving(true)
     setError('')
-    const { error: err } = await supabase.from('teklifler').update({ durum: secilenDurum }).eq('id', id)
-    if (err) { setError(err.message); setSaving(false); return }
+    if (!id) {
+      setError('Teklif bulunamadı.')
+      setSaving(false)
+      return
+    }
+    const result = await updateTeklifDurumAction(id, secilenDurum)
+    if (!result.ok) { setError(result.message); setSaving(false); return }
     router.push(`/fiyat-teklifleri/${id}`)
   }
 

@@ -1,16 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import EditServiceFormClient from './EditServiceFormClient'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function EditServiceFormPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data: sf } = await supabase
+  let formQuery = supabase
     .from('service_forms')
     .select('*, customers(full_name)')
     .eq('id', id)
-    .single()
+  formQuery = applyTenantScope(formQuery, tenantAccess)
+  const { data: sf } = await formQuery.maybeSingle()
 
   if (!sf) notFound()
 

@@ -39,18 +39,21 @@ export default function OdemeEklePage() {
     if (!form.amount || parseFloat(form.amount) <= 0) { setError('Geçerli bir tutar girin.'); return }
     setLoading(true); setError('')
 
-    const { error: payErr } = await supabase.from('payments').insert([{
-      invoice_id: id,
-      direction: 'tahsilat',
-      method: form.method,
-      amount: parseFloat(form.amount),
-      payment_date: form.payment_date,
-      reference_no: form.reference_no || null,
-      notes: form.notes || null,
-    }])
-
-    if (payErr) {
-      setError(payErr.message); setLoading(false); return
+    const res = await fetch('/api/odeme-kaydet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoice_id: id,
+        method: form.method,
+        amount: parseFloat(form.amount),
+        payment_date: form.payment_date,
+        reference_no: form.reference_no || null,
+        notes: form.notes || null,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data?.error ?? `HTTP ${res.status}`); setLoading(false); return
     }
     router.push(`/cari-hesap/faturalar/${id}`)
   }

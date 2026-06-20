@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import PrintActions from '@/app/(dashboard)/service-forms/[id]/PrintActions'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 // ─── Şirket bilgileri (PDF'de sabit) ─────────────────────────────
 const SIRKET = {
@@ -64,9 +65,10 @@ function fmtN(n: number, para: string) {
 export default async function ProformaPdfPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const [{ data: proforma }, { data: kalemler }] = await Promise.all([
-    supabase.from('proforma_faturalar').select('*').eq('id', id).single(),
+    applyTenantScope(supabase.from('proforma_faturalar').select('*').eq('id', id), tenantAccess).maybeSingle(),
     supabase.from('proforma_fatura_kalemleri').select('*').eq('proforma_id', id).order('sira_no'),
   ])
 

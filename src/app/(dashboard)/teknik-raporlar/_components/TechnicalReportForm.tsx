@@ -555,12 +555,13 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
     if (!manualCustomer.full_name) throw new Error('Manuel müşteri adı / firma unvanı zorunludur.')
 
     if (boolValue(formData.get('manual_add_customer'))) {
-      const { data, error } = await supabase
-        .from('customers')
-        .insert([manualCustomer])
-        .select('id')
-        .single()
-      if (error) throw new Error(`Müşteri listesine eklenemedi: ${error.message}`)
+      const res = await fetch('/api/tenant-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'customers', payload: manualCustomer }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.id) throw new Error(`Müşteri listesine eklenemedi: ${data?.error ?? `HTTP ${res.status}`}`)
       return {
         customerId: data.id as string,
         customerName: manualCustomer.full_name,
@@ -641,10 +642,18 @@ export default function TechnicalReportForm({ customers, subeler, personeller, s
         ...(report ? {} : { created_by: auth.user?.id ?? null }),
       }
       payloadForLog = payload
-      const query = report
-        ? supabase.from('teknik_raporlar').update(payload).eq('id', report.id).select('id').single()
-        : supabase.from('teknik_raporlar').insert(payload).select('id').single()
-      const { data: saved, error } = await query
+      const savedResult = report
+        ? await supabase.from('teknik_raporlar').update(payload).eq('id', report.id).select('id').single()
+        : await fetch('/api/tenant-create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'teknik_raporlar', payload }),
+          }).then(async res => {
+            const data = await res.json()
+            if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`)
+            return { data, error: null }
+          })
+      const { data: saved, error } = savedResult
       if (error) throw new Error(supabaseErrorMessage(report ? 'update' : 'insert', error))
       if (!saved?.id) throw new Error('Teknik rapor kaydedildi ancak kayıt ID bilgisi alınamadı.')
       router.push(submitIntent === 'print' ? `/teknik-raporlar/${saved.id}/yazdir` : `/teknik-raporlar/${saved.id}`)

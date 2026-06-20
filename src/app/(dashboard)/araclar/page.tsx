@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import { formatCurrency, formatTRDate } from '@/lib/finance/formatters'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type CariRow = {
   araci_id: string
@@ -31,27 +32,28 @@ export default async function AraclarPage({
 }) {
   const params = await searchParams
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const [{ data: brokers }, { data: subeler }] = await Promise.all([
-    supabase
+    applyTenantScope(supabase
       .from('brokers')
       .select('*')
       .eq('is_active', true)
-      .order('full_name'),
-    supabase
+      .order('full_name'), tenantAccess),
+    applyTenantScope(supabase
       .from('subeler')
       .select('id, ad')
       .eq('aktif', true)
-      .order('ad'),
+      .order('ad'), tenantAccess),
   ])
 
   const brokerIds = (brokers ?? []).map(b => b.id)
   const [{ data: movements }, { data: commissions }] = brokerIds.length > 0
     ? await Promise.all([
-        supabase
+        applyTenantScope(supabase
           .from('araci_cari_hareketleri')
           .select('araci_id, hareket_tarihi, vade_tarihi, islem_yonu, tutar, durum, sube_id')
-          .in('araci_id', brokerIds),
+          .in('araci_id', brokerIds), tenantAccess),
         supabase
           .from('invoice_brokers')
           .select('broker_id, id')

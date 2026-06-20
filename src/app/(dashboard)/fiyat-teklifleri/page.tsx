@@ -4,6 +4,7 @@ import { formatTRDate } from '@/lib/finance/formatters'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
 import { TeklifSilButton } from './TeklifSilButton'
 import PrintButton from '@/components/PrintButton'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
   taslak:     { label: 'Taslak',     className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
@@ -21,6 +22,28 @@ const DURUM_ALIASES: Record<string, string[]> = {
   kaybedildi: ['kaybedildi', 'Kaybedildi'],
   iptal:      ['iptal', 'İptal', 'Iptal'],
   taslak:     ['taslak', 'Taslak'],
+}
+
+function tenantScope<T>(query: T, tenantAccess: Awaited<ReturnType<typeof getCurrentTenantAccessFromSession>>) {
+  return applyTenantScope(query as any, tenantAccess) as any
+}
+
+type TeklifListRow = {
+  id: string
+  teklif_no: string
+  tarih: string | null
+  musteri_adi: string | null
+  musteri_sehir: string | null
+  genel_toplam: number | null
+  para_birimi: string
+  kdv_durumu: string | null
+  durum: string
+  customers?: { full_name?: string | null } | { full_name?: string | null }[] | null
+}
+
+type TeklifOzetRow = {
+  durum: string
+  genel_toplam: number | null
 }
 
 function normalizeDurum(durum: string | null | undefined) {
@@ -58,11 +81,12 @@ export default async function FiyatTeklifleriPage({
 }) {
   const { durum, from, to, q, sehir } = await searchParams
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  let query = supabase
+  let query = tenantScope(supabase
     .from('teklifler')
     .select('id, teklif_no, tarih, musteri_adi, musteri_sehir, genel_toplam, para_birimi, kdv_durumu, durum, customers(full_name)')
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }), tenantAccess)
 
   const durumAliases = getDurumAliases(durum)
   if (durumAliases) query = query.in('durum', durumAliases)
@@ -71,12 +95,12 @@ export default async function FiyatTeklifleriPage({
   if (q)    query = query.ilike('musteri_adi', `%${q}%`)
   if (sehir) query = query.eq('musteri_sehir', sehir)
 
-  const { data: teklifler } = await query
+  const { data: teklifler } = await query as { data: TeklifListRow[] | null }
 
   // Özet istatistikler
-  const { data: ozet } = await supabase
+  const { data: ozet } = await tenantScope(supabase
     .from('teklifler')
-    .select('durum, genel_toplam')
+    .select('durum, genel_toplam'), tenantAccess) as { data: TeklifOzetRow[] | null }
 
   const toplam    = (ozet ?? []).length
   const kazanilan = (ozet ?? []).filter(t => getDurumAliases('kazanildi')?.includes(t.durum)).length

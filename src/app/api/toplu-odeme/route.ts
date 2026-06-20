@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,12 +11,26 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const firmaId = await requireCurrentFirmaId()
     let eklendi = 0
     let toplam = 0
     const hatalar: string[] = []
 
     for (const p of payments) {
       if (!p.invoice_id || !p.amount || p.amount <= 0) continue
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('id, firma_id')
+        .eq('id', p.invoice_id)
+        .maybeSingle()
+      if (invoiceError || !invoice) {
+        hatalar.push(`${p.invoice_id}: Fatura bulunamadı`)
+        continue
+      }
+      if (invoice.firma_id !== firmaId) {
+        hatalar.push(`${p.invoice_id}: Fatura kullanıcının firmasına ait değil`)
+        continue
+      }
 
       const { error } = await supabase.from('payments').insert({
         invoice_id:  p.invoice_id,
@@ -25,6 +40,7 @@ export async function POST(req: NextRequest) {
         payment_date,
         reference_no: reference_no ?? null,
         notes:        notes ?? null,
+        firma_id:     firmaId,
       })
 
       if (error) {

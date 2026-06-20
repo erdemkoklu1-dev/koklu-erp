@@ -94,7 +94,10 @@ export default function YeniOnKayitPage() {
       }))
 
       const tek = kalemlerData.length === 1
-      const { error: dbErr } = await supabase.from('on_kayitlar').insert({
+      const res = await fetch('/api/tenant-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'on_kayitlar', payload: {
         customer_id:  selectedCustomer.id,
         kayit_tarihi: kayitTarihi,
         aciklama:     tek ? kalemlerData[0].aciklama : kalemlerData.map(k => k.aciklama).join(', '),
@@ -104,8 +107,10 @@ export default function YeniOnKayitPage() {
         toplam_tutar: toplamTutar,
         kalemler:     kalemlerData,
         durum:        'beklemede',
+      } }),
       })
-      if (dbErr) throw new Error(dbErr.message)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`)
 
       router.push('/cari-hesap/on-kayitlar')
     } catch (e: any) {

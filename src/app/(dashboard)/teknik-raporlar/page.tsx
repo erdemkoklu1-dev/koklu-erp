@@ -6,6 +6,7 @@ import { REPORT_TYPE_LABELS, type TechnicalReportRow, type TechnicalReportType }
 import TechnicalReportTabs from './_components/TechnicalReportTabs'
 import TechnicalReportDeleteButton from './_components/TechnicalReportDeleteButton'
 import { allowedBranchFilter, getCurrentAccess } from '@/lib/auth/authorization'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type SearchParams = Promise<{ q?: string; tur?: TechnicalReportType; sube?: string; durum?: string; from?: string; to?: string }>
 
@@ -13,11 +14,13 @@ export default async function TechnicalReportsPage({ searchParams }: { searchPar
   const params = await searchParams
   const supabase = await createClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const effectiveSube = access ? allowedBranchFilter(access, params.sube) : params.sube
-  let query = supabase
+  // Önce firma (tenant) filtresi, ardından şube filtresi uygulanır.
+  let query = applyTenantScope(supabase
     .from('teknik_raporlar')
     .select('*, customers(full_name), subeler(ad), personeller(ad, soyad)')
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }), tenantAccess)
 
   if (params.tur) query = query.eq('rapor_turu', params.tur)
   if (effectiveSube === '__none__') query = query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])

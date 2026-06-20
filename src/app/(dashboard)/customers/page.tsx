@@ -4,6 +4,7 @@ import CustomersClient, { type CustomerRow, type ControlStatus } from './Custome
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
 import PrintButton from '@/components/PrintButton'
 import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 function resolveCityInfo(il: string | null, address: string | null): {
   city: 'Erzincan' | 'İstanbul' | 'Diğer'
@@ -82,12 +83,14 @@ function computeControlStatus(devices: any[]): { status: ControlStatus; daysUnti
 export default async function CustomersPage() {
   const supabase = await createClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   let customerQuery = supabase
     .from('customers')
     .select('*')
     .eq('is_active', true)
     .order('full_name')
+  customerQuery = applyTenantScope(customerQuery, tenantAccess)
 
   if (access && !access.isAdmin) {
     customerQuery = access.branchIds.length > 0
@@ -97,10 +100,12 @@ export default async function CustomersPage() {
 
   const { data: customers } = await customerQuery
 
-  const { data: devices } = await supabase
+  let deviceQuery = supabase
     .from('devices')
     .select('customer_id, control1_date, control2_date, control3_date, expiry_date')
     .eq('is_active', true)
+  deviceQuery = applyTenantScope(deviceQuery, tenantAccess)
+  const { data: devices } = await deviceQuery
 
   // Group devices by customer_id
   const devicesByCustomer = new Map<string, any[]>()

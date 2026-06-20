@@ -5,6 +5,7 @@ import GidenFiltresi from './GidenFiltresi'
 import PrintButton from '@/components/PrintButton'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 function computeDateRange(period?: string, from?: string, to?: string) {
   const today = new Date()
@@ -37,6 +38,7 @@ export default async function GidenFaturalarPage({
   const { q, period, from: fromParam, to: toParam, sort, durum, sehir, sube } = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const today = new Date().toISOString().split('T')[0]
 
   const { from: dateFrom, to: dateTo } = computeDateRange(period, fromParam, toParam)
@@ -45,20 +47,20 @@ export default async function GidenFaturalarPage({
     : sort === 'amount_desc' || sort === 'amount_asc' ? 'total_amount'
     : 'invoice_date'
   const dbAsc = sort === 'date_asc' || sort === 'amount_asc'
-  const { data: branchRows } = await supabase
+  const { data: branchRows } = await applyTenantScope(supabase
     .from('subeler')
     .select('id, ad')
     .eq('aktif', true)
-    .order('ad')
+    .order('ad'), tenantAccess)
   const visibleBranches = filterVisibleBranches((branchRows ?? []) as { id: string; ad: string }[], access)
   const lockedBranchId = getLockedBranchId(access)
 
-  let query = supabase
+  let query = applyTenantScope(supabase
     .from('invoices')
     .select('id, invoice_number, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, sube_id, customers(full_name, il), subeler(ad)')
     .eq('invoice_type', 'satis')
     .neq('status', 'iptal')
-    .order(dbSortCol, { ascending: dbAsc })
+    .order(dbSortCol, { ascending: dbAsc }), tenantAccess)
 
   if (dateFrom) query = query.gte('invoice_date', dateFrom)
   if (dateTo)   query = query.lte('invoice_date', dateTo)

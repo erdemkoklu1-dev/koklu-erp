@@ -77,7 +77,14 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
     async function load() {
       const { id: resolvedId } = await params
       setId(resolvedId)
-      const { data: customer } = await supabase.from('customers').select('*').eq('id', resolvedId).single()
+      const res = await fetch(`/api/customers/${resolvedId}?record=1`)
+      const record = await res.json()
+      if (!res.ok || !record?.customer) {
+        setError(record?.error ?? 'Müşteri bulunamadı veya bu kayda erişim yetkiniz yok.')
+        setFetching(false)
+        return
+      }
+      const customer = record.customer
       if (customer) {
         setForm({
           full_name: customer.full_name ?? '',
@@ -96,12 +103,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
         setSubeId(customer.sube_id ?? null)
       }
 
-      const { data: devs } = await supabase
-        .from('devices')
-        .select('*')
-        .eq('customer_id', resolvedId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: true })
+      const devs = record.devices ?? []
 
       setDevices((devs ?? []).map((d: any) => ({
         id: d.id,
@@ -211,8 +213,13 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
           is_active: true,
           qr_code: `KOKLU-${id.slice(0, 8)}-${now}-${idx}`,
         }))
-        const { error: devErr } = await supabase.from('devices').insert(rows)
-        if (devErr) throw new Error('Cihaz eklenemedi: ' + devErr.message)
+        const deviceRes = await fetch('/api/tenant-create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'devices', payload: rows }),
+        })
+        const deviceData = await deviceRes.json()
+        if (!deviceRes.ok) throw new Error('Cihaz eklenemedi: ' + (deviceData?.error ?? `HTTP ${deviceRes.status}`))
       }
 
       router.push(`/customers/${id}`)

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { canReadModule, getCurrentAccess, getModulePermissionMap } from '@/lib/auth/authorization'
 import { applyBranchScope, EMPTY_BRANCH_ID, filterVisibleBranches } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession, type TenantAccess } from '@/lib/auth/tenant-scope'
 import { TESLIMAT_CANCELLED_STATUS_ALIASES, quotedTeslimatStatuses } from '@/lib/teslimat-status'
 
 type CardTone = 'default' | 'green' | 'yellow' | 'red' | 'blue'
@@ -82,9 +83,9 @@ function KpiCard({
   )
 }
 
-function scopedCustomerQuery(svc: ReturnType<typeof createServiceClient>, access: Awaited<ReturnType<typeof getCurrentAccess>>) {
+function scopedCustomerQuery(svc: ReturnType<typeof createServiceClient>, access: Awaited<ReturnType<typeof getCurrentAccess>>, tenantAccess: TenantAccess | null) {
   const query = svc.from('customers').select('*', { count: 'exact', head: true }).eq('is_active', true)
-  return applyBranchScope(query, access)
+  return applyBranchScope(applyTenantScope(query, tenantAccess), access)
 }
 
 async function countRows(query: PromiseLike<{ count: number | null }>) {
@@ -99,6 +100,7 @@ function relationOne<T>(value: T | T[] | null | undefined) {
 export default async function DashboardPage() {
   const svc = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const permissions = await getModulePermissionMap(access)
   const role = access?.role ?? 'Admin'
   const isAdmin = access?.isAdmin ?? false
@@ -132,67 +134,67 @@ export default async function DashboardPage() {
         ? `${visibleBranches.length} yetkili şube`
         : 'Yetkili şube yok'
 
-  const customerCount = canCustomers ? await countRows(scopedCustomerQuery(svc, access)) : 0
+  const customerCount = canCustomers ? await countRows(scopedCustomerQuery(svc, access, tenantAccess)) : 0
 
   const newCustomerCount = canCustomers
     ? await countRows(applyBranchScope(
-        svc.from('customers').select('*', { count: 'exact', head: true }).eq('is_active', true).gte('created_at', monthStart),
+        applyTenantScope(svc.from('customers').select('*', { count: 'exact', head: true }).eq('is_active', true).gte('created_at', monthStart), tenantAccess),
         access,
       ))
     : 0
 
   const serviceCount = canServiceForms
     ? await countRows(applyBranchScope(
-        svc.from('service_forms').select('*', { count: 'exact', head: true }).gte('created_at', monthStart),
+        applyTenantScope(svc.from('service_forms').select('*', { count: 'exact', head: true }).gte('created_at', monthStart), tenantAccess),
         access,
       ))
     : 0
 
   const pendingServiceCount = canServiceForms
     ? await countRows(applyBranchScope(
-        svc.from('service_forms').select('*', { count: 'exact', head: true }).neq('status', 'completed'),
+        applyTenantScope(svc.from('service_forms').select('*', { count: 'exact', head: true }).neq('status', 'completed'), tenantAccess),
         access,
       ))
     : 0
 
   const deliveryCount = canDeliveries
     ? await countRows(applyBranchScope(
-        svc.from('teslimatlar').select('*', { count: 'exact', head: true }).neq('durum', 'tamamlandi').not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES)),
+        applyTenantScope(svc.from('teslimatlar').select('*', { count: 'exact', head: true }).neq('durum', 'tamamlandi').not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES)), tenantAccess),
         access,
       ))
     : 0
 
   const requestCount = canOperations
     ? await countRows(applyBranchScope(
-        svc.from('musteri_talepleri').select('*', { count: 'exact', head: true }).not('durum', 'in', '("Tamamlandı","İptal")'),
+        applyTenantScope(svc.from('musteri_talepleri').select('*', { count: 'exact', head: true }).not('durum', 'in', '("Tamamlandı","İptal")'), tenantAccess),
         access,
       ))
     : 0
 
   const workPlanCount = canOperations
     ? await countRows(applyBranchScope(
-        svc.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor'),
+        applyTenantScope(svc.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor'), tenantAccess),
         access,
       ))
     : 0
 
   const technicalReportCount = canTechnicalReports
     ? await countRows(applyBranchScope(
-        svc.from('teknik_raporlar').select('*', { count: 'exact', head: true }).gte('rapor_tarihi', monthStart),
+        applyTenantScope(svc.from('teknik_raporlar').select('*', { count: 'exact', head: true }).gte('rapor_tarihi', monthStart), tenantAccess),
         access,
       ))
     : 0
 
   let expiringDevices: ReminderDeviceRow[] = []
   if (canReminders) {
-    let deviceQuery = svc
+    let deviceQuery = applyTenantScope(svc
       .from('devices')
       .select('expiry_date, customers!inner(id, full_name, sube_id)')
       .eq('is_active', true)
       .not('expiry_date', 'is', null)
       .lte('expiry_date', in90DaysStr)
       .order('expiry_date', { ascending: true })
-      .limit(500)
+      .limit(500), tenantAccess)
 
     if (access && !access.isAdmin) {
       deviceQuery = access.branchIds.length > 0
@@ -207,11 +209,11 @@ export default async function DashboardPage() {
   let recentServices: Array<{ id: string; form_number: string | null; service_date: string | null; status: string | null; customers: { full_name?: string | null } | null }> = []
   if (canServiceForms) {
     const { data } = await applyBranchScope(
-      svc
+      applyTenantScope(svc
         .from('service_forms')
         .select('id, form_number, service_date, status, customers(full_name)')
         .order('created_at', { ascending: false })
-        .limit(5),
+        .limit(5), tenantAccess),
       access,
     )
     recentServices = (data ?? []) as typeof recentServices
@@ -226,19 +228,19 @@ export default async function DashboardPage() {
   if (canFinance) {
     const [incomeRes, expenseRes, receivableRes, debtRes] = await Promise.all([
       applyBranchScope(
-        svc.from('invoices').select('total_amount').eq('invoice_type', 'satis').gte('invoice_date', monthStart).neq('status', 'iptal'),
+        applyTenantScope(svc.from('invoices').select('total_amount').eq('invoice_type', 'satis').gte('invoice_date', monthStart).neq('status', 'iptal'), tenantAccess),
         access,
       ),
       applyBranchScope(
-        svc.from('invoices').select('total_amount').eq('invoice_type', 'alis').gte('invoice_date', monthStart).neq('status', 'iptal'),
+        applyTenantScope(svc.from('invoices').select('total_amount').eq('invoice_type', 'alis').gte('invoice_date', monthStart).neq('status', 'iptal'), tenantAccess),
         access,
       ),
       applyBranchScope(
-        svc.from('invoices').select('total_amount, paid_amount').eq('invoice_type', 'satis').neq('status', 'odendi').neq('status', 'iptal'),
+        applyTenantScope(svc.from('invoices').select('total_amount, paid_amount').eq('invoice_type', 'satis').neq('status', 'odendi').neq('status', 'iptal'), tenantAccess),
         access,
       ),
       applyBranchScope(
-        svc.from('invoices').select('total_amount, paid_amount, supplier_name').eq('invoice_type', 'alis').lt('due_date', todayStr).neq('status', 'odendi').neq('status', 'iptal'),
+        applyTenantScope(svc.from('invoices').select('total_amount, paid_amount, supplier_name').eq('invoice_type', 'alis').lt('due_date', todayStr).neq('status', 'odendi').neq('status', 'iptal'), tenantAccess),
         access,
       ),
     ])

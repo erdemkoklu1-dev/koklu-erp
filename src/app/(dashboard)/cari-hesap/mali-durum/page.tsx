@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { formatCurrency, formatTRDate, MONTHS_TR, INVOICE_STATUS_CONFIG } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type InvoiceAmountRow = {
   total_amount: number | null
@@ -32,6 +33,7 @@ export default async function MaliDurumPage({
   const { yil, ay } = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const today = new Date()
   const year = parseInt(yil ?? String(today.getFullYear()))
   const month = parseInt(ay ?? String(today.getMonth() + 1))
@@ -46,7 +48,7 @@ export default async function MaliDurumPage({
 
   const in7 = new Date(today); in7.setDate(today.getDate() + 7)
   const in7Str = in7.toISOString().split('T')[0]
-  const invoiceScope = (query: any) => applyBranchScope(query, access)
+  const invoiceScope = (query: any) => applyBranchScope(applyTenantScope(query, tenantAccess), access)
 
   const [
     { data: monthInvoices },

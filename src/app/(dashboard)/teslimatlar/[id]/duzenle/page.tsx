@@ -1,16 +1,18 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import TeslimatForm from '../../TeslimatForm'
 
 export default async function TeslimatDuzenlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const [{ data: teslimat }, { data: kalemler }, { data: customers }, { data: subeler }, { data: personeller }, { data: urunler }] = await Promise.all([
-    supabase.from('teslimatlar').select('*').eq('id', id).single(),
-    supabase.from('teslimat_kalemleri').select('*').eq('teslimat_id', id).order('created_at'),
-    supabase.from('customers').select('id, full_name, tax_number').eq('is_active', true).order('full_name'),
-    supabase.from('subeler').select('id, ad').order('ad'),
+    applyTenantScope(supabase.from('teslimatlar').select('*').eq('id', id), tenantAccess).maybeSingle(),
+    applyTenantScope(supabase.from('teslimat_kalemleri').select('*').eq('teslimat_id', id).order('created_at'), tenantAccess),
+    applyTenantScope(supabase.from('customers').select('id, full_name, tax_number').eq('is_active', true).order('full_name'), tenantAccess),
+    applyTenantScope(supabase.from('subeler').select('id, ad').order('ad'), tenantAccess),
     supabase.from('personeller').select('id, ad, soyad, durum').order('ad'),
     supabase.from('urunler').select('id, kategori, ad, birim, kdv_dahil_fiyat, kdv_haric_fiyat, dolum_fiyati, periyodik_bakim_fiyati').eq('aktif', true).order('kategori').order('ad'),
   ])

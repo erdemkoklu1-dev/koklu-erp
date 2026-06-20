@@ -1,15 +1,17 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { EmanetlerClient, type EmanetRow } from './EmanetlerClient'
 
 export default async function EmanetlerPage({ searchParams }: { searchParams: Promise<{ sube?: string }> }) {
   const { sube } = await searchParams
   const supabase = createServiceClient()
-  let query = supabase
+  const tenantAccess = await getCurrentTenantAccessFromSession()
+  let query = applyTenantScope(supabase
     .from('emanet_takipleri')
     .select('*, teslimatlar(id, teslimat_no), customers(id, full_name), subeler(id, ad), urunler(ad)')
     .in('durum', ['acik', 'kismi_kapandi'])
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }), tenantAccess)
   if (sube) query = query.eq('sube_id', sube)
   const { data } = await query
 

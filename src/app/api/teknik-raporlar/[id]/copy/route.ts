@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 import { createReportNo } from '@/lib/technical-reports/report-utils'
 import type { TechnicalReportRow } from '@/lib/technical-reports/types'
 
@@ -9,6 +10,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   const supabase = await createClient()
 
   try {
+    const firmaId = await requireCurrentFirmaId()
     const { data: report, error: readError } = await supabase
       .from('teknik_raporlar')
       .select('*')
@@ -22,6 +24,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const { data: auth } = await supabase.auth.getUser()
     const source = report as TechnicalReportRow
+    if ((report as { firma_id?: string | null }).firma_id !== firmaId) {
+      return Response.json({ error: 'Teknik rapor kullanıcının firmasına ait değil.' }, { status: 403 })
+    }
     const payload = {
       rapor_no: createReportNo(source.rapor_turu),
       rapor_turu: source.rapor_turu,
@@ -41,6 +46,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       notes: source.notes,
       created_by: auth.user?.id ?? null,
       updated_by: auth.user?.id ?? null,
+      firma_id: firmaId,
     }
 
     const { data: copied, error } = await supabase

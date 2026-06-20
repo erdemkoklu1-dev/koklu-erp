@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import { formatCurrency, formatTRDate } from '@/lib/finance/formatters'
 import PrintButton from '@/components/PrintButton'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
   beklemede:      { label: 'Faturalanmadı', className: 'bg-orange-50 text-orange-700 border-orange-200' },
@@ -19,17 +20,18 @@ export default async function OnKayitlarPage({
 }) {
   const { durum, customer_id, from, to } = await searchParams
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   // Varsayılan filtre: sadece beklemedekiler
   const durumFilter = durum ?? 'beklemede'
 
-  const { data: customers } = await supabase
+  const { data: customers } = await applyTenantScope(supabase
     .from('customers')
     .select('id, full_name')
     .eq('is_active', true)
-    .order('full_name')
+    .order('full_name'), tenantAccess)
 
-  let query = supabase
+  let query = applyTenantScope(supabase
     .from('on_kayitlar')
     .select(`
       id, kayit_tarihi, aciklama, miktar, birim, birim_fiyat, toplam_tutar, notlar, durum, invoice_id, kalemler,
@@ -37,7 +39,7 @@ export default async function OnKayitlarPage({
       invoices(invoice_number)
     `)
     .order('kayit_tarihi', { ascending: false })
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }), tenantAccess)
 
   if (durumFilter !== 'tumu') query = query.eq('durum', durumFilter)
   if (customer_id) query = query.eq('customer_id', customer_id)

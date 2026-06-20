@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import OperationShell from '../../_components/OperationShell'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import TalepForm from './TalepForm'
 
 type CustomerRow = {
@@ -17,13 +18,14 @@ type TalepFormProps = ComponentProps<typeof TalepForm>
 export default async function YeniTalepPage() {
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   let customersQuery = supabase
     .from('customers')
     .select('id, full_name, sube_id')
     .eq('is_active', true)
     .order('full_name')
-  customersQuery = applyBranchScope(customersQuery, access)
+  customersQuery = applyBranchScope(applyTenantScope(customersQuery, tenantAccess), access)
 
   let personellerQuery = supabase
     .from('personeller')
@@ -41,13 +43,13 @@ export default async function YeniTalepPage() {
   const customerRows = (customers ?? []) as CustomerRow[]
   const customerIds = customerRows.map(customer => customer.id)
   const { data: devices } = customerIds.length > 0
-    ? await supabase
+    ? await applyTenantScope(supabase
       .from('devices')
       .select('id, customer_id, custom_device_name, capacity, serial_number, device_types(name)')
       .eq('is_active', true)
       .in('customer_id', customerIds)
       .order('created_at', { ascending: false })
-      .limit(500)
+      .limit(500), tenantAccess)
     : { data: [] }
 
   const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string | null }[], access)

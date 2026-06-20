@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import OperationShell from '../../_components/OperationShell'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import IsPlaniForm from './IsPlaniForm'
 
 type IsPlaniFormProps = ComponentProps<typeof IsPlaniForm>
@@ -41,13 +42,14 @@ export default async function YeniIsPlaniPage({ searchParams }: { searchParams: 
   const requestId = typeof params.requestId === 'string' ? params.requestId : null
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   let customersQuery = supabase
     .from('customers')
     .select('id, full_name, phone, address, sube_id')
     .eq('is_active', true)
     .order('full_name')
-  customersQuery = applyBranchScope(customersQuery, access)
+  customersQuery = applyBranchScope(applyTenantScope(customersQuery, tenantAccess), access)
 
   let personellerQuery = supabase
     .from('personeller')
@@ -57,10 +59,10 @@ export default async function YeniIsPlaniPage({ searchParams }: { searchParams: 
   personellerQuery = applyBranchScope(personellerQuery, access)
 
   let requestQuery = requestId
-    ? supabase
+    ? applyTenantScope(supabase
       .from('musteri_talepleri')
       .select('id, talep_no, customer_id, customer_name_snapshot, baslik, aciklama, kategori, oncelik, hedef_tarih, sube_id, ilgili_is_plani_id, customers(phone, address)')
-      .eq('id', requestId)
+      .eq('id', requestId), tenantAccess)
     : null
   if (requestQuery) requestQuery = applyBranchScope(requestQuery, access)
 

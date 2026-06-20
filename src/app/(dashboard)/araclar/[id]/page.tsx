@@ -5,6 +5,7 @@ import { formatCurrency } from '@/lib/finance/formatters'
 import CommissionsTable from './CommissionsTable'
 import BrokerActions from './BrokerActions'
 import CariHareketlerTable, { type CariHareketRow } from './CariHareketlerTable'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 function isOpenReceivable(row: CariHareketRow) {
   return row.islem_yonu === 'alacak' && !['Ödendi', 'İptal', 'Mahsup Edildi'].includes(row.durum)
@@ -13,9 +14,10 @@ function isOpenReceivable(row: CariHareketRow) {
 export default async function AraciDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const [{ data: broker }, { data: commissions }, { data: cariHareketler }, { data: subeler }] = await Promise.all([
-    supabase.from('brokers').select('*').eq('id', id).single(),
+    applyTenantScope(supabase.from('brokers').select('*').eq('id', id), tenantAccess).maybeSingle(),
     supabase
       .from('invoice_brokers')
       .select(`
@@ -24,17 +26,17 @@ export default async function AraciDetayPage({ params }: { params: Promise<{ id:
       `)
       .eq('broker_id', id)
       .order('created_at', { ascending: false }),
-    supabase
+    applyTenantScope(supabase
       .from('araci_cari_hareketleri')
       .select('*, subeler(ad)')
       .eq('araci_id', id)
       .order('hareket_tarihi', { ascending: false })
-      .order('created_at', { ascending: false }),
-    supabase
+      .order('created_at', { ascending: false }), tenantAccess),
+    applyTenantScope(supabase
       .from('subeler')
       .select('id, ad')
       .eq('aktif', true)
-      .order('ad'),
+      .order('ad'), tenantAccess),
   ])
 
   if (!broker) notFound()

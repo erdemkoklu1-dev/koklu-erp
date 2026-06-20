@@ -5,6 +5,7 @@ import OperationFilters from '../_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type SearchParams = Promise<{ durum?: string; geciken?: string; bugun?: string; q?: string; sube?: string; baslangic?: string; bitis?: string }>
 
@@ -38,15 +39,17 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
   const params = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const lockedSubeId = getLockedBranchId(access)
   const effectiveSube = lockedSubeId ?? params.sube
   const today = new Date().toISOString().slice(0, 10)
 
-  let query = supabase
+  // Önce firma (tenant) filtresi, ardından şube filtresi uygulanır.
+  let query = applyTenantScope(supabase
     .from('is_planlari')
     .select('id, plan_no, baslik, customer_name_snapshot, plan_turu, durum, baslangic_tarihi, bitis_tarihi, tekrar_tipi, sonraki_is_tarihi, toplam_is_sayisi, tamamlanan_is_sayisi, iptal_is_sayisi, subeler(ad), musteri_talepleri!musteri_talepleri_is_plani_fk(id, talep_no)')
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(200), tenantAccess)
 
   query = applyBranchScope(query, access, effectiveSube)
   if (params.q) query = query.or(`baslik.ilike.%${params.q}%,plan_no.ilike.%${params.q}%,customer_name_snapshot.ilike.%${params.q}%`)
@@ -54,7 +57,7 @@ export default async function IsPlanlariPage({ searchParams }: { searchParams: S
   if (params.baslangic) query = query.gte('baslangic_tarihi', params.baslangic)
   if (params.bitis) query = query.lte('baslangic_tarihi', params.bitis)
 
-  const scopedCount = <T,>(baseQuery: T) => applyBranchScope(baseQuery, access, effectiveSube) as T
+  const scopedCount = <T,>(baseQuery: T) => applyBranchScope(applyTenantScope(baseQuery as any, tenantAccess), access, effectiveSube) as T
 
   const [
     { data: plans },

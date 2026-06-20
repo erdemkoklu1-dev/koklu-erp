@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 import type { MaterialListItem, TechnicalReportRow } from '@/lib/technical-reports/types'
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -40,6 +41,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   try {
     const body = (await request.json()) as QuoteRequest
+    const firmaId = await requireCurrentFirmaId()
     const { data: report, error: readError } = await supabase
       .from('teknik_raporlar')
       .select('*')
@@ -52,6 +54,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const source = report as TechnicalReportRow
+    if ((report as { firma_id?: string | null }).firma_id !== firmaId) {
+      return Response.json({ error: 'Teknik rapor kullanıcının firmasına ait değil.' }, { status: 403 })
+    }
     const materialList = Array.isArray(source.material_list) ? source.material_list : []
     if (materialList.length === 0) {
       return Response.json({ error: 'Bu raporda teklife aktarılabilecek ihtiyaç kalemi bulunmuyor.' }, { status: 400 })
@@ -60,6 +65,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const customerId = body.customerId || source.customer_id
     let customer: { full_name?: string | null; phone?: string | null; email?: string | null; il?: string | null } | null = null
     if (customerId) {
+      await assertCustomerBelongsToFirma(customerId, firmaId)
       const { data, error } = await supabase
         .from('customers')
         .select('full_name, phone, email, il')
@@ -70,6 +76,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const teklifNo = createTeklifNo()
+    const subeId = body.subeId || source.sube_id || null
+    await assertBranchBelongsToFirma(subeId, firmaId)
     const validityDate = body.validityDate || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
     const title = body.title?.trim() || `${source.rapor_no} Teknik Rapor Teklifi`
     const noteParts = [
@@ -87,7 +95,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         gecerlilik_bitis: validityDate,
         sehir: customer?.il ?? null,
         durum: 'taslak',
-        sube_id: body.subeId || source.sube_id || null,
+        sube_id: subeId,
         musteri_id: customerId ?? null,
         musteri_adi: customer?.full_name || source.customer_name_snapshot || '',
         musteri_sehir: customer?.il ?? null,
@@ -101,6 +109,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         kdv_tutari: 0,
         genel_toplam: 0,
         notlar: noteParts.join('\n'),
+        firma_id: firmaId,
       })
       .select('id')
       .single()
@@ -118,6 +127,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         miktar: Number(item.miktar) || 1,
         birim_fiyat: 0,
         toplam: 0,
+        firma_id: firmaId,
       }))
     )
 

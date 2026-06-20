@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type DependencyCounts = {
   service_forms: number
@@ -89,7 +90,7 @@ function totalDependencies(counts: DependencyCounts) {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -97,6 +98,32 @@ export async function GET(
     if (!id) return NextResponse.json({ error: 'ID eksik' }, { status: 400 })
 
     const supabase = createServiceClient()
+    const tenantAccess = await getCurrentTenantAccessFromSession()
+    let customerQuery = supabase.from('customers').select('id').eq('id', id)
+    customerQuery = applyTenantScope(customerQuery, tenantAccess)
+    const { data: customer, error: customerError } = await customerQuery.maybeSingle()
+    if (customerError) throw customerError
+    if (!customer) return NextResponse.json({ error: 'Müşteri bulunamadı veya bu kayda erişim yetkiniz yok.' }, { status: 404 })
+
+    if (req.nextUrl.searchParams.get('record') === '1') {
+      let fullCustomerQuery = supabase.from('customers').select('*').eq('id', id)
+      fullCustomerQuery = applyTenantScope(fullCustomerQuery, tenantAccess)
+      const { data: fullCustomer, error: fullCustomerError } = await fullCustomerQuery.maybeSingle()
+      if (fullCustomerError) throw fullCustomerError
+
+      let devicesQuery = supabase
+        .from('devices')
+        .select('*')
+        .eq('customer_id', id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+      devicesQuery = applyTenantScope(devicesQuery, tenantAccess)
+      const { data: devices, error: devicesError } = await devicesQuery
+      if (devicesError) throw devicesError
+
+      return NextResponse.json({ ok: true, customer: fullCustomer, devices: devices ?? [] })
+    }
+
     const dependencies = await getCustomerDependencies(supabase, id)
 
     return NextResponse.json({
@@ -119,11 +146,20 @@ export async function DELETE(
     if (!id) return NextResponse.json({ error: 'ID eksik' }, { status: 400 })
 
     const supabase = createServiceClient()
+    const tenantAccess = await getCurrentTenantAccessFromSession()
+    let customerQuery = supabase.from('customers').select('id').eq('id', id)
+    customerQuery = applyTenantScope(customerQuery, tenantAccess)
+    const { data: customer, error: customerError } = await customerQuery.maybeSingle()
+    if (customerError) throw customerError
+    if (!customer) return NextResponse.json({ error: 'Müşteri bulunamadı veya bu kayda erişim yetkiniz yok.' }, { status: 404 })
+
     const dependencies = await getCustomerDependencies(supabase, id)
     const dependencyTotal = totalDependencies(dependencies)
 
     if (dependencyTotal > 0) {
-      const { error } = await supabase.from('customers').update({ is_active: false }).eq('id', id)
+      let deactivateQuery = supabase.from('customers').update({ is_active: false }).eq('id', id)
+      deactivateQuery = applyTenantScope(deactivateQuery, tenantAccess)
+      const { error } = await deactivateQuery
       if (error) return NextResponse.json({ error: 'Musteri pasife alinamadi.' }, { status: 500 })
 
       return NextResponse.json({
@@ -136,7 +172,9 @@ export async function DELETE(
       })
     }
 
-    const { error } = await supabase.from('customers').delete().eq('id', id)
+    let deleteQuery = supabase.from('customers').delete().eq('id', id)
+    deleteQuery = applyTenantScope(deleteQuery, tenantAccess)
+    const { error } = await deleteQuery
     if (error) return NextResponse.json({ error: 'Musteri silinemedi.' }, { status: 500 })
 
     return NextResponse.json({ ok: true, deleted: true, deactivated: false })

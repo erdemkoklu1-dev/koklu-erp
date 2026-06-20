@@ -8,6 +8,7 @@ import { formatCurrency, formatTRDate, INVOICE_STATUS_CONFIG } from '@/lib/finan
 import { Suspense } from 'react'
 import GrupFilter from './GrupFilter'
 import PrintButton from '@/components/PrintButton'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function GecikisPage({
   searchParams,
@@ -16,16 +17,17 @@ export default async function GecikisPage({
 }) {
   const { grupla } = await searchParams
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const today = new Date().toISOString().split('T')[0]
 
   // Tüm ödenmemiş alış faturalarını çek (due_date filtresi olmadan)
   // due_date NULL olanlar için fatura tarihi esas alınır
-  const { data: allInvoices } = await supabase
+  const { data: allInvoices } = await applyTenantScope(supabase
     .from('invoices')
     .select('id, invoice_number, supplier_name, invoice_date, due_date, total_amount, paid_amount, status')
     .eq('invoice_type', 'alis')
     .in('status', ['taslak', 'kesildi', 'gonderildi', 'kismi_odendi'])
-    .order('invoice_date', { ascending: true })
+    .order('invoice_date', { ascending: true }), tenantAccess)
 
   // Gecikmiş filtresi: vade tarihi yoksa fatura tarihi esas alınır
   const rows = (allInvoices ?? []).filter(inv => {

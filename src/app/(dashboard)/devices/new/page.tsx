@@ -199,8 +199,13 @@ export default function NewDevicePage() {
       }
     }
 
-    const { error } = await supabase.from('devices').insert(inserts)
-    if (error) { setError('Kayıt hatası: ' + error.message); setLoading(false) }
+    const res = await fetch('/api/tenant-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'devices', payload: inserts }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setError('Kayıt hatası: ' + (data?.error ?? `HTTP ${res.status}`)); setLoading(false) }
     else {
       setSuccess(`✅ ${inserts.length} cihaz başarıyla kaydedildi!`)
       setTimeout(() => {

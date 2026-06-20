@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export type ImportRow = {
   alici_adi: string
@@ -45,17 +46,20 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const firmaId = await requireCurrentFirmaId()
 
     // Mevcut fatura numaralarını çek
     const { data: existingInvoices } = await supabase
       .from('invoices')
       .select('invoice_number')
+      .eq('firma_id', firmaId)
     const existingNos = new Set((existingInvoices ?? []).map(i => i.invoice_number))
 
     // Mevcut müşterileri çek
     const { data: existingCustomers } = await supabase
       .from('customers')
       .select('id, full_name')
+      .eq('firma_id', firmaId)
     const customerMap = new Map<string, string>() // normalizedName → id
     for (const c of existingCustomers ?? []) {
       customerMap.set(normalizeCustomerName(c.full_name), c.id)
@@ -94,6 +98,7 @@ export async function POST(req: NextRequest) {
               full_name: row.alici_adi.trim(),
               type: 'company',
               is_active: true,
+              firma_id: firmaId,
             })
             .select('id')
             .single()
@@ -126,6 +131,7 @@ export async function POST(req: NextRequest) {
             status,
             description:    `e-Fatura: ${row.senaryo}`,
             notes:          `Durum: ${row.durum}`,
+            firma_id:       firmaId,
           })
           .select('id')
           .single()

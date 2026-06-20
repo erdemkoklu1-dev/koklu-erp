@@ -4,38 +4,50 @@ import { notFound } from 'next/navigation'
 import { formatCurrency, formatTRDate } from '@/lib/finance/formatters'
 import DeleteCustomerButton from './DeleteCustomerButton'
 import HatirlatmaSection from './HatirlatmaSection'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data: customer } = await supabase
-    .from('customers').select('*').eq('id', id).single()
+  let customerQuery = supabase
+    .from('customers').select('*').eq('id', id)
+  customerQuery = applyTenantScope(customerQuery, tenantAccess)
+  const { data: customer } = await customerQuery.maybeSingle()
   if (!customer) notFound()
 
-  const { data: devices } = await supabase
+  let devicesQuery = supabase
     .from('devices')
     .select('*, device_types(name)')
     .eq('customer_id', id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
+  devicesQuery = applyTenantScope(devicesQuery, tenantAccess)
+  const { data: devices } = await devicesQuery
 
-  const { data: onKayitlar } = await supabase
+  let onKayitQuery = supabase
     .from('on_kayitlar')
     .select('id, kayit_tarihi, aciklama, miktar, birim, toplam_tutar, durum, invoice_id, invoices(invoice_number)')
     .eq('customer_id', id)
     .order('kayit_tarihi', { ascending: false })
     .limit(20)
+  onKayitQuery = applyTenantScope(onKayitQuery, tenantAccess)
+  const { data: onKayitlar } = await onKayitQuery
 
-  const { data: serviceForms } = await supabase
+  let serviceFormsQuery = supabase
     .from('service_forms')
     .select('id, form_number, service_date, status, general_notes, customer_note')
     .eq('customer_id', id)
     .order('service_date', { ascending: false })
     .limit(5)
+  serviceFormsQuery = applyTenantScope(serviceFormsQuery, tenantAccess)
+  const { data: serviceForms } = await serviceFormsQuery
 
+  let teslimatlarQuery = supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum').eq('customer_id', id).order('teslimat_tarihi', { ascending: false }).limit(5)
+  teslimatlarQuery = applyTenantScope(teslimatlarQuery, tenantAccess)
   const [{ data: teslimatlar }, { data: acikEmanetler }, { data: geriBekleyenler }] = await Promise.all([
-    supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum').eq('customer_id', id).order('teslimat_tarihi', { ascending: false }).limit(5),
+    teslimatlarQuery,
     supabase.from('emanet_takipleri').select('id, miktar, geri_alinan_miktar, durum, hedef_tarih, urunler(ad)').eq('customer_id', id).in('durum', ['acik', 'kismi_kapandi']).limit(5),
     supabase.from('geri_teslim_takipleri').select('id, miktar, teslim_edilen_miktar, durum, hedef_tarih, urunler(ad)').eq('customer_id', id).in('durum', ['bekliyor', 'kismi_teslim']).limit(5),
   ])

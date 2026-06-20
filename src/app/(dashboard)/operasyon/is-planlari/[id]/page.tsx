@@ -6,6 +6,7 @@ import OperationShell from '../../_components/OperationShell'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type Relation<T> = T | T[] | null
 
@@ -29,18 +30,19 @@ export default async function IsPlaniDetayPage({ params }: { params: Promise<{ i
   const { id } = await params
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  let planQuery = supabase
+  let planQuery = applyTenantScope(supabase
     .from('is_planlari')
     .select('*, customers(id, full_name), subeler(ad), personeller(ad, soyad)')
-    .eq('id', id)
+    .eq('id', id), tenantAccess)
   planQuery = applyBranchScope(planQuery, access)
 
-  let islerQuery = supabase
+  let islerQuery = applyTenantScope(supabase
     .from('planli_isler')
     .select('*, customers(full_name), subeler(ad), personeller(ad, soyad)')
     .eq('is_plani_id', id)
-    .order('sira_no')
+    .order('sira_no'), tenantAccess)
   islerQuery = applyBranchScope(islerQuery, access)
 
   const [{ data: plan }, { data: isler }] = await Promise.all([

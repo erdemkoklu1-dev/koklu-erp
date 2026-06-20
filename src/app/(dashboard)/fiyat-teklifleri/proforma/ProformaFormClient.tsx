@@ -398,12 +398,27 @@ export default function ProformaFormClient({
     let proformaId: string
 
     if (mode === 'yeni') {
-      const { data, error: err } = await supabase
-        .from('proforma_faturalar')
-        .insert(proformaPayload)
-        .select('id')
-        .single()
-      if (err || !data) { setError(err?.message ?? 'Kayıt hatası'); setSaving(false); return }
+      const newKalemPayload = kalemler.map((k, i) => ({
+        sira_no:        i + 1,
+        urun_id:        k.urun_id,
+        mal_hizmet:     k.mal_hizmet,
+        aciklama:       k.aciklama || null,
+        miktar:         k.miktar,
+        birim:          k.birim,
+        birim_fiyat:    k.birim_fiyat,
+        iskonto_orani:  k.iskonto_orani,
+        iskonto_tutari: k.iskonto_tutari,
+        kdv_orani:      k.kdv_orani,
+        kdv_tutari:     k.kdv_tutari,
+        toplam_tutar:   k.toplam_tutar,
+      }))
+      const res = await fetch('/api/tenant-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'proforma_faturalar', proforma: proformaPayload, kalemler: newKalemPayload }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.id) { setError(data?.error ?? 'Kayıt hatası'); setSaving(false); return }
       proformaId = data.id
     } else {
       proformaId = initialData!.id
@@ -415,6 +430,7 @@ export default function ProformaFormClient({
       await supabase.from('proforma_fatura_kalemleri').delete().eq('proforma_id', proformaId)
     }
 
+    if (mode !== 'yeni') {
     const kalemPayload = kalemler.map((k, i) => ({
       proforma_id:    proformaId,
       sira_no:        i + 1,
@@ -433,6 +449,7 @@ export default function ProformaFormClient({
 
     const { error: kalemErr } = await supabase.from('proforma_fatura_kalemleri').insert(kalemPayload)
     if (kalemErr) { setError(kalemErr.message); setSaving(false); return }
+    }
 
     if (redirectToPdf) {
       router.push(`/fiyat-teklifleri/proforma/${proformaId}/pdf`)

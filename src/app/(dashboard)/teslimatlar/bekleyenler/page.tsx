@@ -1,15 +1,17 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { BekleyenlerClient, type BekleyenRow } from './BekleyenlerClient'
 
 export default async function BekleyenlerPage() {
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data } = await supabase
+  const { data } = await applyTenantScope(supabase
     .from('geri_teslim_takipleri')
     .select('*, teslimatlar(id, teslimat_no), customers(id, full_name), subeler(id, ad), urunler(ad)')
     .in('durum', ['bekliyor', 'kismi_teslim'])
-    .order('hedef_tarih', { ascending: true })
+    .order('hedef_tarih', { ascending: true }), tenantAccess)
 
   const rows: BekleyenRow[] = (data ?? []).map(row => ({
     id: row.id as string,

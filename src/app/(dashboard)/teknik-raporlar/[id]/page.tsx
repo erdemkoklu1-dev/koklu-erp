@@ -5,17 +5,19 @@ import { formatDateTR, personName } from '@/lib/technical-reports/report-utils'
 import { REPORT_TYPE_LABELS, type TechnicalReportRow } from '@/lib/technical-reports/types'
 import TechnicalReportPrintView from '../_components/TechnicalReportPrintView'
 import TechnicalReportActions from '../_components/TechnicalReportActions'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function TechnicalReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const [{ data }, { data: customers }, { data: subeler }] = await Promise.all([
-    supabase
+    applyTenantScope(supabase
       .from('teknik_raporlar')
       .select('*, customers(full_name, address), subeler(ad), personeller(ad, soyad)')
-      .eq('id', id)
-      .single(),
-    supabase.from('customers').select('id, full_name').order('full_name'),
+      .eq('id', id), tenantAccess)
+      .maybeSingle(),
+    applyTenantScope(supabase.from('customers').select('id, full_name').order('full_name'), tenantAccess),
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
   ])
   if (!data) notFound()

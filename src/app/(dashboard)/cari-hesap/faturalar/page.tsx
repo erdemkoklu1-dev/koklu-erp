@@ -6,6 +6,7 @@ import FaturaFiltrePaneli from '../_components/FaturaFiltrePaneli'
 import PrintButton from '@/components/PrintButton'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 const TYPE_LABELS: Record<string, string> = {
   satis: 'Satış', alis: 'Alış', iade_satis: 'İade (Satış)', iade_alis: 'İade (Alış)',
@@ -42,14 +43,15 @@ export default async function FaturalarPage({
   const { status, type, q, period, from: fromParam, to: toParam, sort, sube } = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const isMahsupFilter = status === 'vergi_mahsup'
   const { from: dateFrom, to: dateTo } = computeDateRange(period, fromParam, toParam)
 
-  // Ana sorgu
-  let query = supabase
+  // Ana sorgu — önce firma (tenant) filtresi
+  let query = applyTenantScope(supabase
     .from('invoices')
-    .select('id, invoice_number, invoice_type, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, description, sube_id, customers(full_name), supplier_name, subeler(ad)')
+    .select('id, invoice_number, invoice_type, invoice_date, due_date, total_amount, paid_amount, status, mahsup_durumu, description, sube_id, customers(full_name), supplier_name, subeler(ad)'), tenantAccess)
 
   if (isMahsupFilter) {
     query = query.eq('mahsup_durumu', 'vergi_mahsup')
@@ -70,16 +72,16 @@ export default async function FaturalarPage({
 
   const { data: rawInvoices } = await query
 
-  const { data: subeler } = await supabase
+  const { data: subeler } = await applyTenantScope(supabase
     .from('subeler')
     .select('id, ad')
-    .order('ad')
+    .order('ad'), tenantAccess)
   const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string }[], access)
 
   // Counts (no date filter, to keep status chips accurate)
-  let allInvoicesQuery = supabase
+  let allInvoicesQuery = applyTenantScope(supabase
     .from('invoices')
-    .select('status, mahsup_durumu, sube_id')
+    .select('status, mahsup_durumu, sube_id'), tenantAccess)
   allInvoicesQuery = applyBranchScope(allInvoicesQuery, access, sube)
   const { data: allInvoices } = await allInvoicesQuery
 

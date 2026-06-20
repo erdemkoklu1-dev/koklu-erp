@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
@@ -8,7 +7,6 @@ import SubeSelect from '@/components/SubeSelect'
 
 export default function NewCustomerPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [subeId, setSubeId] = useState<string | null>(null)
@@ -36,9 +34,14 @@ export default function NewCustomerPage() {
     if (!form.full_name.trim()) { setError('Müşteri adı zorunlu.'); return }
     setLoading(true)
     setError('')
-    const { error } = await supabase.from('customers').insert([{ ...form, sube_id: subeId || null }])
-    if (error) {
-      setError('Kayıt sırasında hata oluştu: ' + error.message)
+    const res = await fetch('/api/tenant-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'customers', payload: { ...form, sube_id: subeId || null } }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setError('Kayıt sırasında hata oluştu: ' + (data?.error ?? `HTTP ${res.status}`))
       setLoading(false)
     } else {
       router.push('/customers')

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentAccess, type CurrentAccess } from '@/lib/auth/authorization'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { talepStatusLabel } from '../../status'
 import PrintButton from '@/components/PrintButton'
@@ -16,11 +17,12 @@ export default async function TalepYazdirPage({ params }: { params: Promise<{ id
   const { id } = await params
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data: talep, error } = await supabase
+  const { data: talep, error } = await applyTenantScope(supabase
     .from('musteri_talepleri')
     .select('*')
-    .eq('id', id)
+    .eq('id', id), tenantAccess)
     .maybeSingle()
 
   if (error) throw new Error(`Talep yazdırma bilgisi alınamadı: ${error.message}`)

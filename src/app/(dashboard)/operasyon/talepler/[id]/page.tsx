@@ -5,6 +5,7 @@ import { updateTalepDurumAction } from '../actions'
 import OperationShell from '../../_components/OperationShell'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess, type CurrentAccess } from '@/lib/auth/authorization'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 const DURUMLAR = ['Yeni', 'İşleme Alındı', 'Planlandı', 'Sahada', 'Beklemede', 'Tamamlandı', 'İptal', 'Teslimata Aktarıldı', 'İş Planına Aktarıldı', 'Teklif Verildi']
 
@@ -19,11 +20,12 @@ export default async function TalepDetayPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data: talep, error } = await supabase
+  const { data: talep, error } = await applyTenantScope(supabase
     .from('musteri_talepleri')
     .select('*')
-    .eq('id', id)
+    .eq('id', id), tenantAccess)
     .maybeSingle()
 
   if (error) {

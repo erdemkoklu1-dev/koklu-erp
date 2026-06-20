@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +21,17 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const firmaId = await requireCurrentFirmaId()
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('id, firma_id')
+      .eq('id', invoice_id)
+      .maybeSingle()
+    if (invoiceError) return NextResponse.json({ error: invoiceError.message }, { status: 500 })
+    if (!invoice) return NextResponse.json({ error: 'Fatura bulunamadı' }, { status: 404 })
+    if (invoice.firma_id !== firmaId) {
+      return NextResponse.json({ error: 'Seçilen fatura kullanıcının firmasına ait değil.' }, { status: 403 })
+    }
 
     // Ödeme kaydı ekle
     // NOT: paid_amount ve status, DB trigger (trg_payment_sync_invoice) tarafından
@@ -33,6 +45,7 @@ export async function POST(req: NextRequest) {
       payment_date: isMahsup ? mahsup_tarihi : payment_date,
       reference_no: reference_no ?? null,
       notes: isMahsup ? (mahsup_aciklama ?? null) : (notes ?? null),
+      firma_id: firmaId,
     }])
 
     if (payErr) {

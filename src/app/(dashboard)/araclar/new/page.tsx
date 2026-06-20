@@ -1,12 +1,10 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function NewAraciPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -26,15 +24,20 @@ export default function NewAraciPage() {
     if (!form.full_name.trim()) { setError('Ad soyad zorunludur.'); return }
     setLoading(true)
     setError('')
-    const { error } = await supabase.from('brokers').insert([{
+    const res = await fetch('/api/tenant-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'brokers', payload: {
       full_name: form.full_name.trim(),
       company_name: form.company_name.trim() || null,
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
       notes: form.notes.trim() || null,
-    }])
-    if (error) {
-      setError('Kayıt sırasında hata oluştu: ' + error.message)
+    } }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setError('Kayıt sırasında hata oluştu: ' + (data?.error ?? `HTTP ${res.status}`))
       setLoading(false)
     } else {
       router.push('/araclar')

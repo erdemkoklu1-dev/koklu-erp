@@ -276,7 +276,7 @@ export default function YeniTeklifPage() {
     if (!kalemler.length) { setError('En az bir kalem ekleyiniz.'); return }
     setSaving(true)
     try {
-      const { data: teklif, error: tErr } = await supabase.from('teklifler').insert([{
+      const teklifPayload = {
         teklif_no, tarih, gecerlilik_suresi: gecerlilik, gecerlilik_bitis: gecerlilikBitis,
         sehir: sehir || null, durum, sube_id: subeId || null,
         musteri_id: musteriMod === 'kayitli' ? seciliMusteri?.id : null,
@@ -292,13 +292,16 @@ export default function YeniTeklifPage() {
         kar_orani: karOrani ? parseFloat(karOrani) : null,
         notlar: notlar || null,
         ticari_sartname_ekli: sartname, ticari_sartname_metni: sartname ? sartnameMetin : null,
-      }]).select().single()
-      if (tErr || !teklif) throw new Error(tErr?.message ?? 'Teklif kaydedilemedi')
-      const { error: kErr } = await supabase.from('teklif_kalemleri').insert(
-        kalemler.map((k, i) => ({ teklif_id: teklif.id, sira_no: i + 1, aciklama: k.aciklama, miktar: k.miktar, birim_fiyat: k.birim_fiyat, iskonto: k.iskonto || 0, toplam: k.toplam }))
-      )
-      if (kErr) throw new Error(kErr.message)
-      router.push(`/fiyat-teklifleri/${teklif.id}`)
+      }
+      const kalemPayload = kalemler.map((k, i) => ({ sira_no: i + 1, aciklama: k.aciklama, miktar: k.miktar, birim_fiyat: k.birim_fiyat, iskonto: k.iskonto || 0, toplam: k.toplam }))
+      const res = await fetch('/api/tenant-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'teklifler', teklif: teklifPayload, kalemler: kalemPayload }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.id) throw new Error(data?.error ?? 'Teklif kaydedilemedi')
+      router.push(`/fiyat-teklifleri/${data.id}`)
     } catch (err: any) {
       setError(err.message ?? 'Bilinmeyen hata'); setSaving(false)
     }

@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { ProformaSilButton } from './ProformaSilButton'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
   taslak:      { label: 'Taslak',      className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
@@ -25,11 +26,12 @@ export default async function ProformaListesiPage({
 }) {
   const { durum, from, to, q, para_birimi } = await searchParams
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  let query = supabase
+  let query = applyTenantScope(supabase
     .from('proforma_faturalar')
     .select('id, proforma_no, tarih, musteri_unvan, ara_toplam, kdv_tutari, toplam_tutar, para_birimi, durum')
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false }), tenantAccess)
 
   if (durum && durum !== 'tumu')           query = query.eq('durum', durum)
   if (from)                                query = query.gte('tarih', from)

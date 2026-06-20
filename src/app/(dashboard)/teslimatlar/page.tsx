@@ -4,6 +4,7 @@ import { formatTRDate } from '@/lib/finance/formatters'
 import TabletModeButton from './TabletModeButton'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { TESLIMAT_CANCELLED_STATUS_ALIASES, isCancelledTeslimatStatus, normalizeTeslimatStatus, quotedTeslimatStatuses } from '@/lib/teslimat-status'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 type TeslimatKalemRow = {
   id: string
@@ -78,11 +79,13 @@ function DashboardCard({ label, value, icon, valueCls, isUrgent, href }: CardPro
 export default async function TeslimatlarPage() {
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const today = new Date().toISOString().slice(0, 10)
   const tenDaysAgoDate = new Date()
   tenDaysAgoDate.setDate(tenDaysAgoDate.getDate() - 10)
   const tenDaysAgo = tenDaysAgoDate.toISOString().slice(0, 10)
   function scope(query: any) {
+    query = applyTenantScope(query, tenantAccess)
     if (!access || access.isAdmin) return query
     if (access.branchIds.length === 0) return query.in('sube_id', ['00000000-0000-0000-0000-000000000000'])
     return query.in('sube_id', access.branchIds)
@@ -106,17 +109,17 @@ export default async function TeslimatlarPage() {
     scope(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim'])),
     scope(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']).lt('created_at', tenDaysAgo)),
     scope(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']).lt('created_at', tenDaysAgo)),
-    supabase
+    applyTenantScope(supabase
       .from('teslimat_kalemleri')
       .select('id, aciklama, toplam_tutar, teslimatlar(teslimat_no, durum)')
       .eq('faturalanir_mi', true)
       .gt('toplam_tutar', 0)
-      .limit(300),
-    supabase
+      .limit(300), tenantAccess),
+    applyTenantScope(supabase
       .from('on_kayitlar')
       .select('id, aciklama, notlar')
       .ilike('notlar', '%Teslimat kalemi:%')
-      .limit(1000),
+      .limit(1000), tenantAccess),
     scope(supabase
       .from('teslimatlar')
       .select('id, teslimat_no, teslimat_tarihi, durum, customers(id, full_name), subeler(ad)')

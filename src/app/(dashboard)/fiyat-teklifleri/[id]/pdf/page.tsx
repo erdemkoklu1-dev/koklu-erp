@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import PrintActions from '@/app/(dashboard)/service-forms/[id]/PrintActions'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 // ─── Türkçe para yazıya çevirme ────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -56,10 +57,11 @@ function fmtN(n: number, currency: string) {
 export default async function TeklifPdfPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const [{ data: teklif }, { data: kalemler }] = await Promise.all([
-    supabase.from('teklifler').select('*, customers(full_name, phone, address)').eq('id', id).single(),
-    supabase.from('teklif_kalemleri').select('*').eq('teklif_id', id).order('sira_no'),
+    applyTenantScope(supabase.from('teklifler').select('*, customers(full_name, phone, address)').eq('id', id), tenantAccess).maybeSingle(),
+    applyTenantScope(supabase.from('teklif_kalemleri').select('*').eq('teklif_id', id).order('sira_no'), tenantAccess),
   ])
 
   if (!teklif) notFound()

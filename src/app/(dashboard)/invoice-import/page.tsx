@@ -304,9 +304,10 @@ export default function InvoiceImportPage() {
       }
 
       if (!customerId) {
-        const { data: newCustomer, error: custErr } = await supabase
-          .from('customers')
-          .insert({
+        const customerRes = await fetch('/api/tenant-create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'customers', payload: {
             full_name: customer.full_name,
             type: customer.type,
             tax_number: customer.tax_number || null,
@@ -316,11 +317,11 @@ export default function InvoiceImportPage() {
             il: customer.il || null,
             sube_id: customer.sube_id || null,
             is_active: true,
-          })
-          .select('id')
-          .single()
+          } }),
+        })
+        const newCustomer = await customerRes.json()
 
-        if (custErr) throw new Error('Müşteri kaydedilemedi: ' + custErr.message)
+        if (!customerRes.ok || !newCustomer?.id) throw new Error('Müşteri kaydedilemedi: ' + (newCustomer?.error ?? `HTTP ${customerRes.status}`))
         customerId = newCustomer.id
       }
 
@@ -346,8 +347,13 @@ export default function InvoiceImportPage() {
           qr_code: `KOKLU-${customerId!.slice(0, 8)}-${now}-${idx}`,
         }))
 
-        const { error: devErr } = await supabase.from('devices').insert(rows)
-        if (devErr) throw new Error('Cihazlar kaydedilemedi: ' + devErr.message)
+        const deviceRes = await fetch('/api/tenant-create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'devices', payload: rows }),
+        })
+        const deviceData = await deviceRes.json()
+        if (!deviceRes.ok) throw new Error('Cihazlar kaydedilemedi: ' + (deviceData?.error ?? `HTTP ${deviceRes.status}`))
       }
 
       setSavedCustomerId(customerId)

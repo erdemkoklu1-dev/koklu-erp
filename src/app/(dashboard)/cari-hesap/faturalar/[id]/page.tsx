@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { formatCurrency, formatTRDate, INVOICE_STATUS_CONFIG, PAYMENT_METHOD_LABELS } from '@/lib/finance/formatters'
 import InvoiceActions from './_components/InvoiceActions'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function FaturaDetayPage({
   params,
@@ -14,11 +15,12 @@ export default async function FaturaDetayPage({
   const { id } = await params
   const { kaynak } = await searchParams
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const [{ data: invoice }, { data: items }, { data: payments }, { data: invoiceBrokers }] = await Promise.all([
-    supabase.from('invoices')
+    applyTenantScope(supabase.from('invoices')
       .select('*, customers(full_name, phone, address, tax_number, email), subeler(ad)')
-      .eq('id', id).single(),
+      .eq('id', id), tenantAccess).maybeSingle(),
     supabase.from('invoice_items').select('*').eq('invoice_id', id).order('line_order'),
     supabase.from('payments').select('*').eq('invoice_id', id).order('payment_date', { ascending: false }),
     supabase.from('invoice_brokers')

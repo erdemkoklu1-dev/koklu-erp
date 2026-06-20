@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { TeklifSilButton } from '../TeklifSilButton'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 const DURUM_CONFIG: Record<string, { label: string; className: string }> = {
   taslak:     { label: 'Taslak',     className: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600' },
@@ -23,12 +24,13 @@ function fmt(n: number, currency: string) {
 export default async function TeklifDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const [{ data: teklif }, { data: kalemler }] = await Promise.all([
-    supabase.from('teklifler')
+    applyTenantScope(supabase.from('teklifler')
       .select('*, customers(full_name, phone)')
-      .eq('id', id).single(),
-    supabase.from('teklif_kalemleri').select('*').eq('teklif_id', id).order('sira_no'),
+      .eq('id', id), tenantAccess).maybeSingle(),
+    applyTenantScope(supabase.from('teklif_kalemleri').select('*').eq('teklif_id', id).order('sira_no'), tenantAccess),
   ])
 
   if (!teklif) notFound()

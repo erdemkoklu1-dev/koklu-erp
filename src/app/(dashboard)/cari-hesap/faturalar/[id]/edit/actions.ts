@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/service'
+import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export type UpdateInvoiceResult =
   | { success: true }
@@ -75,6 +76,25 @@ export async function updateInvoiceAction(
   brokersToInsert: BrokerInsert[]
 ): Promise<UpdateInvoiceResult> {
   const supabase = createServiceClient()
+
+  // Tenant güvenliği: fatura kullanıcının firmasına ait mi + şube/müşteri uyumu
+  try {
+    const firmaId = await requireCurrentFirmaId()
+    const { data: existing, error: readErr } = await supabase
+      .from('invoices')
+      .select('id, firma_id')
+      .eq('id', invoiceId)
+      .maybeSingle()
+    if (readErr) return { success: false, error: readErr.message }
+    if (!existing) return { success: false, error: 'Fatura bulunamadı.' }
+    if (existing.firma_id !== firmaId) {
+      return { success: false, error: 'Bu kayıt kullanıcının firmasına ait değil.' }
+    }
+    await assertBranchBelongsToFirma(invoiceData.sube_id, firmaId)
+    await assertCustomerBelongsToFirma(invoiceData.customer_id, firmaId)
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Firma doğrulaması başarısız.' }
+  }
 
   const { error: invErr } = await supabase
     .from('invoices')

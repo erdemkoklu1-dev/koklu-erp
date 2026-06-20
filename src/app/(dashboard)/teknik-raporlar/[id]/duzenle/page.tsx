@@ -4,13 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 import type { TechnicalReportRow } from '@/lib/technical-reports/types'
 import TechnicalReportForm from '../../_components/TechnicalReportForm'
 import TechnicalReportTabs from '../../_components/TechnicalReportTabs'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function EditTechnicalReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const [{ data: report }, { data: customers }, { data: subeler }, { data: personeller }, { data: settings }] = await Promise.all([
-    supabase.from('teknik_raporlar').select('*, customers(full_name, address), subeler(ad), personeller(ad, soyad)').eq('id', id).single(),
-    supabase.from('customers').select('id, full_name, address, sube_id').eq('is_active', true).order('full_name'),
+    applyTenantScope(supabase.from('teknik_raporlar').select('*, customers(full_name, address), subeler(ad), personeller(ad, soyad)').eq('id', id), tenantAccess).maybeSingle(),
+    applyTenantScope(supabase.from('customers').select('id, full_name, address, sube_id').eq('is_active', true).order('full_name'), tenantAccess),
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
     supabase.from('personeller').select('id, ad, soyad').eq('durum', 'aktif').order('ad'),
     supabase.from('teknik_hesap_ayarlari').select('ayar_grubu, ayar_adi, ayar_degeri, birim').eq('aktif', true),

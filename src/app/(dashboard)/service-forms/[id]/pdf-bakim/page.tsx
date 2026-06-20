@@ -4,6 +4,7 @@ import { Fragment } from 'react'
 import PrintActions from '../PrintActions'
 import CompanyStampApproval from '../../_components/CompanyStampApproval'
 import { getCompanyStampSettings } from '@/lib/company-stamp'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 function toTrDate(value: string | null) {
   if (!value) return '-'
@@ -54,12 +55,14 @@ const C = {
 export default async function ServiceFormBakimPdfPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const { data: form, error: formError } = await supabase
+  let formQuery = supabase
     .from('service_forms')
     .select('*, customers(full_name, phone, address, tax_number)')
     .eq('id', id)
-    .single()
+  formQuery = applyTenantScope(formQuery, tenantAccess)
+  const { data: form, error: formError } = await formQuery.maybeSingle()
 
   if (formError || !form) notFound()
 
@@ -69,12 +72,14 @@ export default async function ServiceFormBakimPdfPage({ params }: { params: Prom
     .eq('service_form_id', id)
     .order('created_at')
 
-  const { data: devices } = await supabase
+  let devicesQuery = supabase
     .from('devices')
     .select('custom_device_name, capacity, quantity, serial_number, device_types(name)')
     .eq('customer_id', form.customer_id)
     .eq('is_active', true)
     .order('created_at')
+  devicesQuery = applyTenantScope(devicesQuery, tenantAccess)
+  const { data: devices } = await devicesQuery
 
   const itemRows = items ?? []
   const rows =

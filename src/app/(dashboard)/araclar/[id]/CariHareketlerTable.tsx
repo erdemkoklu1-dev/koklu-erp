@@ -183,11 +183,14 @@ export default function CariHareketlerTable({ brokerId, initialRows, subeler }: 
           .neq('kaynak', 'Fatura Komisyonu')
           .select('*, subeler(ad)')
           .single()
-      : await supabase
-          .from('araci_cari_hareketleri')
-          .insert(payload)
-          .select('*, subeler(ad)')
-          .single()
+      : await fetch('/api/tenant-create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'araci_cari_hareketleri', payload }),
+        }).then(async res => {
+          const data = await res.json()
+          return res.ok ? { data, error: null } : { data: null, error: { message: data?.error ?? `HTTP ${res.status}` } }
+        })
 
     if (result.error) {
       setError(result.error.message)

@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import ProformaFormClient, { ProformaPrefillData } from '../ProformaFormClient'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function YeniProformaPage({
   searchParams,
@@ -11,12 +12,13 @@ export default async function YeniProformaPage({
 
   if (teklif_id) {
     const supabase = createServiceClient()
+    const tenantAccess = await getCurrentTenantAccessFromSession()
     const [{ data: teklif }, { data: kalemler }] = await Promise.all([
-      supabase
+      applyTenantScope(supabase
         .from('teklifler')
         .select('*, customers(full_name, phone, email, address, tax_number)')
-        .eq('id', teklif_id)
-        .single(),
+        .eq('id', teklif_id), tenantAccess)
+        .maybeSingle(),
       supabase
         .from('teklif_kalemleri')
         .select('*')

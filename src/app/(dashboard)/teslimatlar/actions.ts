@@ -11,6 +11,7 @@ import { getSetting } from '@/lib/settings'
 import { getTeslimFormData, teslimFormFileName } from '@/lib/teslim-form-data'
 import { TeslimFormPdfDocument } from '@/lib/teslim-form-pdf'
 import { getCurrentAccess } from '@/lib/auth/authorization'
+import { applyTenantScope, assertBranchBelongsToFirma, assertCustomerBelongsToFirma, getCurrentTenantAccessFromSession, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message
@@ -18,6 +19,10 @@ function errorMessage(error: unknown, fallback: string) {
     return String((error as { message?: unknown }).message || fallback)
   }
   return fallback
+}
+
+function tenantScope<T>(query: T, tenantAccess: Awaited<ReturnType<typeof getCurrentTenantAccessFromSession>>) {
+  return applyTenantScope(query as any, tenantAccess) as any
 }
 
 function revalidateTeslimatDeletePaths(id?: string) {
@@ -40,8 +45,11 @@ export async function createTeslimatAction(payload: string) {
   if (!user) return { ok: false, message: 'Oturum gerekli.' }
 
   try {
+    const firmaId = await requireCurrentFirmaId()
     const raw = JSON.parse(payload)
     const input = normalizeTeslimatInput(raw)
+    input.firma_id = firmaId
+    await assertBranchBelongsToFirma(input.sube_id, firmaId)
     const manualCustomer = raw?.manual_customer
     if (!input.customer_id && manualCustomer?.full_name?.trim()) {
       const addToCustomers = Boolean(manualCustomer.add_to_customers)
@@ -55,6 +63,7 @@ export async function createTeslimatAction(payload: string) {
           authorized_person: manualCustomer.authorized_person || null,
           sube_id: input.sube_id,
           is_active: addToCustomers,
+          firma_id: firmaId,
           notes: addToCustomers ? null : 'Teslimat modülünde geçici müşteri olarak oluşturuldu.',
         })
         .select('id')
@@ -62,6 +71,7 @@ export async function createTeslimatAction(payload: string) {
       if (customerError) throw customerError
       input.customer_id = customer.id
     }
+    await assertCustomerBelongsToFirma(input.customer_id, firmaId)
       const teslimat = await createTeslimat(input, user.id)
     return { ok: true, id: teslimat.id as string, message: 'Teslimat oluşturuldu.' }
   } catch (error) {
@@ -80,6 +90,20 @@ export async function updateTeslimatAction(id: string, payload: string) {
 
   try {
     const input = normalizeTeslimatInput(JSON.parse(payload))
+    const tenantAccess = await getCurrentTenantAccessFromSession()
+    const { data: mevcut, error: mevcutError } = await tenantScope(supabase
+      .from('teslimatlar')
+      .select('id, firma_id')
+      .eq('id', id), tenantAccess)
+      .maybeSingle()
+    if (mevcutError) throw mevcutError
+    if (!mevcut) throw new Error('Teslimat bulunamadı veya bu kayda erişim yetkiniz yok.')
+    const firmaId = tenantAccess?.isSuperAdmin ? mevcut.firma_id : tenantAccess?.companyId
+    if (firmaId) {
+      input.firma_id = firmaId
+      await assertBranchBelongsToFirma(input.sube_id, firmaId)
+      await assertCustomerBelongsToFirma(input.customer_id, firmaId)
+    }
     const teslimat = await updateTeslimat(id, input, user.id)
     revalidatePath('/teslimatlar/liste')
     revalidatePath(`/teslimatlar/${id}`)
@@ -97,11 +121,12 @@ export async function deleteTeslimatAction(id: string) {
   try {
     const access = await getCurrentAccess()
     if (!access) return { ok: false, message: 'Yetki bilgisi alınamadı.' }
-    const { data: teslimat, error: teslimatError } = await supabase
+    const tenantAccess = await getCurrentTenantAccessFromSession()
+    const { data: teslimat, error: teslimatError } = await tenantScope(supabase
       .from('teslimatlar')
       .select('id, sube_id')
-      .eq('id', id)
-      .single()
+      .eq('id', id), tenantAccess)
+      .maybeSingle()
 
     if (teslimatError || !teslimat) return { ok: false, message: 'Teslimat kaydı bulunamadı.' }
     if (!access.isAdmin && (!teslimat.sube_id || !access.branchIds.includes(teslimat.sube_id))) {
@@ -129,18 +154,20 @@ export async function updateTeslimatDurumAction(formData: FormData) {
     throw new Error('Durum geçersiz.')
   }
 
-  const { data: mevcut, error: mevcutError } = await supabase
+  const tenantAccess = await getCurrentTenantAccessFromSession()
+  const { data: mevcut, error: mevcutError } = await tenantScope(supabase
     .from('teslimatlar')
     .select('durum')
-    .eq('id', id)
-    .single()
+    .eq('id', id), tenantAccess)
+    .maybeSingle()
   if (mevcutError) throw mevcutError
+  if (!mevcut) throw new Error('Teslimat bulunamadı veya bu kayda erişim yetkiniz yok.')
 
   if (mevcut.durum !== yeniDurum) {
-    const { error: updateError } = await supabase
+    const { error: updateError } = await tenantScope(supabase
       .from('teslimatlar')
       .update({ durum: yeniDurum, updated_at: new Date().toISOString() })
-      .eq('id', id)
+      .eq('id', id), tenantAccess)
     if (updateError) throw updateError
 
       await supabase.from('teslimat_durum_gecmisi').insert({

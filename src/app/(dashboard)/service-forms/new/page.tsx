@@ -261,9 +261,7 @@ export default function NewServiceFormPage() {
     setLoading(true); setError('')
 
     const formNumber = `SF-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`
-    const { data: form, error: formErr } = await supabase
-      .from('service_forms')
-      .insert([{
+    const formPayload = {
         form_number: formNumber,
         customer_id: selectedCustomer.id,
         technician_name: technicianName || null,
@@ -273,14 +271,9 @@ export default function NewServiceFormPage() {
         next_service_date: nextServiceDate || null,
         control_number: controlNumber,
         status: 'completed',
-      }])
-      .select().single()
+      }
 
-    if (formErr || !form) { setError('Form kaydedilemedi: ' + formErr?.message); setLoading(false); return }
-
-    const { error: itemErr } = await supabase.from('service_form_items').insert(
-      items.map(i => ({
-        service_form_id: form.id,
+    const itemPayload = items.map(i => ({
         device_name: i.device_name,
         serial_number: i.serial_number || null,
         quantity: i.quantity,
@@ -290,9 +283,19 @@ export default function NewServiceFormPage() {
         gauge_status: i.gauge_status,
         notes: i.notes || null,
       }))
-    )
-    if (itemErr) { setError('Satırlar kaydedilemedi: ' + itemErr.message); setLoading(false); return }
-    router.push(`/service-forms/${form.id}`)
+
+    const res = await fetch('/api/tenant-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'service_forms', form: formPayload, items: itemPayload }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data?.id) {
+      setError('Form kaydedilemedi: ' + (data?.error ?? `HTTP ${res.status}`))
+      setLoading(false)
+      return
+    }
+    router.push(`/service-forms/${data.id}`)
   }
 
   const filteredCustomers = customers

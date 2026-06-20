@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { EMPTY_BRANCH_ID, resolveBranchFilter } from '@/lib/auth/branch-scope'
+import { assertBranchBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export type GelenImportRow = {
   alici_adi: string
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const firmaId = await requireCurrentFirmaId()
     const access = await getCurrentAccess()
 
     function incomingBranchId(requested?: string | null) {
@@ -55,8 +57,8 @@ export async function POST(req: NextRequest) {
     }
 
     const [{ data: existingInvoices }, { data: existingSuppliers }] = await Promise.all([
-      supabase.from('invoices').select('invoice_number').eq('invoice_type', 'alis'),
-      supabase.from('invoices').select('supplier_name').eq('invoice_type', 'alis').not('supplier_name', 'is', null),
+      supabase.from('invoices').select('invoice_number').eq('invoice_type', 'alis').eq('firma_id', firmaId),
+      supabase.from('invoices').select('supplier_name').eq('invoice_type', 'alis').eq('firma_id', firmaId).not('supplier_name', 'is', null),
     ])
 
     const existingNos = new Set((existingInvoices ?? []).map(i => i.invoice_number))
@@ -91,6 +93,8 @@ export async function POST(req: NextRequest) {
         if (row.gelis_tarihi) notesParts.push(`Geliş Tarihi: ${row.gelis_tarihi}`)
         const notes = notesParts.join(' | ')
 
+        const subeId = incomingBranchId(row.sube_id)
+        await assertBranchBelongsToFirma(subeId, firmaId)
         const { data: inv, error: invErr } = await supabase
           .from('invoices')
           .insert({
@@ -108,7 +112,8 @@ export async function POST(req: NextRequest) {
             status,
             description:    `e-Fatura Gelen: ${row.senaryo}`,
             notes,
-            sube_id:        incomingBranchId(row.sube_id),
+            sube_id:        subeId,
+            firma_id:       firmaId,
           })
           .select('id')
           .single()

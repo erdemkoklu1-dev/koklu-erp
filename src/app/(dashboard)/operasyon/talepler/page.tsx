@@ -5,6 +5,7 @@ import OperationFilters from '../_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { completeTalepAction, softDeleteTalepAction } from './actions'
 import { TALEP_STATUS_OPTIONS, normalizeTalepStatus, talepStatusAliases, talepStatusLabel } from './status'
 
@@ -84,15 +85,17 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
   const params = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const lockedSubeId = getLockedBranchId(access)
   const effectiveSube = lockedSubeId ?? params.sube
   const today = new Date().toISOString().slice(0, 10)
 
-  let query = supabase
+  // Önce firma (tenant) filtresi, ardından şube filtresi uygulanır.
+  let query = applyTenantScope(supabase
     .from('musteri_talepleri')
     .select('id, talep_no, customer_name_snapshot, cihaz_name_snapshot, baslik, aciklama, kategori, oncelik, durum, talep_tarihi, hedef_tarih, sube_id, sorumlu_personel_id')
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(200), tenantAccess)
 
   query = applyBranchScope(query, access, effectiveSube)
   query = applyDefaultVisibility(query, params.durum)
@@ -106,7 +109,7 @@ export default async function TaleplerPage({ searchParams }: { searchParams: Sea
     query = query.or(`baslik.ilike.%${q}%,talep_no.ilike.%${q}%,customer_name_snapshot.ilike.%${q}%`)
   }
 
-  const scoped = <T,>(baseQuery: T) => applyBranchScope(baseQuery, access, effectiveSube) as T
+  const scoped = <T,>(baseQuery: T) => applyBranchScope(applyTenantScope(baseQuery as any, tenantAccess), access, effectiveSube) as T
   const baseCount = () => scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }))
   const statusCount = (status: 'new' | 'in_progress' | 'waiting' | 'completed') => applyDateFilters(
     baseCount().in('durum', talepStatusAliases(status)),

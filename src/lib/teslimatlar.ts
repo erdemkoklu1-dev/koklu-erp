@@ -90,6 +90,7 @@ export type TeslimatKalemInput = {
 }
 
 export type TeslimatInput = {
+  firma_id?: string
   customer_id: string
   sube_id: string | null
   personel_id: string | null
@@ -279,6 +280,7 @@ function toKalemRows(teslimatId: string, input: TeslimatInput, kalemler: Teslima
     faturalanir_mi: k.faturalanir_mi,
     onceki_kalem_id: k.onceki_kalem_id ?? null,
     notlar: k.notlar ?? null,
+    firma_id: input.firma_id,
   }))
 }
 
@@ -338,6 +340,7 @@ async function createEmanetTakipIfNeeded(teslimat: { id: string }, input: Teslim
     geri_alinan_miktar: 0,
     hedef_tarih: kalem.hedef_tarih ?? input.hedef_tarih,
     durum: 'acik',
+    firma_id: input.firma_id,
   })
   if (error) throw new Error(dbErrorMessage('Emanet takip kaydı oluşturulamadı', error))
 }
@@ -360,6 +363,7 @@ async function createGeriTeslimTakipIfNeeded(teslimat: { id: string }, input: Te
     urun_id: kalem.urun_id,
     miktar: Number(kalem.miktar ?? 0),
     hedef_tarih: kalem.hedef_tarih ?? input.hedef_tarih,
+    firma_id: input.firma_id,
   })
   if (error) throw new Error(dbErrorMessage('Geri teslim takip kaydı oluşturulamadı', error))
 }
@@ -537,6 +541,7 @@ async function createOnKayitlarForTeslimat(teslimat: { id: string; teslimat_no: 
       toplam_tutar: Number(k.toplam_tutar ?? 0),
       notlar: `Teslimat modülünden oluşturuldu. Teslimat: ${teslimat.teslimat_no}. Teslimat kalemi: ${k.id}`,
       durum: 'beklemede',
+      firma_id: input.firma_id,
     }))
 
   if (rows.length === 0) return (mevcutlar ?? []).length > 0
@@ -557,7 +562,7 @@ export async function createOnKayitFromTeslimatKalem(kalemId: string, input: {
   const supabase = createServiceClient()
   const { data: kalem, error: kalemError } = await supabase
     .from('teslimat_kalemleri')
-    .select('id, aciklama, miktar, birim, birim_fiyat, toplam_tutar, faturalanir_mi, teslimatlar(id, teslimat_no, teslimat_tarihi, durum, customer_id)')
+    .select('id, aciklama, miktar, birim, birim_fiyat, toplam_tutar, faturalanir_mi, teslimatlar(id, teslimat_no, teslimat_tarihi, durum, customer_id, firma_id)')
     .eq('id', kalemId)
     .single()
   if (kalemError) throw kalemError
@@ -568,6 +573,7 @@ export async function createOnKayitFromTeslimatKalem(kalemId: string, input: {
     teslimat_tarihi?: string | null
     durum?: string | null
     customer_id?: string | null
+    firma_id?: string | null
   } | null
   if (!teslimat?.customer_id) throw new Error('Müşteri eşleşmesi bulunamadı.')
   if (teslimat.durum !== 'tamamlandi') throw new Error('Yalnızca tamamlanmış teslimat kalemleri ön kayda aktarılabilir.')
@@ -605,6 +611,7 @@ export async function createOnKayitFromTeslimatKalem(kalemId: string, input: {
     .from('on_kayitlar')
     .insert({
       customer_id: teslimat.customer_id,
+      firma_id: teslimat.firma_id,
       kayit_tarihi: teslimat.teslimat_tarihi,
       aciklama: onKayitAciklama,
       miktar,
@@ -661,6 +668,7 @@ export async function createTeslimat(input: TeslimatInput, userId?: string | nul
       aciklama: input.aciklama,
       notlar: input.notlar,
       created_by: userId ?? null,
+      firma_id: input.firma_id,
     })
     .select('id, teslimat_no')
     .single()

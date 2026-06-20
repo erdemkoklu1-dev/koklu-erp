@@ -5,6 +5,7 @@ import OperationFilters from './_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { TESLIMAT_CANCELLED_STATUS_ALIASES, isCancelledTeslimatStatus, normalizeTeslimatStatus, quotedTeslimatStatuses } from '@/lib/teslimat-status'
 
 type SearchParams = Promise<{ sube?: string; baslangic?: string; bitis?: string; q?: string }>
@@ -58,6 +59,7 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
   const params = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const lockedSubeId = getLockedBranchId(access)
   const effectiveSube = lockedSubeId ?? params.sube
   const today = new Date().toISOString().slice(0, 10)
@@ -66,6 +68,8 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
   const tenDaysAgoStr = tenDaysAgo.toISOString().slice(0, 10)
 
   const scoped = <T,>(query: T) => applyBranchScope(query, access, effectiveSube) as T
+  // firma_id sütunu olan tablolar için: önce tenant, sonra şube filtresi
+  const scopedTenant = <T,>(query: T) => scoped(applyTenantScope(query as any, tenantAccess) as T)
 
   const [
     { data: subeler },
@@ -88,23 +92,23 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
     { data: sonIsPlanlari },
   ] = await Promise.all([
     supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
-    applyDate(scoped(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today).not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))), 'teslimat_tarihi', params.baslangic, params.bitis),
-    applyDate(scoped(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte')), 'teslimat_tarihi', params.baslangic, params.bitis),
+    applyDate(scopedTenant(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('teslimat_tarihi', today).not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))), 'teslimat_tarihi', params.baslangic, params.bitis),
+    applyDate(scopedTenant(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('durum', 'sevkte')), 'teslimat_tarihi', params.baslangic, params.bitis),
     scoped(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi'])),
     scoped(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim'])),
     scoped(supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['bekliyor', 'kismi_teslim']).lt('created_at', tenDaysAgoStr)),
     scoped(supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).in('durum', ['acik', 'kismi_kapandi']).lt('created_at', tenDaysAgoStr)),
-    applyDate(scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'Yeni')), 'talep_tarihi', params.baslangic, params.bitis),
-    applyDate(scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'İşleme Alındı')), 'talep_tarihi', params.baslangic, params.bitis),
-    applyDate(scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('oncelik', 'Acil').not('durum', 'in', '("Tamamlandı","İptal")')), 'talep_tarihi', params.baslangic, params.bitis),
-    scoped(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).lt('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
-    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('planlanan_tarih', today)),
-    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor')),
-    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı')),
-    scoped(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
-    scoped(supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum, customers(full_name), subeler(ad)').not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES)).order('created_at', { ascending: false }).limit(5)),
-    scoped(supabase.from('musteri_talepleri').select('id, talep_no, baslik, durum, talep_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
-    scoped(supabase.from('is_planlari').select('id, plan_no, baslik, durum, sonraki_is_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
+    applyDate(scopedTenant(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'Yeni')), 'talep_tarihi', params.baslangic, params.bitis),
+    applyDate(scopedTenant(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'İşleme Alındı')), 'talep_tarihi', params.baslangic, params.bitis),
+    applyDate(scopedTenant(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('oncelik', 'Acil').not('durum', 'in', '("Tamamlandı","İptal")')), 'talep_tarihi', params.baslangic, params.bitis),
+    scopedTenant(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).lt('hedef_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
+    scopedTenant(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('planlanan_tarih', today)),
+    scopedTenant(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Bekliyor')),
+    scopedTenant(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('durum', 'Tamamlandı')),
+    scopedTenant(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")')),
+    scopedTenant(supabase.from('teslimatlar').select('id, teslimat_no, teslimat_tarihi, durum, customers(full_name), subeler(ad)').not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES)).order('created_at', { ascending: false }).limit(5)),
+    scopedTenant(supabase.from('musteri_talepleri').select('id, talep_no, baslik, durum, talep_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
+    scopedTenant(supabase.from('is_planlari').select('id, plan_no, baslik, durum, sonraki_is_tarihi, subeler(ad)').order('created_at', { ascending: false }).limit(5)),
   ])
 
   const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string | null }[], access)
@@ -117,12 +121,12 @@ export default async function OperasyonPage({ searchParams }: { searchParams: Se
       { count: bekleyenPlanliIs },
       { count: gecikenPlanliIs },
     ] = await Promise.all([
-      supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).eq('durum', 'sevkte'),
+      applyTenantScope(supabase.from('teslimatlar').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).eq('durum', 'sevkte'), tenantAccess),
       supabase.from('emanet_takipleri').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).in('durum', ['acik', 'kismi_kapandi']),
       supabase.from('geri_teslim_takipleri').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).in('durum', ['bekliyor', 'kismi_teslim']),
-      supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).not('durum', 'in', '("Tamamlandı","İptal")'),
-      supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).eq('durum', 'Bekliyor'),
-      supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")'),
+      applyTenantScope(supabase.from('musteri_talepleri').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).not('durum', 'in', '("Tamamlandı","İptal")'), tenantAccess),
+      applyTenantScope(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).eq('durum', 'Bekliyor'), tenantAccess),
+      applyTenantScope(supabase.from('planli_isler').select('*', { count: 'exact', head: true }).eq('sube_id', sube.id).lt('planlanan_tarih', today).not('durum', 'in', '("Tamamlandı","İptal")'), tenantAccess),
     ])
 
     return {

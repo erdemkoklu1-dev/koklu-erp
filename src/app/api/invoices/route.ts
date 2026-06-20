@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { EMPTY_BRANCH_ID, resolveBranchFilter } from '@/lib/auth/branch-scope'
+import { applyTenantScope, assertBranchBelongsToFirma, assertCustomerBelongsToFirma, getCurrentTenantAccessFromSession, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 
 export async function GET() {
   try {
     const supabase = createServiceClient()
-    const { data, error } = await supabase
+    const tenantAccess = await getCurrentTenantAccessFromSession()
+    const { data, error } = await applyTenantScope(supabase
       .from('invoices')
       .select('id, invoice_number, invoice_date, total_amount, customers(full_name)')
-      .order('invoice_date', { ascending: false })
+      .order('invoice_date', { ascending: false }), tenantAccess)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     const invoices = (data ?? []).map((inv: any) => ({
       id: inv.id,
@@ -38,11 +40,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const firmaId = await requireCurrentFirmaId()
     const access = await getCurrentAccess()
     const branchId = resolveBranchFilter(access, invoice.sube_id)
     if (branchId === EMPTY_BRANCH_ID || !branchId) {
       return NextResponse.json({ error: 'Şube seçilmelidir' }, { status: 400 })
     }
+    await assertBranchBelongsToFirma(branchId, firmaId)
+    await assertCustomerBelongsToFirma(invoice.customer_id || null, firmaId)
 
     // Fatura numarası üret
     const year = Number(invoice.year ?? new Date().getFullYear())
@@ -96,6 +101,7 @@ export async function POST(req: NextRequest) {
         status: 'kesildi',
         description: invoice.description || null,
         notes: invoice.notes || null,
+        firma_id: firmaId,
       })
       .select('id')
       .single()
@@ -118,6 +124,7 @@ export async function POST(req: NextRequest) {
         unit: String(item.unit || 'adet'),
         unit_price: Number(item.unit_price) || 0,
         kdv_rate: Number(item.kdv_rate) || 20,
+        firma_id: firmaId,
       }))
 
       const { error: itemsErr } = await supabase.from('invoice_items').insert(itemRows)

@@ -5,6 +5,7 @@ import OperationFilters from '../_components/OperationFilters'
 import { formatTRDate } from '@/lib/finance/formatters'
 import { getCurrentAccess } from '@/lib/auth/authorization'
 import { applyBranchScope, filterVisibleBranches, getLockedBranchId } from '@/lib/auth/branch-scope'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { TESLIMAT_CANCELLED_STATUS_ALIASES, normalizeTeslimatStatus, quotedTeslimatStatuses } from '@/lib/teslimat-status'
 import { TeslimatSilButton } from '../../teslimatlar/TeslimatSilButton'
 
@@ -34,15 +35,16 @@ export default async function OperasyonTeslimatlarPage({ searchParams }: { searc
   const params = await searchParams
   const supabase = createServiceClient()
   const access = await getCurrentAccess()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const lockedSubeId = getLockedBranchId(access)
   const effectiveSube = lockedSubeId ?? params.sube
   const today = new Date().toISOString().slice(0, 10)
 
-  let query = applyBranchScope(supabase
+  let query = applyBranchScope(applyTenantScope(supabase
     .from('teslimatlar')
     .select('id, teslimat_no, teslimat_tarihi, hedef_tarih, durum, customers(id, full_name), subeler(id, ad), personeller(id, ad, soyad)')
     .order('created_at', { ascending: false })
-    .limit(300), access, effectiveSube)
+    .limit(300), tenantAccess), access, effectiveSube)
 
   if (params.durum === 'iptal') query = query.in('durum', [...TESLIMAT_CANCELLED_STATUS_ALIASES])
   else query = query.not('durum', 'in', quotedTeslimatStatuses(TESLIMAT_CANCELLED_STATUS_ALIASES))
@@ -54,14 +56,14 @@ export default async function OperasyonTeslimatlarPage({ searchParams }: { searc
 
   const [{ data: rows }, { data: subeler }] = await Promise.all([
     query,
-    supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'),
+    applyTenantScope(supabase.from('subeler').select('id, ad').eq('aktif', true).order('ad'), tenantAccess),
   ])
   const visibleSubeler = filterVisibleBranches((subeler ?? []) as { id: string; ad: string | null }[], access)
   const displayRows: any[] = (rows ?? []).map((row: any) => ({ ...row, durum: normalizeTeslimatStatus(row.durum) }))
 
   const ids = (rows ?? []).map((row: any) => row.id)
   const { data: kalemRows } = ids.length > 0
-    ? await supabase.from('teslimat_kalemleri').select('teslimat_id').in('teslimat_id', ids)
+    ? await applyTenantScope(supabase.from('teslimat_kalemleri').select('teslimat_id').in('teslimat_id', ids), tenantAccess)
     : { data: [] }
 
   const kalemCountMap = new Map<string, number>()

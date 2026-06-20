@@ -4,15 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import PrintButton from '@/components/PrintButton'
 import type { TechnicalReportRow } from '@/lib/technical-reports/types'
 import TechnicalReportPrintView from '../../_components/TechnicalReportPrintView'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function PrintTechnicalReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data } = await supabase
+  const tenantAccess = await getCurrentTenantAccessFromSession()
+  const { data } = await applyTenantScope(supabase
     .from('teknik_raporlar')
     .select('*, customers(full_name, address), subeler(ad), personeller(ad, soyad)')
-    .eq('id', id)
-    .single()
+    .eq('id', id), tenantAccess)
+    .maybeSingle()
   if (!data) notFound()
   const report = data as TechnicalReportRow
   return (

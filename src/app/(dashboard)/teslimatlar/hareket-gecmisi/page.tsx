@@ -2,23 +2,25 @@ import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { HAREKET_TIPI_LABELS, type HareketTipi } from '@/lib/teslimatlar'
 import { formatTRDate } from '@/lib/finance/formatters'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function HareketGecmisiPage({ searchParams }: { searchParams: Promise<{ customer?: string; urun?: string; sube?: string; personel?: string; yon?: string }> }) {
   const params = await searchParams
   const supabase = createServiceClient()
-  let query = supabase
+  const tenantAccess = await getCurrentTenantAccessFromSession()
+  let query = applyTenantScope(supabase
     .from('teslimat_kalemleri')
     .select('*, urunler(id, ad), teslimatlar(id, teslimat_no, teslimat_tarihi, customer_id, sube_id, personel_id, customers(full_name), subeler(ad), personeller(ad, soyad))')
     .order('created_at', { ascending: false })
-    .limit(500)
+    .limit(500), tenantAccess)
   if (params.urun) query = query.eq('urun_id', params.urun)
   if (params.yon) query = query.eq('hareket_yonu', params.yon)
 
   const [{ data }, { data: customers }, { data: urunler }, { data: subeler }, { data: personeller }] = await Promise.all([
     query,
-    supabase.from('customers').select('id, full_name').order('full_name'),
+    applyTenantScope(supabase.from('customers').select('id, full_name').order('full_name'), tenantAccess),
     supabase.from('urunler').select('id, ad').order('ad'),
-    supabase.from('subeler').select('id, ad').order('ad'),
+    applyTenantScope(supabase.from('subeler').select('id, ad').order('ad'), tenantAccess),
     supabase.from('personeller').select('id, ad, soyad').order('ad'),
   ])
 

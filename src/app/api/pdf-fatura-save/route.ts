@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
 import { matchCustomerForImport, normalizeCustomerTaxNo } from '@/lib/customer-matching'
 
 export type PdfInvoiceItem = {
@@ -90,12 +91,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
+    const firmaId = await requireCurrentFirmaId()
 
     // ── Mevcut fatura numaraları ───────────────────────────────────
     const { data: existingInvoices } = await supabase
       .from('invoices')
       .select('invoice_number')
       .eq('invoice_type', 'satis')
+      .eq('firma_id', firmaId)
     const existingNos = new Set((existingInvoices ?? []).map(i => normNo(i.invoice_number)))
 
     // ── Mevcut müşteriler ─────────────────────────────────────────
@@ -106,9 +109,10 @@ export async function POST(req: NextRequest) {
       const { data, error } = await supabase
         .from('customers')
         .select('id, full_name, tax_number, tc_kimlik, address')
+        .eq('firma_id', firmaId)
       if (error) {
         // tc_kimlik sütunu henüz eklenmemiş — temel sütunlarla devam et
-        const { data: data2 } = await supabase.from('customers').select('id, full_name, tax_number, address')
+        const { data: data2 } = await supabase.from('customers').select('id, full_name, tax_number, address').eq('firma_id', firmaId)
         existingCustomers = data2 ?? []
       } else {
         existingCustomers = data ?? []
@@ -153,6 +157,7 @@ export async function POST(req: NextRequest) {
         if (row.customer_id) {
           const selectedCustomer = existingCustomers.find(c => c.id === row.customer_id)
           if (!selectedCustomer) throw new Error(`Seçilen müşteri bulunamadı (${row.musteri_adi})`)
+          await assertCustomerBelongsToFirma(row.customer_id, firmaId)
           customerId = selectedCustomer.id
         } else if (!row.force_new_customer) {
           const match = matchCustomerForImport(existingCustomers, {
@@ -182,6 +187,7 @@ export async function POST(req: NextRequest) {
               il:         row.musteri_il || null,
               sube_id:    row.sube_id || null,
               is_active:  true,
+              firma_id:    firmaId,
             })
             .select('id')
             .single()
@@ -209,6 +215,7 @@ export async function POST(req: NextRequest) {
           .map(b => b.banka_adi ? `${b.banka_adi}: ${b.iban}` : b.iban)
           .join(' | ')
 
+        await assertBranchBelongsToFirma(row.sube_id || null, firmaId)
         const { data: inv, error: invErr } = await supabase
           .from('invoices')
           .insert({
@@ -232,6 +239,7 @@ export async function POST(req: NextRequest) {
             description:    row.senaryo ? `PDF e-Fatura: ${row.senaryo}` : 'PDF e-Fatura',
             notes:          bankaNotu || null,
             sube_id:        row.sube_id || null,
+            firma_id:       firmaId,
           })
           .select('id')
           .single()
@@ -253,6 +261,7 @@ export async function POST(req: NextRequest) {
             unit_price:  k.birim_fiyat || 0,
             kdv_rate:    k.kdv_orani   || 20,
             notes:       null,
+            firma_id:    firmaId,
           }))
 
           const { error: itemErr } = await supabase
@@ -287,6 +296,7 @@ export async function POST(req: NextRequest) {
             control3_date:      c3,
             is_active:          true,
             qr_code:            `KOKLU-${(customerId as string).slice(0, 8)}-${now}-${idx}`,
+            firma_id:           firmaId,
           }))
 
           const { error: devErr } = await supabase

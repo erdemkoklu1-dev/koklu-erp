@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 import { GecikenlerClient, type GecikenRow } from './GecikenlerClient'
 
 function daysLate(date: string | null | undefined) {
@@ -10,18 +11,19 @@ function daysLate(date: string | null | undefined) {
 
 export default async function GecikenlerPage() {
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
   const today = new Date().toISOString().slice(0, 10)
   const [{ data: geri }, { data: emanet }] = await Promise.all([
-    supabase
+    applyTenantScope(supabase
       .from('geri_teslim_takipleri')
       .select('*, teslimatlar(id, teslimat_no), customers(full_name), urunler(ad)')
       .in('durum', ['bekliyor', 'kismi_teslim'])
-      .lt('hedef_tarih', today),
-    supabase
+      .lt('hedef_tarih', today), tenantAccess),
+    applyTenantScope(supabase
       .from('emanet_takipleri')
       .select('*, teslimatlar(id, teslimat_no), customers(full_name), urunler(ad)')
       .in('durum', ['acik', 'kismi_kapandi'])
-      .lt('hedef_tarih', today),
+      .lt('hedef_tarih', today), tenantAccess),
   ])
 
   const rows: GecikenRow[] = [

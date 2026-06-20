@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import ProformaFormClient, { ProformaInitialData, ProformaKalem } from '../ProformaFormClient'
+import { applyTenantScope, getCurrentTenantAccessFromSession } from '@/lib/auth/tenant-scope'
 
 export default async function ProformaDuzenlePage({
   params,
@@ -9,9 +10,10 @@ export default async function ProformaDuzenlePage({
 }) {
   const { id } = await params
   const supabase = createServiceClient()
+  const tenantAccess = await getCurrentTenantAccessFromSession()
 
   const [{ data: proforma }, { data: kalemler }] = await Promise.all([
-    supabase.from('proforma_faturalar').select('*').eq('id', id).single(),
+    applyTenantScope(supabase.from('proforma_faturalar').select('*').eq('id', id), tenantAccess).maybeSingle(),
     supabase.from('proforma_fatura_kalemleri').select('*').eq('proforma_id', id).order('sira_no'),
   ])
 
