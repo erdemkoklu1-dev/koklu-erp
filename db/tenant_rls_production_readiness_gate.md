@@ -42,6 +42,11 @@ Production'da RLS açmadan önce bu kapıların tamamı geçmelidir. Bu dosyanı
 
 - [ ] Rollback scripti hazır.
 - [ ] Staging'de rollback provası yapıldı.
+- [ ] Staging helper upgrade test edildi.
+- [ ] Staging gerçek policy cleanup test edildi.
+- [ ] Staging tenant policy apply test edildi.
+- [ ] Staging negatif testler geçti.
+- [ ] Staging rollback provası yapıldı.
 - [ ] Backup/snapshot prosedürü hazır.
 - [ ] Production bakım penceresi belirlendi.
 - [ ] Rollback sonrası smoke test listesi hazır.

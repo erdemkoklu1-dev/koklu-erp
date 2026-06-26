@@ -61,3 +61,33 @@ Sprint 1.5 raporuna göre audit scriptleri 0 sonuç dönerse şu tablolar RLS i�
 ## Production Kararı
 
 Production RLS için hazır değiliz. Gerekçe: bu sprint yalnızca envanter, dry-run taslakları ve risk planı üretir; staging üzerinde policy değişikliği ve uçtan uca kullanıcı senaryoları henüz tamamlanmamıştır.
+
+## Sprint 1.9 Gerçek Envanter Güncellemesi
+
+Production read-only envanterine göre:
+
+- Public şemada 56 tablonun tamamında RLS açık.
+- Force RLS açık tablo yok.
+- Veri temizlik özetinde 38/38 kontrol `0`.
+- Fazla izin veren policy sayısı 59.
+- `current_firma_id()` ve `is_super_admin()` mevcut.
+- `current_user_role()` ve `current_user_sube_id()` eksik.
+- `is_super_admin()` rol adı `Super Admin` beklediği için production'da görünen `Admin` rolüyle uyuşmayabilir.
+
+Gerçek policy adlarıyla staging cleanup dosyası:
+
+- `db/tenant_rls_staging_cleanup_real.sql`
+
+Gerçek tenant policy apply dosyası:
+
+- `db/tenant_rls_staging_apply_tenant_policies_real.sql`
+
+Staging sırası:
+
+1. `db/tenant_rls_helper_upgrade_staging.sql`
+2. `db/tenant_rls_staging_cleanup_real.sql`
+3. `db/tenant_rls_staging_apply_tenant_policies_real.sql`
+4. `db/tenant_rls_staging_test_matrix_real.md`
+5. `db/tenant_rls_staging_rollback_real.sql`
+
+Production policy temizliği için karar hâlâ hazır değil. Önce staging/local dry-run ve rollback provası tamamlanmalıdır.

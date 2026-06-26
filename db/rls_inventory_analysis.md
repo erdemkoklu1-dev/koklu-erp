@@ -8,39 +8,39 @@ Bu analiz dosyası, kullanıcı Supabase SQL Editor'dan read-only çıktıları 
 
 ## 1. Genel Özet
 
-- İncelenen tablo sayısı:
-- RLS açık tablo sayısı:
-- RLS kapalı tablo sayısı:
-- Force RLS açık tablo sayısı:
-- Mevcut policy sayısı:
-- Fazla izin veren policy sayısı:
-- Eksik helper fonksiyon sayısı:
-- Eksik `firma_id` kolonu olan tenant tablo sayısı:
+- İncelenen tablo sayısı: 56 public tablo
+- RLS açık tablo sayısı: 56
+- RLS kapalı tablo sayısı: 0
+- Force RLS açık tablo sayısı: 0
+- Mevcut policy sayısı: production çıktısında çok sayıda mevcut policy var
+- Fazla izin veren policy sayısı: 59
+- Eksik helper fonksiyon sayısı: 2 (`current_user_role`, `current_user_sube_id`)
+- Eksik `firma_id` kolonu olan tenant tablo sayısı: kritik tenant tablolarda yok; `firmalar` için `firma_id` olmaması normal
 
 ## 2. Tenant RLS'e Hazır Tablolar
 
 | Tablo | firma_id var mı | RLS durumu | Mevcut policy riski | Hazır mı |
 | --- | ---: | --- | --- | --- |
-| customers |  |  |  |  |
-| devices |  |  |  |  |
-| service_forms |  |  |  |  |
-| service_form_items |  |  |  |  |
-| invoices |  |  |  |  |
-| invoice_items |  |  |  |  |
-| invoice_brokers |  |  |  |  |
-| payments |  |  |  |  |
-| teslimatlar |  |  |  |  |
-| teslimat_kalemleri |  |  |  |  |
-| teklifler |  |  |  |  |
-| teklif_kalemleri |  |  |  |  |
-| proforma_faturalar |  |  |  |  |
-| proforma_fatura_kalemleri |  |  |  |  |
-| teknik_raporlar |  |  |  |  |
-| musteri_talepleri |  |  |  |  |
-| is_planlari |  |  |  |  |
-| planli_isler |  |  |  |  |
-| brokers |  |  |  |  |
-| araci_cari_hareketleri |  |  |  |  |
+| customers | Evet | açık | geniş select/insert/update | Staging cleanup sonrası |
+| devices | Evet | açık | geniş select/insert/update | Staging cleanup sonrası |
+| service_forms | Evet | açık | geniş select/insert/update/delete | Staging cleanup sonrası |
+| service_form_items | Evet | açık | `sfi_all` | Staging cleanup sonrası |
+| invoices | Evet | açık | policy yok | Tenant policy eklenince |
+| invoice_items | Evet | açık | policy yok | Tenant policy eklenince |
+| invoice_brokers | Evet | açık | geniş authenticated | Staging cleanup sonrası |
+| payments | Evet | açık | policy yok | Tenant policy eklenince |
+| teslimatlar | Evet | açık | public true | Staging cleanup sonrası |
+| teslimat_kalemleri | Evet | açık | public true | Staging cleanup sonrası |
+| teklifler | Evet | açık | public true | Staging cleanup sonrası |
+| teklif_kalemleri | Evet | açık | public true | Staging cleanup sonrası |
+| proforma_faturalar | Evet | açık | `auth.uid() IS NOT NULL` | Staging cleanup sonrası |
+| proforma_fatura_kalemleri | Evet | açık | `auth.uid() IS NOT NULL` | Staging cleanup sonrası |
+| teknik_raporlar | Evet | açık | `auth.uid() IS NOT NULL` | Staging cleanup sonrası |
+| musteri_talepleri | Evet | açık | auth/public wide | Staging cleanup sonrası |
+| is_planlari | Evet | açık | auth/public wide | Staging cleanup sonrası |
+| planli_isler | Evet | açık | auth/public wide | Staging cleanup sonrası |
+| brokers | Evet | açık | geniş authenticated | Staging cleanup sonrası |
+| araci_cari_hareketleri | Evet | açık | anon/public true | Staging cleanup sonrası |
 
 ## 3. Fazla İzin Veren Policy'ler
 
@@ -66,10 +66,17 @@ Bu liste sadece staging dry-run içindir. Production kararı için staging test 
 
 | Fonksiyon | Durum | Risk | Öneri |
 | --- | --- | --- | --- |
-| current_firma_id |  |  |  |
-| is_super_admin |  |  |  |
-| current_user_role |  |  |  |
-| current_user_sube_id |  |  |  |
+| current_firma_id | Var | Aktif kullanıcı kontrolü staging'de doğrulanmalı | `aktif = true` ile staging upgrade |
+| is_super_admin | Var | `Super Admin` bekliyor, production rolü `Admin` görünüyor | `Admin` ve `Super Admin` destekli staging upgrade |
+| current_user_role | Yok | Rol bazlı policy için eksik | Staging helper olarak oluştur |
+| current_user_sube_id | Yok | Şube policy için eksik | Staging helper olarak oluştur |
+
+## 6.1 Veri Temizlik Özeti
+
+- `firma_id` boş kayıt yok.
+- Parent-child firma uyumsuzluğu yok.
+- Şube-firma uyumsuzluğu yok.
+- Production read-only Bölüm 7 sonucu: 38/38 kontrol `0`.
 
 ## 7. RLS Dry-Run Riskleri
 
@@ -89,4 +96,5 @@ Production RLS:
 
 Gerekçe:
 
--
+- Production'da RLS zaten açık olsa da 59 fazla izin veren policy var.
+- Gerçek policy cleanup, helper upgrade, tenant policy apply, negatif test ve rollback provası staging/local ortamda tamamlanmadan production policy değişikliği yapılmamalı.
