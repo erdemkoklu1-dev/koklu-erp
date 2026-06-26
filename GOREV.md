@@ -1,623 +1,397 @@
-# GÖREV — Sprint 1.5: Tenant Güvenlik Denetimi, Kaçak Sorgu Tespiti ve RLS Hazırlık
+# GÖREV — Sprint 1.7B: RLS Staging Dry-Run Dosyalarını Commit/Push ile Kapatma ve Read-Only Envanter Hazırlığı
 
 ## Amaç
 
-Köklü ERP’nin ticari SaaS altyapısı için tenant/firma ayrımı kademeli olarak kuruldu.
+Sprint 1.7 sonunda RLS staging dry-run hazırlık dosyaları üretildi.
 
-Tamamlananlar:
+Bu görevin amacı:
 
-* `firmalar` tablosu oluşturuldu.
-* Varsayılan `Köklü Yangın` firması oluşturuldu.
-* `kullanici_profiller.firma_id` dolu.
-* `subeler.firma_id` dolu.
-* Kritik tablolara `firma_id` eklendi.
-* Mevcut kayıtlar Köklü firmasına bağlandı.
-* Yeni müşteri oluşturunca `customers.firma_id` doluyor.
-* Yeni cihaz oluşturunca `devices.firma_id` doluyor.
-* Servis formu, teklif, teslimat, teknik rapor, operasyon, fatura, ödeme, aracı cari kayıtlarında `firma_id` boş kayıt kalmadı.
-* EXOPANEL müşterisi geçici olarak test firmasına taşınarak görünürlük testi yapıldı.
-* Normal kullanıcıda farklı firmaya ait müşteri listede görünmedi.
-* Doğrudan URL erişim testi başarılı geçti.
-* EXOPANEL tekrar Köklü firmasına geri alındı.
-* TypeScript ve build daha önce başarılı geçti.
+1. Sprint 1.7 kapsamında üretilen/güncellenen dosyaları kontrol etmek.
+2. Sadece ilgili `db/*.md`, `db/*.sql` ve gerekirse `GOREV.md` dosyalarını commit’e almak.
+3. `src/` kod dosyalarında gereksiz değişiklik varsa commit’e almamak.
+4. TypeScript ve build sonuçlarını doğrulamak.
+5. Commit ve push işlemini tamamlamak.
+6. Görev sonunda kullanıcıya Supabase’de hangi read-only SQL dosyalarının çalıştırılacağını net olarak raporlamak.
 
-Bu sprintin amacı:
-
-1. Uygulama katmanında hâlâ tenant filtresi eksik kalan sorguları tespit etmek.
-2. Service role kullanılan API route’larında tenant güvenlik kontrolü var mı denetlemek.
-3. RLS açmadan önce riskli noktaları listelemek.
-4. `firma_id IS NULL` kalmadığını tekrar doğrulamak.
-5. RLS policy taslaklarını hazırlamak, ancak bu sprintte RLS’i aktif etmemek.
-6. `firma_id NOT NULL` için hazır olmayan tabloları tespit etmek, ancak bu sprintte NOT NULL yapmamak.
-7. Ticari SaaS’a geçiş öncesi tenant güvenlik raporu üretmek.
+Bu görevde **RLS açılmayacak**. Bu görev sadece dosya kontrolü, commit/push ve sonraki read-only envanter adımını hazırlama görevidir.
 
 ---
 
-## 1. Çok Önemli Kısıtlar
+## 1. Kesin Yasaklar
 
 Bu görevde kesinlikle şunlar yapılmayacak:
 
 ```txt
-RLS policy aktif etme.
-ALTER TABLE ... ENABLE ROW LEVEL SECURITY yapma.
-firma_id kolonlarını NOT NULL yapma.
-Mevcut kayıt silme.
-Mevcut müşteri/fatura/cihaz verisi taşıma.
-Fatura parser mantığını değiştirme.
-KDV/toplam/iskonto hesaplarını değiştirme.
-Teknik rapor formüllerini değiştirme.
-Teslimat iptal/silme mantığını değiştirme.
-Aracı komisyon formülünü değiştirme.
+Production Supabase üzerinde RLS açma.
+ALTER TABLE ... ENABLE ROW LEVEL SECURITY çalıştırma.
+FORCE ROW LEVEL SECURITY çalıştırma.
+CREATE POLICY çalıştırma.
+DROP POLICY çalıştırma.
+firma_id NOT NULL yapma.
+Veri silme.
+Veri taşıma.
+Veri güncelleme.
+Parser, hesaplama, teknik rapor formülü, teslimat mantığı veya PDF tasarımı değiştirme.
+UI redesign yapma.
 ```
 
-Bu sprint **denetim ve hazırlık sprintidir**.
+Supabase tarafında bu görev kapsamında hiçbir SQL çalıştırılmayacak. Sadece repo dosyaları kontrol edilecek.
 
 ---
 
-## 2. İncelenecek Ana Dosyalar
+## 2. Beklenen Sprint 1.7 Dosyaları
 
-Aşağıdaki klasör ve dosyalar taranacak:
-
-```txt
-src/app/(dashboard)/**
-src/app/api/**
-src/lib/**
-src/lib/auth/tenant-scope.ts
-src/lib/auth/branch-scope.ts
-src/lib/supabase/**
-```
-
-Özellikle şu dosyalar dikkatli incelenecek:
+Aşağıdaki dosyaların mevcut olduğunu kontrol et:
 
 ```txt
-src/app/api/invoices/route.ts
-src/app/api/odeme-kaydet/route.ts
-src/app/api/toplu-odeme/route.ts
-src/app/api/pdf-fatura-save/route.ts
-src/app/api/gelen-fatura-import/route.ts
-src/app/api/gelen-pdf-save/route.ts
-src/app/api/efatura-import/route.ts
-
-src/app/(dashboard)/customers/**
-src/app/(dashboard)/devices/**
-src/app/(dashboard)/cihazlar/**
-src/app/(dashboard)/service-forms/**
-src/app/(dashboard)/teslimatlar/**
-src/app/(dashboard)/fiyat-teklifleri/**
-src/app/(dashboard)/cari-hesap/**
-src/app/(dashboard)/operasyon/**
-src/app/(dashboard)/teknik-raporlar/**
-src/app/(dashboard)/araclar/**
-src/app/(dashboard)/dashboard/page.tsx
+db/rls_inventory_output_template.md
+db/rls_inventory_analysis.md
+db/tenant_rls_staging_dry_run_final.sql
+db/tenant_rls_staging_drop_permissive_policies.sql
+db/tenant_rls_staging_execution_checklist.md
+db/tenant_rls_negative_test_plan.md
+db/tenant_rls_production_readiness_gate.md
 ```
+
+Sprint 1.6 dosyaları daha önce commit’e girmediyse onları da kontrol et:
+
+```txt
+db/rls_policy_inventory.sql
+db/rls_helper_checks.sql
+db/tenant_rls_cleanup_plan.md
+db/tenant_rls_drop_permissive_policies_draft.sql
+db/tenant_rls_staging_test_plan.md
+db/tenant_rls_app_risk_report.md
+db/tenant_rls_rollback_plan.md
+```
+
+Ayrıca `GOREV.md` Sprint 1.7 raporunu içeriyorsa commit’e dahil edilebilir.
 
 ---
 
-## 3. Tenant Helper Kontrolü
+## 3. İlk Kontrol: Git Status
 
-Önce mevcut tenant helper dosyasını incele:
+Önce çalışma alanını kontrol et:
 
-```txt
-src/lib/auth/tenant-scope.ts
+```powershell
+git -c core.quotePath=false -c core.autocrlf=false --no-pager status --short
 ```
 
-Aşağıdaki fonksiyonların doğru çalıştığını doğrula:
+Çıktıyı incele.
+
+Beklenen değişiklikler şunlarla sınırlı olmalı:
 
 ```txt
-requireCurrentFirmaId()
-getCurrentTenantAccess()
-applyTenantScope()
-filterVisibleTenantRows()
-assertBranchBelongsToFirma()
-assertCustomerBelongsToFirma()
+GOREV.md
+db/*.md
+db/*.sql
 ```
 
-Eksik varsa, mevcut mimariyi bozmadan tamamla.
+Eğer `src/` altında değişiklik varsa, bunun Sprint 1.7 ile ilişkili olup olmadığını kontrol et. Bu görevde normalde kod değişikliği beklenmiyor.
 
-Beklenen kurallar:
-
-```txt
-Normal kullanıcı:
-  sadece kendi kullanici_profiller.firma_id kapsamındaki kayıtları görür ve işler.
-
-Super Admin:
-  ileride tüm firmaları görebilir, ancak mevcut tek firma kullanımını bozmaz.
-
-Şube kullanıcısı:
-  önce firma filtresi, sonra şube filtresi uygulanır.
-```
-
-Filtre sırası:
-
-```txt
-1. Tenant / firma scope
-2. Şube scope
-3. Sayfa filtreleri
-4. Arama / tarih / durum filtreleri
-```
+Eğer `.claude/settings.local.json`, `.env.local`, geçici dosya, log dosyası, `changed-files.txt`, `git-status.txt` veya benzeri dosyalar görünürse commit’e alma.
 
 ---
 
-## 4. Kaçak Sorgu Denetimi
+## 4. Diff Kontrolü
 
-Kod tabanında aşağıdaki pattern’leri ara:
+Aşağıdaki komutları çalıştır:
+
+```powershell
+git -c core.autocrlf=false --no-pager diff --name-only
+```
+
+```powershell
+git -c core.autocrlf=false --no-pager diff --stat
+```
+
+Kontrol et:
+
+* Değişiklikler dokümantasyon/SQL hazırlık dosyaları mı?
+* Production’da RLS açacak aktif SQL var mı?
+* `tenant_rls_staging_dry_run_final.sql` dosyasının başında staging-only uyarısı var mı?
+* Drop policy dosyaları production’da çalıştırılmayacak şekilde uyarılı mı?
+* RLS enable/create policy içeren dosyalar sadece staging/local amaçlı mı?
+
+Özellikle şu dosyalarda en üstte uyarı olmalı:
 
 ```txt
-.from('customers')
-.from("customers")
-.from('devices')
-.from("devices")
-.from('service_forms')
-.from("service_forms")
-.from('invoices')
-.from("invoices")
-.from('payments')
-.from("payments")
-.from('teslimatlar')
-.from("teslimatlar")
-.from('teklifler')
-.from("teklifler")
-.from('teknik_raporlar')
-.from("teknik_raporlar")
-.from('musteri_talepleri')
-.from("musteri_talepleri")
-.from('is_planlari')
-.from("is_planlari")
-.from('brokers')
-.from("brokers")
-.from('araci_cari_hareketleri')
-.from("araci_cari_hareketleri")
+db/tenant_rls_staging_dry_run_final.sql
+db/tenant_rls_staging_drop_permissive_policies.sql
+db/tenant_rls_drop_permissive_policies_draft.sql
 ```
 
-Her sorgu için kontrol et:
-
-```txt
-Liste sorgusunda tenant filtresi var mı?
-Detay sorgusunda tenant filtresi var mı?
-PDF/yazdırma sorgusunda tenant kontrolü var mı?
-Silme/güncelleme işleminde kayıt aynı firmaya ait mi kontrol ediliyor mu?
-Service role kullanılıyorsa manuel tenant kontrolü var mı?
-```
-
-Eğer sorgu public ayar tablosu veya global lookup ise tenant filtresi gerekmeyebilir. Ancak bu durum raporda belirtilmeli.
-
----
-
-## 5. Service Role API Güvenlik Denetimi
-
-`createServiceClient()` kullanılan route’ları özellikle denetle.
-
-Service role RLS’i bypass edebileceği için bu route’larda mutlaka manuel firma kontrolü olmalı.
-
-Aranacak pattern:
-
-```txt
-createServiceClient()
-```
-
-Her service role route için şu soruları cevapla:
-
-```txt
-Bu route hangi tabloya okuma/yazma yapıyor?
-Kullanıcının firma_id değeri alınıyor mu?
-İşlem yapılan kayıt kullanıcının firmasına ait mi kontrol ediliyor mu?
-Yeni kayıt oluşturuluyorsa firma_id yazılıyor mu?
-Güncelleme/silme işleminde firma_id kontrolü var mı?
-```
-
-Örnek güvenli yapı:
-
-```ts
-const firmaId = await requireCurrentFirmaId()
-
-const { data: invoice } = await supabase
-  .from('invoices')
-  .select('id, firma_id')
-  .eq('id', invoiceId)
-  .maybeSingle()
-
-if (!invoice || invoice.firma_id !== firmaId) {
-  return NextResponse.json(
-    { error: 'Bu kayıt kullanıcının firmasına ait değil.' },
-    { status: 403 }
-  )
-}
-```
-
----
-
-## 6. Detay ve PDF Route Kontrolü
-
-Aşağıdaki türde route’lar özellikle kontrol edilecek:
-
-```txt
-[id]/page.tsx
-[id]/edit/page.tsx
-[id]/pdf/page.tsx
-[id]/yazdir/page.tsx
-[id]/delete-action.ts
-[id]/copy/route.ts
-[id]/quote/route.ts
-```
-
-Kural:
-
-```txt
-ID ile gelen kayıt önce firma_id kontrolünden geçmeli.
-Kayıt bulunamazsa veya başka firmaya aitse güvenli hata verilmeli.
-```
-
-Yanlış örnek:
-
-```ts
-const { data } = await supabase
-  .from('customers')
-  .select('*')
-  .eq('id', id)
-  .single()
-```
-
-Doğru örnek:
-
-```ts
-let query = supabase
-  .from('customers')
-  .select('*')
-  .eq('id', id)
-
-query = applyTenantScope(query, access)
-
-const { data } = await query.maybeSingle()
-```
-
----
-
-## 7. Dashboard Denetimi
-
-Dashboard sorgularında tenant filtresi eksik kalmamalı.
-
-Kontrol edilecek kartlar:
-
-```txt
-Toplam müşteri
-Toplam cihaz
-SKT yaklaşan/geçen cihazlar
-Servis formu sayıları
-Fatura toplamları
-Tahsilat/borç kartları
-Teklif sayıları
-Teslimat özetleri
-Operasyon talepleri
-Teknik rapor sayıları
-Aracı cari özetleri
-```
-
-Her kart için:
-
-```txt
-Firma filtresi uygulanıyor mu?
-Şube filtresi uygulanıyorsa firma filtresinden sonra mı uygulanıyor?
-Teknik personel finansal kartları görmeme kuralı bozulmuş mu?
-```
-
----
-
-## 8. SQL Denetim Scripti Oluştur
-
-Yeni bir dosya oluştur:
-
-```txt
-db/tenant_audit_checks.sql
-```
-
-Bu dosya sadece kontrol sorguları içermeli. Veri değiştirmemeli.
-
-İçeriğinde şu kontroller olmalı:
-
-### 8.1 Firma ID boş kayıt kontrolü
-
-```sql
-SELECT 'customers' AS tablo, COUNT(*) AS bos_kayit FROM public.customers WHERE firma_id IS NULL
-UNION ALL
-SELECT 'devices', COUNT(*) FROM public.devices WHERE firma_id IS NULL
-UNION ALL
-SELECT 'service_forms', COUNT(*) FROM public.service_forms WHERE firma_id IS NULL
-UNION ALL
-SELECT 'invoices', COUNT(*) FROM public.invoices WHERE firma_id IS NULL
-UNION ALL
-SELECT 'invoice_items', COUNT(*) FROM public.invoice_items WHERE firma_id IS NULL
-UNION ALL
-SELECT 'payments', COUNT(*) FROM public.payments WHERE firma_id IS NULL
-UNION ALL
-SELECT 'teslimatlar', COUNT(*) FROM public.teslimatlar WHERE firma_id IS NULL
-UNION ALL
-SELECT 'teslimat_kalemleri', COUNT(*) FROM public.teslimat_kalemleri WHERE firma_id IS NULL
-UNION ALL
-SELECT 'teklifler', COUNT(*) FROM public.teklifler WHERE firma_id IS NULL
-UNION ALL
-SELECT 'teklif_kalemleri', COUNT(*) FROM public.teklif_kalemleri WHERE firma_id IS NULL
-UNION ALL
-SELECT 'teknik_raporlar', COUNT(*) FROM public.teknik_raporlar WHERE firma_id IS NULL
-UNION ALL
-SELECT 'musteri_talepleri', COUNT(*) FROM public.musteri_talepleri WHERE firma_id IS NULL
-UNION ALL
-SELECT 'is_planlari', COUNT(*) FROM public.is_planlari WHERE firma_id IS NULL
-UNION ALL
-SELECT 'planli_isler', COUNT(*) FROM public.planli_isler WHERE firma_id IS NULL
-UNION ALL
-SELECT 'brokers', COUNT(*) FROM public.brokers WHERE firma_id IS NULL
-UNION ALL
-SELECT 'araci_cari_hareketleri', COUNT(*) FROM public.araci_cari_hareketleri WHERE firma_id IS NULL;
-```
-
-Eğer bazı tablolar yoksa yorum satırı olarak bırakılabilir.
-
-### 8.2 Şube-firma uyumsuzluğu kontrolü
-
-```sql
-SELECT 'customers' AS tablo, c.id, c.firma_id, c.sube_id, s.firma_id AS sube_firma_id
-FROM public.customers c
-JOIN public.subeler s ON s.id = c.sube_id
-WHERE c.firma_id IS DISTINCT FROM s.firma_id;
-```
-
-Benzer kontroller şu tablolar için de eklenmeli:
-
-```txt
-invoices
-teslimatlar
-teklifler
-service_forms
-musteri_talepleri
-is_planlari
-```
-
-### 8.3 Müşteri-firma uyumsuzluğu kontrolü
-
-Örneğin cihazlar:
-
-```sql
-SELECT d.id, d.customer_id, d.firma_id, c.firma_id AS customer_firma_id
-FROM public.devices d
-JOIN public.customers c ON c.id = d.customer_id
-WHERE d.firma_id IS DISTINCT FROM c.firma_id;
-```
-
-Benzer kontroller:
-
-```txt
-service_forms.customer_id
-invoices.customer_id
-teslimatlar.customer_id
-teklifler.customer_id
-```
-
----
-
-## 9. RLS Policy Taslak Dosyası Hazırla, Ancak Çalıştırma
-
-Yeni dosya oluştur:
-
-```txt
-db/tenant_rls_policy_draft.sql
-```
-
-Bu dosya **taslak** olacak. Başında çok net uyarı olacak:
+Uyarı örneği:
 
 ```sql
 -- DİKKAT:
--- Bu dosya taslaktır.
--- Bu sprintte Supabase üzerinde çalıştırılmayacak.
--- RLS aktif etmezden önce tenant_audit_checks.sql sonucu temiz olmalıdır.
-```
-
-Taslakta şu mantık hazırlanabilir:
-
-```sql
--- ÖRNEK TASLAK
--- ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
---
--- CREATE POLICY customers_tenant_select
--- ON public.customers
--- FOR SELECT
--- USING (
---   firma_id = public.current_firma_id()
---   OR public.is_super_admin()
--- );
-```
-
-Ama bu dosyada hiçbir şey otomatik uygulanmamalı. Tüm policy satırları yorum satırı olarak kalabilir.
-
-Kapsanacak tablolar:
-
-```txt
-customers
-devices
-service_forms
-invoices
-invoice_items
-payments
-teslimatlar
-teslimat_kalemleri
-teklifler
-teklif_kalemleri
-proforma_faturalar
-teknik_raporlar
-musteri_talepleri
-is_planlari
-planli_isler
-brokers
-araci_cari_hareketleri
+-- Bu dosya SADECE staging/local Supabase için hazırlanmıştır.
+-- Production Supabase üzerinde çalıştırılmayacak.
 ```
 
 ---
 
-## 10. NOT NULL Hazırlık Raporu
+## 5. Stage Edilecek Dosyalar
 
-Bu sprintte `firma_id NOT NULL` yapılmayacak.
+Sadece aşağıdaki dosyaları stage et:
 
-Ancak hangi tabloların hazır olduğu raporlanacak.
-
-Rapor formatı:
-
-```txt
-Tablo adı
-firma_id boş kayıt sayısı
-İlişki uyumsuzluğu var mı?
-Yeni kayıt akışında firma_id yazılıyor mu?
-NOT NULL için hazır mı?
+```powershell
+git add db/rls_inventory_output_template.md
+git add db/rls_inventory_analysis.md
+git add db/tenant_rls_staging_dry_run_final.sql
+git add db/tenant_rls_staging_drop_permissive_policies.sql
+git add db/tenant_rls_staging_execution_checklist.md
+git add db/tenant_rls_negative_test_plan.md
+git add db/tenant_rls_production_readiness_gate.md
 ```
 
-Örnek:
+Eğer aşağıdaki Sprint 1.6 dosyaları hâlâ untracked ise ve daha önce commit’e girmemişse onları da stage et:
 
-```txt
-customers
-bos_kayit: 0
-ilişki uyumsuzluğu: yok
-yeni kayıt testi: geçti
-NOT NULL hazır: evet
+```powershell
+git add db/rls_policy_inventory.sql
+git add db/rls_helper_checks.sql
+git add db/tenant_rls_cleanup_plan.md
+git add db/tenant_rls_drop_permissive_policies_draft.sql
+git add db/tenant_rls_staging_test_plan.md
+git add db/tenant_rls_app_risk_report.md
+git add db/tenant_rls_rollback_plan.md
 ```
 
-Eğer emin olunamıyorsa:
+`GOREV.md` Sprint 1.7 görev sonu raporunu içeriyorsa stage et:
+
+```powershell
+git add GOREV.md
+```
+
+Kesinlikle şunları stage etme:
 
 ```txt
-NOT NULL hazır: hayır / tekrar test gerekli
+.claude/settings.local.json
+.env.local
+changed-files.txt
+git-status.txt
+node_modules
+.next
+src/ dosyaları
+geçici log/not dosyaları
 ```
+
+Kod değişikliği zorunlu görünüyorsa bu görevde commit’e alma; raporda ayrıca belirt.
 
 ---
 
-## 11. Test Firması Görünürlük Testi Dokümantasyonu
+## 6. Stage Kontrolü
 
-Aşağıdaki test akışı dokümante edilecek:
+Stage sonrası kontrol et:
 
-```txt
-1. Test Yangın Firması oluşturuldu.
-2. EXOPANEL müşterisi geçici olarak test firmasına taşındı.
-3. Normal Köklü admin kullanıcısında müşteri listesinde görünmedi.
-4. Doğrudan URL erişimi güvenli şekilde engellendi.
-5. EXOPANEL tekrar Köklü firmasına alındı.
+```powershell
+git diff --cached --name-only
 ```
 
-Bu test sonucu yeni bir dosyaya yazılabilir:
+Beklenen:
 
 ```txt
-db/tenant_visibility_test_report.md
+GOREV.md
+db/rls_inventory_output_template.md
+db/rls_inventory_analysis.md
+db/tenant_rls_staging_dry_run_final.sql
+db/tenant_rls_staging_drop_permissive_policies.sql
+db/tenant_rls_staging_execution_checklist.md
+db/tenant_rls_negative_test_plan.md
+db/tenant_rls_production_readiness_gate.md
 ```
 
-İçerik:
+Varsa Sprint 1.6 dosyaları:
 
 ```txt
-Test edilen kayıt
-Eski firma_id
-Yeni geçici firma_id
-Liste görünürlüğü sonucu
-Detay URL sonucu
-Geri alma sonucu
-Son karar
+db/rls_policy_inventory.sql
+db/rls_helper_checks.sql
+db/tenant_rls_cleanup_plan.md
+db/tenant_rls_drop_permissive_policies_draft.sql
+db/tenant_rls_staging_test_plan.md
+db/tenant_rls_app_risk_report.md
+db/tenant_rls_rollback_plan.md
 ```
+
+Stage listesinde `src/` dosyası varsa dur ve kullanıcıya raporla. Kullanıcı onayı olmadan commit’e alma.
 
 ---
 
-## 12. Kodda Düzeltme Yapılacaksa Sınır
+## 7. Testler
 
-Bu görev esasen denetimdir. Ancak açıkça eksik tenant filtresi bulunursa küçük ve sınırlı düzeltme yapılabilir.
+Commit öncesi çalıştır:
 
-Düzeltme yapılabilecek alanlar:
-
-```txt
-Eksik .eq('firma_id', firmaId)
-Eksik applyTenantScope
-Eksik firma_id insert alanı
-Eksik firma/şube/müşteri uyum kontrolü
+```powershell
+npx.cmd tsc --noEmit
 ```
 
-Düzeltme yapılmayacak alanlar:
+Sonra:
 
-```txt
-Modül iş mantığı
-Hesaplama formülleri
-Parser
-PDF tasarım
-UI redesign
-RLS
-NOT NULL
-```
-
----
-
-## 13. Kabul Kriterleri
-
-* [ ] `tenant_audit_checks.sql` oluşturuldu.
-* [ ] `tenant_rls_policy_draft.sql` oluşturuldu, ancak çalıştırılmadı.
-* [ ] `tenant_visibility_test_report.md` oluşturuldu.
-* [ ] Service role API route’ları tenant açısından denetlendi.
-* [ ] Dashboard tenant filtresi denetlendi.
-* [ ] Detay/PDF/yazdırma route’ları denetlendi.
-* [ ] `firma_id IS NULL` kayıt kontrolü temiz.
-* [ ] Şube-firma uyumsuzluk kontrolü temiz veya raporlandı.
-* [ ] Müşteri-firma uyumsuzluk kontrolü temiz veya raporlandı.
-* [ ] NOT NULL hazırlık raporu çıkarıldı.
-* [ ] RLS için hangi tablolar hazır, hangileri beklemeli raporlandı.
-* [ ] TypeScript geçti.
-* [ ] Build geçti.
-* [ ] RLS aktif edilmedi.
-* [ ] NOT NULL yapılmadı.
-
----
-
-## 14. Testler
-
-Çalıştır:
-
-```bash
-npx tsc --noEmit
+```powershell
 npm run build
 ```
 
-Ayrıca localhost’ta hızlı kontrol:
+Beklenen:
 
 ```txt
-/customers
-/customers/[id]
-/service-forms
-/service-forms/[id]
-/teslimatlar
-/fiyat-teklifleri
-/cari-hesap
-/teknik-raporlar
-/operasyon
-/araclar
-/dashboard
+TypeScript geçti.
+Build geçti.
 ```
 
-Her sayfada:
+Build sırasında `pdfjs-dist` kaynaklı opsiyonel canvas uyarıları çıkarsa ama build başarısız olmuyorsa sorun kabul edilmez.
 
-```txt
-Liste geliyor mu?
-Detay açılıyor mu?
-Console hatası var mı?
-Tenant filtresi nedeniyle yanlış boş ekran var mı?
+Eğer `.next/dev/types` kaynaklı geçici hata çıkarsa:
+
+```powershell
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+npx.cmd tsc --noEmit
+npm run build
 ```
 
 ---
 
-## 15. Görev Sonu Raporu
+## 8. Commit
 
-İş bitince şunları yaz:
+Stage listesi doğru ve testler başarılıysa commit at:
+
+```powershell
+git commit -m "docs: prepare tenant RLS staging dry-run gate"
+```
+
+Sonra commit’i kontrol et:
+
+```powershell
+git log --oneline -5
+```
+
+---
+
+## 9. Push
+
+Commit başarılıysa push yap:
+
+```powershell
+git push
+```
+
+Push sonrası status kontrolü:
+
+```powershell
+git -c core.quotePath=false -c core.autocrlf=false --no-pager status --short
+```
+
+Beklenen:
 
 ```txt
-Tenant audit sonucunda hangi dosyalar incelendi?
-Eksik tenant filtresi bulundu mu?
-Bulunduysa hangi dosyalarda düzeltildi?
-Service role kullanılan route’larda güvenlik durumu nedir?
-Dashboard tenant filtresi durumu nedir?
-PDF/yazdırma route’ları güvenli mi?
-tenant_audit_checks.sql sonucu nedir?
-tenant_rls_policy_draft.sql oluşturuldu mu?
-RLS bu sprintte aktif edildi mi? Cevap hayır olmalı.
-NOT NULL bu sprintte yapıldı mı? Cevap hayır olmalı.
-Hangi tablolar RLS için hazır görünüyor?
-Hangi tablolar ek test istiyor?
-TypeScript sonucu
-Build sonucu
+Çalışma alanı temiz olmalı.
 ```
+
+Eğer sadece lokal ayar/geçici dosya kaldıysa commit’e alma ve raporda belirt.
+
+---
+
+## 10. Görev Sonrası Kullanıcıya Verilecek Sonraki Manuel Adım
+
+Görev sonunda kullanıcıya şunu net olarak raporla:
+
+Production’da RLS açılmadı.
+
+Şimdi Supabase SQL Editor’da sadece read-only olarak şu dosyalardaki sorgular çalıştırılmalı:
+
+```txt
+db/rls_policy_inventory.sql
+db/rls_helper_checks.sql
+```
+
+Kullanıcıdan beklenen çıktı:
+
+```txt
+1. RLS açık/kapalı tablo durumu
+2. Mevcut policy listesi
+3. Fazla izin veren policy listesi
+4. Helper fonksiyon var/yok ve fonksiyon içerikleri
+5. Kullanıcı profil/rol/firma kontrol sonucu
+```
+
+Kesinlikle çalıştırılmayacak dosyalar:
+
+```txt
+db/tenant_rls_staging_dry_run_final.sql
+db/tenant_rls_staging_drop_permissive_policies.sql
+db/tenant_rls_drop_permissive_policies_draft.sql
+```
+
+Bunlar staging/local içindir; production’da çalıştırılmayacak.
+
+---
+
+## 11. Kabul Kriterleri
+
+* [ ] Sprint 1.7 dosyaları kontrol edildi.
+* [ ] Staging-only SQL dosyalarında production uyarısı var.
+* [ ] Yanlışlıkla `src/` dosyaları stage edilmedi.
+* [ ] `.claude/settings.local.json`, `.env.local`, geçici dosyalar stage edilmedi.
+* [ ] `git diff --cached --name-only` temiz kontrol edildi.
+* [ ] `npx.cmd tsc --noEmit` geçti.
+* [ ] `npm run build` geçti.
+* [ ] Commit atıldı.
+* [ ] Push yapıldı.
+* [ ] Production’da RLS açılmadı.
+* [ ] Production’da policy drop/create yapılmadı.
+* [ ] Sonraki adım olarak read-only envanter sorguları raporlandı.
+
+---
+
+## 12. Görev Sonu Rapor Formatı
+
+Görev bitince şu formatta rapor ver:
+
+```md
+# Sprint 1.7B Görev Sonu Raporu
+
+## Yapılanlar
+
+- ...
+
+## Commit
+
+- Commit mesajı:
+- Commit hash:
+
+## Push
+
+- Push sonucu:
+
+## Testler
+
+- npx.cmd tsc --noEmit:
+- npm run build:
+
+## Stage Edilen Dosyalar
+
+- ...
+
+## Stage Edilmeyen Dosyalar
+
+- ...
+
+## Production RLS Durumu
+
+- RLS açıldı mı? Hayır.
+- Policy değiştirildi mi? Hayır.
+- NOT NULL yapıldı mı? Hayır.
+
+## Sonraki Manuel Adım
+
+Supabase’de sadece read-only olarak çalıştırılacak dosyalar:
+
+- db/rls_policy_inventory.sql
+- db/rls_helper_checks.sql
+
+Çalıştırılmayacak dosyalar:
+
+- db/tenant_rls_staging_dry_run_final.sql
+- db/tenant_rls_staging_drop_permissive_policies.sql
+- db/tenant_rls_drop_permissive_policies_draft.sql
+

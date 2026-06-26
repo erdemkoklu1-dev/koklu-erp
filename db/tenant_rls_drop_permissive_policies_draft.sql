@@ -1,0 +1,59 @@
+-- =====================================================================
+-- Fazla İzin Veren Policy Temizleme TASLAĞI - Sprint 1.6
+-- =====================================================================
+-- BU DOSYA ÇALIŞTIRILMAYACAKTIR.
+-- Production'da DROP POLICY çalıştırılmadı ve bu dosyada çalıştırılabilir
+-- DROP POLICY satırı yoktur. Tüm DROP satırları yorumdur.
+--
+-- Kullanım amacı:
+-- 1. rls_policy_inventory.sql ile gerçek policy adlarını doğrula.
+-- 2. Staging'de tenant policy'ler hazır ve test edilmişse bu taslağı
+--    ayrı, onaylı migration'a dönüştür.
+-- 3. Her tabloyu küçük batch ile ele al.
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- Önce envanter alın:
+-- ---------------------------------------------------------------------
+-- SELECT schemaname, tablename, policyname, cmd, qual, with_check
+-- FROM pg_policies
+-- WHERE schemaname = 'public'
+-- ORDER BY tablename, policyname;
+
+-- ---------------------------------------------------------------------
+-- Tenant çekirdek tabloları - bilinen geniş policy adayları
+-- ---------------------------------------------------------------------
+-- DROP POLICY IF EXISTS "Service role has full access" ON public.teslimatlar;
+-- DROP POLICY IF EXISTS "Service role has full access" ON public.teslimat_kalemleri;
+-- DROP POLICY IF EXISTS "Service role has full access" ON public.teklifler;
+-- DROP POLICY IF EXISTS "Service role has full access" ON public.teklif_kalemleri;
+-- DROP POLICY IF EXISTS "teknik_raporlar_auth_all" ON public.teknik_raporlar;
+-- DROP POLICY IF EXISTS "operasyon_auth_all" ON public.musteri_talepleri;
+-- DROP POLICY IF EXISTS "operasyon_auth_all" ON public.is_planlari;
+-- DROP POLICY IF EXISTS "operasyon_auth_all" ON public.planli_isler;
+-- DROP POLICY IF EXISTS "operasyon_service_all" ON public.musteri_talepleri;
+-- DROP POLICY IF EXISTS "operasyon_service_all" ON public.is_planlari;
+-- DROP POLICY IF EXISTS "operasyon_service_all" ON public.planli_isler;
+-- DROP POLICY IF EXISTS "proforma_auth_all" ON public.proforma_faturalar;
+-- DROP POLICY IF EXISTS "proforma_kalem_auth_all" ON public.proforma_fatura_kalemleri;
+-- DROP POLICY IF EXISTS "auth_all" ON public.araci_cari_hareketleri;
+-- DROP POLICY IF EXISTS "anon_all" ON public.araci_cari_hareketleri;
+
+-- ---------------------------------------------------------------------
+-- Global/lookup veya kapsam dışı tablolar - ayrı analiz ister
+-- ---------------------------------------------------------------------
+-- DROP POLICY IF EXISTS "Service role has full access" ON public.urunler;
+-- DROP POLICY IF EXISTS "auth_all" ON public.subeler;
+-- DROP POLICY IF EXISTS "anon_read" ON public.subeler;
+-- DROP POLICY IF EXISTS "auth_all" ON public.sube_gider_gelir;
+-- DROP POLICY IF EXISTS "anon_all" ON public.sube_gider_gelir;
+-- DROP POLICY IF EXISTS "Service role has full access" ON public.tedarikciler;
+-- DROP POLICY IF EXISTS "personeller_auth_all" ON public.personeller;
+-- DROP POLICY IF EXISTS "teknik_hesap_ayarlari_auth_all" ON public.teknik_hesap_ayarlari;
+
+-- ---------------------------------------------------------------------
+-- Güvenlik notu
+-- ---------------------------------------------------------------------
+-- Bir policy kaldırılmadan önce aynı tablo için tenant-scoped SELECT,
+-- INSERT, UPDATE ve DELETE policy'leri staging'de test edilmiş olmalıdır.
+-- Aksi halde uygulama ekranları veri göremez veya yazamaz hale gelebilir.
