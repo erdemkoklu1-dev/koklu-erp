@@ -1,5 +1,7 @@
 # RLS Inventory Output Template
 
+> Not: Production çıktıları için artık `db/rls_production_readonly_collection.sql` ve `db/rls_production_inventory_results.md` kullanılacaktır.
+
 Bu dosya, Supabase SQL Editor'da yalnızca read-only sorgular çalıştırıldıktan sonra sonuçların yapıştırılması için hazırlanmıştır. Production üzerinde policy değiştirme, RLS açma veya veri değiştirme adımı içermez.
 
 ## 1. RLS Açık/Kapalı Tablo Durumu

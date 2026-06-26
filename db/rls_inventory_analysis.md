@@ -2,6 +2,10 @@
 
 Bu dosya ilk analiz şablonudur. `db/rls_inventory_output_template.md` doldurulup gerçek SQL çıktıları paylaşıldıktan sonra somut tablo/policy kararları buraya işlenecektir.
 
+## Production Read-Only Çıktı Bekleniyor
+
+Bu analiz dosyası, kullanıcı Supabase SQL Editor'dan read-only çıktıları aldıktan sonra doldurulacaktır. Henüz production policy temizliği veya RLS uygulanmamıştır.
+
 ## 1. Genel Özet
 
 - İncelenen tablo sayısı:

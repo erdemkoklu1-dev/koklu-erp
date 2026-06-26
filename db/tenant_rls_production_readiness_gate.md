@@ -14,11 +14,14 @@ Production'da RLS açmadan önce bu kapıların tamamı geçmelidir. Bu dosyanı
 
 ## 2. Policy Kapısı
 
+- [ ] Production read-only RLS inventory çıktıları alındı.
 - [ ] Mevcut policy envanteri çıkarıldı.
 - [ ] Fazla izin veren policy'ler belirlendi.
 - [ ] Hangi policy'lerin düşeceği gerçek adlarıyla doğrulandı.
 - [ ] Uydurma policy adı kullanılmadı.
 - [ ] RLS helper fonksiyonları doğrulandı.
+- [ ] Helper fonksiyon çıktıları doğrulandı.
+- [ ] Fazla izin veren policy'lerin gerçek adları doğrulandı.
 - [ ] Tenant policy staging'de çalıştı.
 - [ ] Kalan global/lookup policy'ler bilinçli olarak sınıflandırıldı.
 - [ ] `FORCE ROW LEVEL SECURITY` gerekmiyor kararı doğrulandı.
