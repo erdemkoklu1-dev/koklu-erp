@@ -42,6 +42,8 @@ Aşağıdaki dosyalar production'da çalıştırılmayacak:
 
 Bu dosya sadece `SELECT` sorguları içerir.
 
+> SQL'den önce tamamlanması gereken kurulum/seed/ortam adımları için bkz. `db/staging_preflight_before_sql_checklist.md`, `db/staging_project_setup_runbook.md` ve `db/staging_env_switching_guide.md` (Sprint 2.3).
+
 ## 5. Otomatik Yardımcı Kontrol
 
 Local ortamda env değerlerini doğrulamak için:

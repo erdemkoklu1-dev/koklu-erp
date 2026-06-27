@@ -34,6 +34,14 @@ Bağlanmadan önce her zaman doğrula: `SELECT current_database(), inet_server_a
    - Yalnızca şema migration'larını uygula; RLS dry-run dosyalarını (`tenant_rls_staging_*`, `staging_rls_*`) bu aşamada uygulama.
 4. Production verisinin **kopyasını taşıma**; bunun yerine anonimleştirilmiş/sentetik test verisi oluştur.
 
+Bu seçeneğin adım adım runbook'u, seed planı, Auth kullanıcı kurulumu ve env switching için bkz. (Sprint 2.3):
+
+- `db/staging_project_setup_runbook.md`
+- `db/staging_minimal_seed_plan.md`
+- `db/staging_manual_auth_user_setup.md`
+- `db/staging_env_switching_guide.md`
+- `db/staging_preflight_before_sql_checklist.md`
+
 ### 3.2 Seçenek B — Local Supabase (Docker)
 
 1. `supabase start` ile local stack'i ayağa kaldır.

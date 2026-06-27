@@ -1,181 +1,85 @@
-# GÖREV — Sprint 2.1: Staging Ortam Ayrıştırma ve Preflight Doğrulama
+# GÖREV — Sprint 2.2: Staging Ortam Seçimi, Env Doğrulama ve Preflight Sonuç Toplama
 
 ## Amaç
 
-Sprint 2.0 tamamlandı ve staging/local Supabase RLS dry-run için gerekli plan dosyaları oluşturuldu.
+Sprint 2.1 tamamlandı. Staging/local RLS dry-run öncesi environment safety dosyaları, preflight sonuç şablonları ve local env kontrol scripti hazırlandı.
 
-Bir sonraki adım, production’a dokunmadan staging/local ortamın gerçekten ayrı olduğunu doğrulamak ve RLS dry-run öncesi **preflight kontrol sürecini** güvenli şekilde hazırlamaktır.
+Bu sprintin amacı:
 
-Bu sprintte:
+1. Production olmayan bir staging/local Supabase ortamı seçmek.
+2. `.env.local` değerlerinin production olmadığını doğrulamak.
+3. `scripts/verify-staging-env.mjs` kontrolünü çalıştırmak.
+4. Staging/local Supabase SQL Editor’da yalnızca `db/staging_rls_preflight_checks.sql` dosyasını çalıştırmak.
+5. Preflight çıktılarını `db/staging_rls_preflight_results.md` dosyasına işlemek.
+6. Preflight sonucuna göre helper upgrade aşamasına geçilebilir mi kararını raporlamak.
 
-1. Production ve staging/local Supabase bağlantılarının karışmaması için güvenlik kontrolü hazırlanacak.
-2. `.env` dosyalarının nasıl yönetileceği belgelenecek.
-3. Production secret/key bilgileri kesinlikle commit edilmeyecek.
-4. Staging/local ortamda çalıştırılacak preflight kontrolleri için sonuç şablonu hazırlanacak.
-5. RLS helper upgrade, cleanup veya tenant policy apply henüz çalıştırılmayacak.
-6. Production üzerinde hiçbir SQL çalıştırılmayacak.
-
-Bu sprintin çıktısı: **staging/local preflight’e geçebiliriz / geçemeyiz** kararıdır.
+Bu sprintte **RLS helper upgrade, policy cleanup veya tenant policy apply çalıştırılmayacak.**
 
 ---
 
 ## 1. Kesin Yasaklar
 
-Bu görevde kesinlikle yapma:
+Kesinlikle yapma:
 
 ```txt
 Production Supabase üzerinde SQL çalıştırma.
-Production üzerinde RLS veya policy değiştirme.
+Production `.env.local` ile dry-run yapma.
+Production service role key kullanma.
 DROP POLICY çalıştırma.
 CREATE POLICY çalıştırma.
 ALTER TABLE çalıştırma.
+ENABLE / DISABLE RLS yapma.
 INSERT / UPDATE / DELETE / TRUNCATE çalıştırma.
 firma_id NOT NULL yapma.
-Production service role key’i dosyaya yazma.
-.env.local, .env.production, .env gibi secret içeren dosyaları commit’e alma.
 src uygulama kodunu değiştirme.
-Parser, fatura hesaplama, teknik rapor formülü, teslimat mantığı veya PDF tasarımını değiştirme.
+Secret veya gerçek key içeren dosyaları commit’e alma.
+.env.local, .env.production, .env dosyalarını commit’e alma.
 ```
 
-Bu sprint **ortam güvenliği ve preflight hazırlığı** sprintidir.
+Bu sprint yalnızca staging/local ortam doğrulama ve read-only preflight sprintidir.
 
 ---
 
-## 2. Önceki Dosyaları Oku
+## 2. Önce Mevcut Dosyaları Oku
 
 Aşağıdaki dosyaları incele:
 
 ```txt
+db/staging_rls_env_safety_checklist.md
 db/staging_rls_environment_setup.md
 db/staging_rls_execution_order.md
+db/staging_rls_dry_run_env_template.md
 db/staging_rls_preflight_checks.sql
-db/staging_rls_post_apply_checks.sql
-db/staging_rls_manual_test_results.md
+db/staging_rls_preflight_results.md
+db/staging_rls_preflight_interpretation.md
+scripts/verify-staging-env.mjs
 db/staging_rls_go_no_go_report.md
-
-db/tenant_rls_helper_upgrade_staging.sql
-db/tenant_rls_staging_cleanup_real.sql
-db/tenant_rls_staging_apply_tenant_policies_real.sql
-db/tenant_rls_staging_rollback_real.sql
-db/tenant_rls_staging_test_matrix_real.md
-db/tenant_rls_production_risk_assessment_real.md
 db/tenant_rls_production_readiness_gate.md
 ```
 
-Bu sprintte özellikle şu sıraya hazırlık yapılacak:
-
-```txt
-preflight → helper upgrade → cleanup → tenant policy apply → post-apply → manuel testler → rollback → Go/No-Go
-```
-
-Ancak bu sprintte yalnızca **preflight öncesi ortam doğrulaması** yapılacak.
-
 ---
 
-## 3. Üretilecek Yeni Dosyalar
+## 3. Ortam Seçimi
 
-Aşağıdaki yeni dosyaları oluştur:
+Kullanıcı hangi ortamla ilerleyecekse bunu rapora yaz.
 
-```txt
-db/staging_rls_env_safety_checklist.md
-db/staging_rls_preflight_results.md
-db/staging_rls_preflight_interpretation.md
-db/staging_rls_dry_run_env_template.md
-scripts/verify-staging-env.mjs
-```
-
-Mevcut şu dosyaları gerekirse küçük notlarla güncelle:
+Önerilen sıralama:
 
 ```txt
-db/staging_rls_environment_setup.md
-db/staging_rls_execution_order.md
-db/staging_rls_go_no_go_report.md
-GOREV.md
+1. Ayrı Supabase staging project — önerilen yöntem
+2. Supabase branch — mümkünse kullanılabilir
+3. Local Supabase — teknik kurulum uygunsa kullanılabilir
 ```
 
-Kod tarafında uygulama mantığı değiştirme. `scripts/verify-staging-env.mjs` yalnızca local environment güvenlik kontrol scripti olacak.
-
----
-
-## 4. staging_rls_env_safety_checklist.md
-
-Yeni dosya:
-
-```txt
-db/staging_rls_env_safety_checklist.md
-```
-
-İçerik:
-
-```md
-# Staging RLS Environment Safety Checklist
-
-## Amaç
-
-Bu checklist, RLS dry-run işlemlerinin yanlışlıkla production Supabase üzerinde çalıştırılmasını engellemek için hazırlanmıştır.
-
-## 1. Ortam Kararı
-
-Seçilen ortam:
-
-- [ ] Ayrı Supabase staging project
-- [ ] Supabase branch
-- [ ] Local Supabase
-- [ ] Henüz seçilmedi
-
-## 2. Production’dan Ayrışma Kontrolü
-
-Aşağıdaki maddelerin tamamı doğrulanmadan helper upgrade / cleanup / tenant policy apply çalıştırılmayacak.
-
-- [ ] NEXT_PUBLIC_SUPABASE_URL production URL değil.
-- [ ] NEXT_PUBLIC_SUPABASE_ANON_KEY production anon key değil.
-- [ ] SUPABASE_SERVICE_ROLE_KEY production service role key değil.
-- [ ] Supabase Dashboard’da staging/local project adı doğrulandı.
-- [ ] SQL Editor’da görünen proje adı production değil.
-- [ ] Test verileri staging/local üzerinde.
-- [ ] Production verisi üzerinde işlem yapılmıyor.
-
-## 3. Yasak Dosyalar
-
-Aşağıdaki dosyalar production’da çalıştırılmayacak:
-
-- db/tenant_rls_helper_upgrade_staging.sql
-- db/tenant_rls_staging_cleanup_real.sql
-- db/tenant_rls_staging_apply_tenant_policies_real.sql
-- db/tenant_rls_staging_rollback_real.sql
-
-## 4. İzinli İlk SQL
-
-İlk aşamada yalnızca şu dosya çalıştırılabilir:
-
-- db/staging_rls_preflight_checks.sql
-
-Bu dosya sadece SELECT sorguları içerir.
-
-## 5. Go / No-Go
-
-- [ ] Ortam güvenli: preflight’e geçilebilir.
-- [ ] Ortam belirsiz: preflight’e geçilmez.
-- [ ] Production riski var: işlem durdurulur.
-```
-
----
-
-## 5. staging_rls_preflight_results.md
-
-Yeni dosya:
+Bu sprintte seçilen ortam şu dosyaya işlenecek:
 
 ```txt
 db/staging_rls_preflight_results.md
 ```
 
-Bu dosya, staging/local üzerinde `db/staging_rls_preflight_checks.sql` çalıştırıldıktan sonra sonuçların yapıştırılacağı şablon olacak.
-
-İçerik:
+Şu alanları doldur:
 
 ```md
-# Staging RLS Preflight Results
-
 ## Ortam Bilgisi
 
 | Alan | Değer |
@@ -184,7 +88,133 @@ Bu dosya, staging/local üzerinde `db/staging_rls_preflight_checks.sql` çalış
 | Supabase project adı | |
 | Production mı? | Hayır |
 | Test tarihi | |
-| Test eden | |
+| Test eden | Erdem Köklü |
+```
+
+Eğer ortam hâlâ seçilmediyse görev sonunda `NO-GO: Staging ortam seçilmedi` diye raporla.
+
+---
+
+## 4. Env Güvenlik Kontrolü
+
+`.env.local` dosyasını **içeriğini ekrana yazmadan** kontrol et.
+
+Şu değerlerin varlığı doğrulanmalı:
+
+```txt
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Kesinlikle key değerlerini rapora yazma.
+
+Şu komutu çalıştır:
+
+```powershell
+node scripts/verify-staging-env.mjs
+```
+
+Olası sonuçlar:
+
+### A. Script PASS
+
+Devam et. Ancak yine de raporda şu notu yaz:
+
+```txt
+Env script temiz geçti; yine de Supabase Dashboard project adı manuel doğrulanmalıdır.
+```
+
+### B. Script production hint yakaladı
+
+Dur. Preflight’e geçme.
+
+Raporla:
+
+```txt
+NO-GO: Env production değerine benziyor. Preflight çalıştırılmadı.
+```
+
+### C. Env eksik
+
+Dur. Preflight’e geçme.
+
+Raporla:
+
+```txt
+NO-GO: Staging env eksik. .env.local staging/local değerlerle ayarlanmalı.
+```
+
+---
+
+## 5. Preflight SQL Çalıştırma Hazırlığı
+
+Sadece şu dosya kullanılacak:
+
+```txt
+db/staging_rls_preflight_checks.sql
+```
+
+Bu dosya yalnızca SELECT sorguları içermelidir.
+
+Kesinlikle çalıştırılmayacak dosyalar:
+
+```txt
+db/tenant_rls_helper_upgrade_staging.sql
+db/tenant_rls_staging_cleanup_real.sql
+db/tenant_rls_staging_apply_tenant_policies_real.sql
+db/tenant_rls_staging_rollback_real.sql
+```
+
+Codex bu dosyaları çalıştırmayacak. Kullanıcı staging/local Supabase SQL Editor’da bölüm bölüm çalıştıracak.
+
+---
+
+## 6. Kullanıcıya Verilecek Preflight Çalıştırma Sırası
+
+Görev sonunda kullanıcıya şu sırayı açıkça ver:
+
+```txt
+1. Staging/local Supabase SQL Editor aç.
+2. Production project olmadığını üst bardan doğrula.
+3. db/staging_rls_preflight_checks.sql dosyasını aç.
+4. Bölüm 1’i çalıştır: Kritik tablolar var mı?
+5. Çıktıyı db/staging_rls_preflight_results.md içine işle.
+6. Bölüm 2’yi çalıştır: firma_id kolonları var mı?
+7. Bölüm 3’ü çalıştır: Helper fonksiyon durumu.
+8. Bölüm 4’ü çalıştır: Kullanıcı / firma / rol kontrolü.
+9. Bölüm 5’i çalıştır: Fazla izin veren policy sayısı.
+10. Tüm çıktıları kullanıcı ChatGPT’ye gönderecek.
+```
+
+---
+
+## 7. Preflight Sonuç Dosyasını Güncelle
+
+`db/staging_rls_preflight_results.md` dosyasını şu başlıklarla hazır ve doldurulabilir hale getir:
+
+```md
+# Staging RLS Preflight Results
+
+## Ortam Bilgisi
+
+| Alan | Değer |
+|---|---|
+| Ortam tipi | |
+| Supabase project adı | |
+| Production mı? | Hayır |
+| Test tarihi | |
+| Test eden | Erdem Köklü |
+
+## Env Safety Check
+
+| Kontrol | Sonuç | Not |
+|---|---|---|
+| NEXT_PUBLIC_SUPABASE_URL var mı? | | Değer yazılmayacak |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY var mı? | | Değer yazılmayacak |
+| SUPABASE_SERVICE_ROLE_KEY var mı? | | Değer yazılmayacak |
+| Production hint var mı? | | |
+| scripts/verify-staging-env.mjs sonucu | | |
 
 ## 1. Kritik Tablolar Var mı?
 
@@ -211,11 +241,12 @@ Bu dosya, staging/local üzerinde `db/staging_rls_preflight_checks.sql` çalış
 | permissive_policy_count |
 |---|
 
-## 6. Preflight Kararı
+## Preflight Kararı
 
-- [ ] Temiz, helper upgrade aşamasına geçilebilir.
-- [ ] Eksikler var, helper upgrade aşamasına geçilmez.
-- [ ] Ortam production olabilir, işlem durduruldu.
+- [ ] GO — Helper upgrade aşamasına geçilebilir.
+- [ ] NO-GO — Eksikler var.
+- [ ] NO-GO — Ortam production olabilir.
+- [ ] NO-GO — Staging ortam henüz seçilmedi.
 
 ## Notlar
 
@@ -224,296 +255,107 @@ Bu dosya, staging/local üzerinde `db/staging_rls_preflight_checks.sql` çalış
 
 ---
 
-## 6. staging_rls_preflight_interpretation.md
+## 8. Go / No-Go Mantığı
 
-Yeni dosya:
+Preflight sonrası karar şu kurala göre verilecek:
+
+### GO
+
+Aşağıdakilerin tamamı sağlanırsa:
 
 ```txt
-db/staging_rls_preflight_interpretation.md
+Ortam production değil.
+Env kontrolü production hint vermedi.
+Kritik tablolar var.
+firma_id kolonları var.
+Kullanıcı/firma/rol verisi test için yeterli.
+Preflight SQL hata vermedi.
 ```
 
-İçerik:
+### NO-GO
+
+Aşağıdaki durumlardan biri varsa:
+
+```txt
+Ortam production olabilir.
+Env production hint verdi.
+Staging project adı doğrulanamadı.
+Kritik tablo eksik.
+firma_id kolonu eksik.
+Test kullanıcısı/firma verisi yetersiz.
+Preflight SQL hata verdi.
+```
+
+---
+
+## 9. GOREV.md Görev Sonu Raporu
+
+Görev sonunda `GOREV.md` içine şu formatta rapor ekle:
 
 ```md
-# Staging RLS Preflight Interpretation
+# Sprint 2.2 Görev Sonu Raporu
 
-## Amaç
+## Yapılanlar
 
-Bu dosya, preflight sonuçlarının nasıl yorumlanacağını açıklar.
+- Staging/local ortam seçimi kontrol edildi.
+- Env safety kontrolü çalıştırıldı.
+- Preflight sonuç şablonu güncellendi.
+- Kullanıcıya staging/local SQL Editor’da çalıştırılacak preflight sırası hazırlandı.
 
-## 1. Kritik Tablo Kontrolü
+## Production’da İşlem Yapıldı mı?
 
-Eğer herhangi bir kritik tabloda `table_exists = false` ise RLS dry-run’a geçilmez.
+Hayır.
 
-Eksik tablo varsa önce staging schema eşitlemesi yapılmalıdır.
+## SQL Çalıştırıldı mı?
 
-## 2. firma_id Kolon Kontrolü
+Codex tarafından hayır.
 
-Aşağıdaki kritik tablolarda `firma_id_exists = true` olmalıdır:
+## Env Kontrol Sonucu
 
-- customers
-- devices
-- service_forms
-- service_form_items
-- invoices
-- invoice_items
-- invoice_brokers
-- payments
-- teslimatlar
-- teslimat_kalemleri
-- teklifler
-- teklif_kalemleri
-- proforma_faturalar
-- proforma_fatura_kalemleri
-- teknik_raporlar
-- musteri_talepleri
-- is_planlari
-- planli_isler
-- brokers
-- araci_cari_hareketleri
-- subeler
-- kullanici_profiller
+- node scripts/verify-staging-env.mjs:
+- Production hint:
+- Eksik env:
 
-## 3. Helper Fonksiyon Kontrolü
+## Preflight Durumu
 
-Preflight aşamasında mevcut helper fonksiyonlar görülebilir.
+- Preflight SQL çalıştırıldı mı? Kullanıcı tarafından staging/local ortamda çalıştırılacak.
+- Sonuçlar işlendi mi?
+- GO / NO-GO:
 
-Helper upgrade sonrasında beklenen fonksiyonlar:
+## Güncellenen Dosyalar
 
-- current_firma_id
-- is_super_admin
-- current_user_role
-- current_user_sube_id
-
-## 4. Kullanıcı / Firma / Rol Kontrolü
-
-En az iki firma ve mümkünse iki kullanıcı olmalıdır.
-
-Minimum test senaryosu:
-
-- Köklü Yangın kullanıcısı
-- Test Yangın Firması kullanıcısı
-
-Eğer tek firma varsa negatif tenant testi yapılamaz. Bu durumda staging test verisi hazırlanmalıdır.
-
-## 5. Fazla İzin Veren Policy Sayısı
-
-Production envanterinde fazla izin veren policy sayısı 59 idi.
-
-Staging preflight’te bu sayı benzer olabilir. Cleanup sonrası azalması beklenir.
-
-## 6. Geçiş Kararı
-
-Helper upgrade aşamasına yalnızca şu şartlarda geç:
-
-- Ortam production değil.
-- Kritik tablolar var.
-- firma_id kolonları var.
-- Kullanıcı/firma verisi test için yeterli.
-- Preflight SQL hata vermeden çalıştı.
-```
-
----
-
-## 7. staging_rls_dry_run_env_template.md
-
-Yeni dosya:
-
-```txt
-db/staging_rls_dry_run_env_template.md
-```
-
-Bu dosya `.env` örneği olacak ama gerçek secret içermeyecek.
-
-İçerik:
-
-````md
-# Staging RLS Dry-Run Environment Template
-
-Bu dosya gerçek `.env` değildir. Secret içermez.
-
-Staging/local RLS dry-run için gerekli environment alanları:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR-STAGING-PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_STAGING_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY=YOUR_STAGING_SERVICE_ROLE_KEY
-````
-
-## Güvenlik Notları
-
-* Production key buraya yazılmayacak.
-* Gerçek `.env.local` dosyası commit edilmeyecek.
-* Service role key hiçbir dokümana yapıştırılmayacak.
-* Testten önce Supabase Dashboard’daki project adı kontrol edilecek.
-
-## Kontrol
-
-Aşağıdaki komutla local env kontrol edilebilir:
-
-```bash
-node scripts/verify-staging-env.mjs
-```
-
-````
-
----
-
-## 8. scripts/verify-staging-env.mjs
-
-Yeni dosya:
-
-```txt
-scripts/verify-staging-env.mjs
-````
-
-Bu script sadece local ortamda `.env.local` değerlerini kontrol edecek. Secret’ları ekrana yazmayacak.
-
-Amaç:
-
-* Production URL gibi görünen değerleri yakalamak.
-* Eksik env değerlerini raporlamak.
-* Kullanıcıya staging/local olduğundan emin olması gerektiğini hatırlatmak.
-
-İçerik önerisi:
-
-```js
-const required = [
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-];
-
-const productionHints = [
-  'koklu-erp',
-  'hbcbpirbcpthftddzjau',
-];
-
-let hasError = false;
-
-console.log('Staging RLS environment safety check');
-console.log('------------------------------------');
-
-for (const key of required) {
-  const value = process.env[key];
-
-  if (!value) {
-    console.error(`MISSING: ${key}`);
-    hasError = true;
-    continue;
-  }
-
-  const masked =
-    value.length > 12
-      ? `${value.slice(0, 6)}...${value.slice(-4)}`
-      : '***';
-
-  console.log(`FOUND: ${key} = ${masked}`);
-
-  if (key.includes('KEY')) {
-    continue;
-  }
-
-  const lower = value.toLowerCase();
-  for (const hint of productionHints) {
-    if (lower.includes(hint.toLowerCase())) {
-      console.error(
-        `POSSIBLE PRODUCTION VALUE DETECTED in ${key}. Do not run staging RLS dry-run with this environment.`
-      );
-      hasError = true;
-    }
-  }
-}
-
-if (hasError) {
-  console.error('Environment safety check FAILED.');
-  process.exit(1);
-}
-
-console.log('Environment variables exist and no production hint was detected.');
-console.log('Still manually verify Supabase project name before running SQL.');
-```
-
-Not:
-
-* Script `.env.local` dosyasını otomatik okumuyorsa raporda belirt.
-* Projede dotenv kullanımı varsa gerekirse `dotenv` import etmeden çalışacak şekilde bırak.
-* Yeni dependency ekleme.
-
----
-
-## 9. Mevcut Dosyaları Güncelle
-
-### 9.1 db/staging_rls_environment_setup.md
-
-Şu bölümü ekle:
-
-```md
-## Sprint 2.1 Notu
-
-RLS dry-run işleminden önce staging/local ortamın production’dan ayrıştığı doğrulanacaktır.
-
-İlk çalıştırılacak dosya:
-
-- db/staging_rls_preflight_checks.sql
-
-Policy/helper değişikliği yapan dosyalar ancak preflight temizse çalıştırılacaktır.
-```
-
-### 9.2 db/staging_rls_execution_order.md
-
-Preflight öncesine şu adımı ekle:
-
-````md
-## 0. Environment Safety Check
-
-Önce şu dosyalar incelenir:
-
+- db/staging_rls_preflight_results.md
 - db/staging_rls_env_safety_checklist.md
-- db/staging_rls_dry_run_env_template.md
+- db/staging_rls_go_no_go_report.md
+- GOREV.md
 
-Opsiyonel local kontrol:
+## Sonraki Adım
 
-```bash
-node scripts/verify-staging-env.mjs
-````
+Eğer GO ise sıradaki sprint:
 
-````
+Sprint 2.3 — Staging Helper Upgrade Uygulama ve Doğrulama
 
-### 9.3 db/staging_rls_go_no_go_report.md
-
-Go/No-Go raporuna şu maddeyi ekle:
-
-```md
-### Environment Safety
-
-- [ ] Production URL kullanılmadı.
-- [ ] Production anon key kullanılmadı.
-- [ ] Production service role key kullanılmadı.
-- [ ] Supabase project adı staging/local olarak doğrulandı.
-- [ ] Preflight başlamadan önce ortam ayrımı onaylandı.
-````
+Eğer NO-GO ise önce staging/local ortam eksikleri giderilecek.
+```
 
 ---
 
 ## 10. Testler
 
-Kod iş mantığı değişmeyecek. Sadece docs ve küçük local safety script eklenecek.
-
-Çalıştır:
+Kod iş mantığı değişmeyecek. Yine de çalıştır:
 
 ```powershell
 npx.cmd tsc --noEmit
 npm run build
 ```
 
-Opsiyonel script kontrolü:
+Env script kontrolü:
 
 ```powershell
 node scripts/verify-staging-env.mjs
 ```
 
-Bu script production hint yakalarsa hata verebilir; bu normaldir. Görev raporunda “production env tespit ettiği için dry-run yapılmadı” şeklinde belirt.
+Bu script production hint yakalarsa hata vermesi beklenen davranıştır. Böyle olursa bunu görev sonu raporunda belirt ve preflight’e geçme.
 
 Git kontrolü:
 
@@ -526,15 +368,12 @@ Beklenen değişiklikler:
 
 ```txt
 GOREV.md
-db/staging_rls_env_safety_checklist.md
 db/staging_rls_preflight_results.md
-db/staging_rls_preflight_interpretation.md
-db/staging_rls_dry_run_env_template.md
-db/staging_rls_environment_setup.md
-db/staging_rls_execution_order.md
+db/staging_rls_env_safety_checklist.md
 db/staging_rls_go_no_go_report.md
-scripts/verify-staging-env.mjs
 ```
+
+`scripts/verify-staging-env.mjs` sadece gerekli küçük düzeltme varsa değişebilir.
 
 `src/` değişmemeli.
 
@@ -546,17 +385,18 @@ Stage edilecek dosyalar:
 
 ```powershell
 git add GOREV.md
-git add db/staging_rls_env_safety_checklist.md
 git add db/staging_rls_preflight_results.md
-git add db/staging_rls_preflight_interpretation.md
-git add db/staging_rls_dry_run_env_template.md
-git add db/staging_rls_environment_setup.md
-git add db/staging_rls_execution_order.md
+git add db/staging_rls_env_safety_checklist.md
 git add db/staging_rls_go_no_go_report.md
+```
+
+Eğer env scriptte küçük düzeltme yapıldıysa:
+
+```powershell
 git add scripts/verify-staging-env.mjs
 ```
 
-Kontrol:
+Stage kontrolü:
 
 ```powershell
 git diff --cached --name-only
@@ -565,7 +405,7 @@ git diff --cached --name-only
 Commit:
 
 ```powershell
-git commit -m "docs: add staging RLS environment safety checks"
+git commit -m "docs: prepare staging RLS preflight run"
 ```
 
 Push:
@@ -576,70 +416,58 @@ git push
 
 ---
 
-## 12. Görev Sonu Raporu
-
-Görev bitince şu formatta rapor ver:
-
-```md
-# Sprint 2.1 Görev Sonu Raporu
+# Sprint 2.3 Görev Sonu Raporu
 
 ## Yapılanlar
 
-- Staging RLS environment safety checklist oluşturuldu.
-- Preflight sonuç şablonu oluşturuldu.
-- Preflight interpretation dokümanı oluşturuldu.
-- Dry-run env template oluşturuldu.
-- Local env safety script oluşturuldu.
-- Execution order ve Go/No-Go raporu güncellendi.
+- Production'dan ayrı Supabase staging project kurulum runbook'u oluşturuldu.
+- Minimum anonim seed planı oluşturuldu (iki firma + test verisi).
+- Manuel Auth kullanıcı kurulum dokümanı oluşturuldu (auth.users → kullanici_profiller eşleme).
+- Preflight öncesi (SQL öncesi) checklist oluşturuldu.
+- Env switching guide oluşturuldu (.env.local production ↔ staging güvenli geçiş).
+- Mevcut ortam dosyaları Sprint 2.3 referanslarıyla güncellendi.
 
-## Production’da İşlem Yapıldı mı?
+## Production'da İşlem Yapıldı mı?
 
 Hayır.
 
 ## SQL Çalıştırıldı mı?
 
-Hayır.
+Hayır. RLS helper upgrade / cleanup / tenant policy apply çalıştırılmadı.
 
 ## Kod İş Mantığı Değişti mi?
 
-Hayır.
+Hayır. `src/` değişmedi.
 
 ## Üretilen Dosyalar
 
-- db/staging_rls_env_safety_checklist.md
-- db/staging_rls_preflight_results.md
-- db/staging_rls_preflight_interpretation.md
-- db/staging_rls_dry_run_env_template.md
-- scripts/verify-staging-env.mjs
+- db/staging_project_setup_runbook.md
+- db/staging_minimal_seed_plan.md
+- db/staging_manual_auth_user_setup.md
+- db/staging_preflight_before_sql_checklist.md
+- db/staging_env_switching_guide.md
 
 ## Güncellenen Dosyalar
 
 - db/staging_rls_environment_setup.md
-- db/staging_rls_execution_order.md
-- db/staging_rls_go_no_go_report.md
+- db/staging_rls_env_safety_checklist.md
+- db/staging_rls_preflight_results.md
 - GOREV.md
 
 ## Testler
 
 - npx.cmd tsc --noEmit: PASS
 - npm run build: PASS
-- node scripts/verify-staging-env.mjs: Çalıştı (sonuç ortamdaki .env.local değerlerine bağlı; production hint yakalanırsa hata vermesi beklenen davranış)
+- node scripts/verify-staging-env.mjs: exit 1 (production hint yakalandı)
 
-## Commit / Push
+## GO / NO-GO
 
-- Commit hash:
-- Push sonucu:
+NO-GO — `scripts/verify-staging-env.mjs` mevcut `.env.local` ortamında production hint yakaladı (exit 1). Bu repodaki aktif ortam production'a bağlı olduğu sürece staging kurulumu ve preflight SQL başlatılmaz. GO için production olmayan ayrı bir staging projesi `.env.local`'a tanımlanıp script exit 0 dönmelidir.
 
 ## Sonraki Adım
 
-Staging/local Supabase ortamı seçilecek.
-
-Production olmayan ortam doğrulandıktan sonra ilk çalıştırılacak SQL:
-
-- db/staging_rls_preflight_checks.sql
-
-Preflight temiz çıkmadan şu dosyalar çalıştırılmayacak:
-
-- db/tenant_rls_helper_upgrade_staging.sql
-- db/tenant_rls_staging_cleanup_real.sql
-- db/tenant_rls_staging_apply_tenant_policies_real.sql
+1. `db/staging_project_setup_runbook.md` ile ayrı staging projesi kur.
+2. `db/staging_minimal_seed_plan.md` ve `db/staging_manual_auth_user_setup.md` ile veri/kullanıcı hazırla.
+3. `db/staging_env_switching_guide.md` ile `.env.local`'ı staging'e al; `node scripts/verify-staging-env.mjs` exit 0 olmalı.
+4. `db/staging_preflight_before_sql_checklist.md` tamamla.
+5. Ardından `db/staging_rls_preflight_checks.sql` çalıştır.

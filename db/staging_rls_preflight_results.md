@@ -12,7 +12,17 @@
 | Test tarihi | |
 | Test eden | |
 
-## 0. Env Safety Doğrulaması (Sprint 2.2)
+## 0. Ortam Kurulum Önkoşulu (Sprint 2.3)
+
+Preflight SQL'den önce staging projesi kurulumu, seed ve env switching tamamlanmış olmalıdır:
+
+- [ ] `db/staging_project_setup_runbook.md` tamamlandı.
+- [ ] `db/staging_minimal_seed_plan.md` uygulandı (iki firma + test verisi).
+- [ ] `db/staging_manual_auth_user_setup.md` ile en az iki Auth kullanıcısı kuruldu.
+- [ ] `db/staging_env_switching_guide.md` ile `.env.local` staging'e alındı.
+- [ ] `db/staging_preflight_before_sql_checklist.md` tüm maddeleri işaretlendi.
+
+## 0.1 Env Safety Doğrulaması (Sprint 2.2)
 
 `scripts/verify-staging-env.mjs` çıktısı ve manuel ortam kontrolü buraya işlenir. Secret değer yazılmaz; yalnızca maskelenmiş/özet sonuç.
 
