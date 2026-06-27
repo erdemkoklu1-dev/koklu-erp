@@ -45,3 +45,15 @@
 - Admin/Super Admin rol helper'ı staging'de beklenen sonucu verir.
 - Service role route'larında manuel firma kontrolü çalışır.
 - DELETE policy eklenmediği halde uygulama soft-delete/cancel akışları bozulmaz.
+
+## Dry-Run Bağlantısı (Sprint 2.0)
+
+Bu matris, staging dry-run akışının 6. adımında doldurulur. Çalıştırma sırası ve sonuç şablonu için bkz:
+
+- `db/staging_rls_execution_order.md` — çalıştırma sırası.
+- `db/staging_rls_preflight_checks.sql` — apply öncesi durum kontrolü.
+- `db/staging_rls_post_apply_checks.sql` — apply sonrası doğrulama.
+- `db/staging_rls_manual_test_results.md` — manuel test sonuç şablonu (bu matrisin sonuçları oraya da işlenir).
+- `db/staging_rls_go_no_go_report.md` — Go/No-Go kararı.
+
+Matristeki her satır, `staging_rls_manual_test_results.md` içindeki "Negatif Tenant Testleri" bölümüyle tutarlı doldurulmalıdır.

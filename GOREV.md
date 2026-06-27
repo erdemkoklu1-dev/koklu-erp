@@ -1,216 +1,66 @@
-Mükemmel. Bölüm 7 de tamamen temiz:
-
-```text
-firma_id boş kayıt yok ✅
-parent-child firma uyumsuzluğu yok ✅
-şube-firma uyumsuzluğu yok ✅
-veri temizlik özeti 38/38 sıfır ✅
-```
-
-Read-only envanter aşaması tamamlandı. Artık elimizde şu net sonuç var:
-
-```text
-Production’da RLS zaten açık.
-Force RLS kapalı.
-Veri tenant açısından temiz.
-Fakat mevcut policy’lerin çoğu tenant güvenli değil.
-Admin rolü “Super Admin” helper’ına takılabilir.
-Bazı helper fonksiyonlar eksik.
-```
-
-Sıradaki doğru iş:
-
-```text
-Sprint 1.9 — Gerçek Policy Envanterine Göre Staging RLS Cleanup/Dry-Run Hazırlığı
-```
-
-Bu sprintte yine **production’da hiçbir şey çalıştırmayacağız**. Codex, gerçek policy adlarına göre staging/local için temizleme ve tenant policy planı hazırlayacak.
-
----
-
-## Sprint 1.9 — Görev MD
-
-````md
-# GÖREV — Sprint 1.9: Gerçek Policy Envanterine Göre Staging RLS Cleanup/Dry-Run Hazırlığı
-
-> Uygulama notu: Sprint 1.9 kapsamında yalnızca `db/*.sql`, `db/*.md` ve `GOREV.md` dosyaları hazırlanacaktır. Production üzerinde RLS/policy/veri değişikliği yapılmayacaktır.
+# GÖREV — Sprint 2.0: Staging/Local Supabase RLS Dry-Run Ortam Hazırlığı
 
 ## Amaç
 
-Production Supabase üzerinde read-only RLS envanter sorguları çalıştırıldı ve aşağıdaki sonuçlar elde edildi:
+Sprint 1.8 ve Sprint 1.9 tamamlandı.
 
-### Veri Durumu
+Hazır olan dosyalar:
 
-- `firma_id` boş kayıt yok.
-- parent-child firma uyumsuzluğu yok.
-- şube-firma uyumsuzluğu yok.
-- Bölüm 7 veri temizlik kontrolünde tüm sonuçlar `0`.
+```txt
+db/tenant_rls_helper_upgrade_staging.sql
+db/tenant_rls_staging_cleanup_real.sql
+db/tenant_rls_staging_apply_tenant_policies_real.sql
+db/tenant_rls_staging_test_matrix_real.md
+db/tenant_rls_staging_rollback_real.sql
+db/tenant_rls_production_risk_assessment_real.md
+```
 
-### RLS Durumu
+Bu sprintin amacı production’a dokunmadan, **staging/local Supabase ortamında RLS dry-run yapılabilmesi için güvenli çalışma planı ve ortam kontrol dosyalarını hazırlamaktır.**
 
-- Public şemadaki 56 tablonun tamamında `rls_enabled = true`.
-- Tüm tablolarda `force_rls = false`.
-- Production’da RLS zaten açık.
-
-### Policy Durumu
-
-- Mevcut policy listesinde çok sayıda tenant güvenli olmayan policy var.
-- Fazla izin veren policy sayısı: 59.
-- Risk patternleri:
-  - `true`
-  - `auth.uid() IS NOT NULL`
-  - `anon`
-  - `public`
-  - `ALL`
-
-### Helper Fonksiyon Durumu
-
-Mevcut helper fonksiyonlar:
-
-- `public.current_firma_id()` var.
-- `public.is_super_admin()` var.
-
-Eksik helper fonksiyonlar:
-
-- `public.current_user_role()` yok.
-- `public.current_user_sube_id()` yok.
-
-Ek risk:
-
-- `is_super_admin()` fonksiyonu `r.ad = 'Super Admin'` kontrolü yapıyor.
-- Production kullanıcı rollerinde görünen en yüksek rol adı `Admin`.
-- Bu nedenle mevcut `Admin` kullanıcılar `is_super_admin()` fonksiyonuna göre super admin sayılmayabilir.
-
-Bu sprintin amacı, elde edilen gerçek policy adlarına ve helper durumuna göre **staging/local ortamda çalıştırılabilecek güvenli RLS cleanup + tenant policy dry-run planını hazırlamaktır.**
-
-Bu sprintte production üzerinde hiçbir policy değiştirilmeyecek.
+Bu görevde production Supabase üzerinde hiçbir SQL çalıştırılmayacak.
 
 ---
 
 ## 1. Kesin Yasaklar
 
-Bu görevde kesinlikle şunlar yapılmayacak:
+Kesinlikle yapma:
 
 ```txt
-Production Supabase üzerinde DROP POLICY çalıştırma.
-Production Supabase üzerinde CREATE POLICY çalıştırma.
-Production Supabase üzerinde ALTER TABLE çalıştırma.
-Production Supabase üzerinde FORCE ROW LEVEL SECURITY çalıştırma.
-Production Supabase üzerinde ENABLE/DISABLE RLS çalıştırma.
-Production verisi üzerinde INSERT / UPDATE / DELETE / TRUNCATE çalıştırma.
-firma_id kolonlarını NOT NULL yapma.
+Production Supabase üzerinde SQL çalıştırma.
+Production üzerinde DROP POLICY çalıştırma.
+Production üzerinde CREATE POLICY çalıştırma.
+Production üzerinde ALTER TABLE çalıştırma.
+Production üzerinde RLS enable/disable yapma.
+Production verisi üzerinde INSERT / UPDATE / DELETE / TRUNCATE yapma.
+firma_id NOT NULL yapma.
+src kod dosyalarını değiştirme.
 Parser, fatura hesaplama, teknik rapor formülü, teslimat mantığı veya PDF tasarımı değiştirme.
-UI redesign yapma.
-````
-
-Bu sprint yalnızca:
-
-```txt
-analiz,
-staging/local SQL hazırlığı,
-rollback hazırlığı,
-test planı,
-dokümantasyon
 ```
 
-sprintidir.
+Bu sprint sadece staging/local hazırlık sprintidir.
 
 ---
 
-## 2. Kullanılacak Read-Only Envanter Sonuçları
+## 2. Ön Temizlik
 
-Aşağıdaki production çıktıları GOREV.md içine veya ayrı rapor dosyasına özetlenmeli:
-
-### 2.1 RLS Açık/Kapalı Durumu
-
-* 56 public tablo var.
-* 56 tabloda RLS açık.
-* 0 tabloda force RLS açık.
-
-### 2.2 Kritik Tenant Tablolar
-
-Şu tablolar tenant açısından temiz ve `firma_id` taşıyor:
+Repo içinde şu eski/untracked dosya varsa kontrol et:
 
 ```txt
-customers
-devices
-service_forms
-service_form_items
-invoices
-invoice_items
-invoice_brokers
-payments
-teslimatlar
-teslimat_kalemleri
-teklifler
-teklif_kalemleri
-proforma_faturalar
-proforma_fatura_kalemleri
-teknik_raporlar
-musteri_talepleri
-is_planlari
-planli_isler
-brokers
-araci_cari_hareketleri
-subeler
-kullanici_profiller
+db/tenant_rls_staging_dry_run.sql
 ```
 
-`firmalar` tablosunda `firma_id` olmaması normaldir; firma tablosu tenant’ın kendisidir.
+Bu dosya Sprint 1.9 kapsamında commit’e alınmadı ve yeni gerçek dry-run dosyalarının yerine kullanılmamalı.
 
-### 2.3 Fazla İzin Veren Policy Grupları
+Eğer artık kullanılmıyorsa sil:
 
-Gerçek policy listesinde aşağıdaki risk grupları görüldü.
-
-#### A. `anon` rolüne açık policy’ler
-
-```txt
-araci_cari_hareketleri / anon_all
-mutabakat_formlari / anon_full_access
-sube_gider_gelir / anon_all
-subeler / anon_read
+```powershell
+Remove-Item db/tenant_rls_staging_dry_run.sql -Force -ErrorAction SilentlyContinue
 ```
 
-#### B. `public` rolüne `true` / `ALL` veren policy’ler
+Sonra status kontrolü:
 
-```txt
-app_settings / Service role has full access
-branches / branches_select
-customers / customers_select, customers_insert, customers_update
-devices / devices_select, devices_insert, devices_update
-firmalar / firmalar_auth_read, firmalar_auth_insert, firmalar_auth_update
-on_kayitlar / Service role has full access
-service_forms / sf_select, sf_insert, sf_update, sf_delete
-service_form_items / sfi_all
-teklifler / Service role has full access
-teklif_kalemleri / Service role has full access
-teslimatlar / Service role has full access
-teslimat_kalemleri / Service role has full access
-teslimat_durum_gecmisi / Service role has full access
-urunler / Service role has full access
-```
-
-#### C. `auth.uid() IS NOT NULL` ile tenant kontrolü olmadan izin veren policy’ler
-
-```txt
-customers
-devices
-service_forms
-service_form_items
-is_planlari
-musteri_talepleri
-planli_isler
-proforma_faturalar
-proforma_fatura_kalemleri
-teknik_raporlar
-maas_odemeleri
-mesai_kayitlari
-personeller
-personel_izinler
-personel_belgeler
-performans_degerlendirmeleri
-yillik_izin_hakki
-teknik_hesap_ayarlari
+```powershell
+git -c core.quotePath=false -c core.autocrlf=false --no-pager status --short
 ```
 
 ---
@@ -220,639 +70,614 @@ teknik_hesap_ayarlari
 Aşağıdaki yeni dosyaları oluştur:
 
 ```txt
-db/tenant_rls_policy_inventory_real.md
-db/tenant_rls_staging_cleanup_real.sql
-db/tenant_rls_staging_apply_tenant_policies_real.sql
-db/tenant_rls_helper_upgrade_staging.sql
-db/tenant_rls_staging_rollback_real.sql
-db/tenant_rls_staging_test_matrix_real.md
-db/tenant_rls_production_risk_assessment_real.md
+db/staging_rls_environment_setup.md
+db/staging_rls_execution_order.md
+db/staging_rls_preflight_checks.sql
+db/staging_rls_post_apply_checks.sql
+db/staging_rls_manual_test_results.md
+db/staging_rls_go_no_go_report.md
 ```
 
-Mevcut şu dosyaları gerekirse güncelle:
-
-```txt
-db/rls_inventory_analysis.md
-db/tenant_rls_cleanup_plan.md
-db/tenant_rls_production_readiness_gate.md
-db/tenant_rls_negative_test_plan.md
-```
-
-Kod dosyası normalde değiştirme.
+Kod dosyası değiştirme.
 
 ---
 
-## 4. tenant_rls_policy_inventory_real.md
+## 4. staging_rls_environment_setup.md
 
-Yeni dosya:
+Yeni dosya oluştur:
 
 ```txt
-db/tenant_rls_policy_inventory_real.md
+db/staging_rls_environment_setup.md
 ```
 
-Bu dosya gerçek production policy envanterinin analiz edilmiş hali olacak.
-
-İçerik formatı:
+İçerik:
 
 ```md
-# Tenant RLS Real Policy Inventory
+# Staging RLS Environment Setup
 
-## 1. Genel Özet
+## Amaç
 
-- Public tablo sayısı: 56
-- RLS açık tablo sayısı: 56
-- Force RLS açık tablo sayısı: 0
-- Fazla izin veren policy sayısı: 59
+Bu dosya production’a dokunmadan RLS dry-run yapabilmek için staging/local Supabase ortamının nasıl hazırlanacağını açıklar.
 
-## 2. Production Veri Durumu
+## Ortam Seçenekleri
 
-- firma_id boş kayıt: yok
-- parent-child uyumsuzluk: yok
-- şube-firma uyumsuzluk: yok
+### Seçenek A — Supabase Staging Project
 
-## 3. Helper Fonksiyon Durumu
+Önerilen yöntem.
 
-| Fonksiyon | Var mı | Durum | Risk |
-|---|---|---|---|
-| current_firma_id | Evet | Çalışır | aktif=true kontrolü yok |
-| is_super_admin | Evet | Rol adı Super Admin bekliyor | Production’da rol adı Admin görünüyor |
-| current_user_role | Hayır | Eksik | Şube/rol policy için gerekli olabilir |
-| current_user_sube_id | Hayır | Eksik | Şube policy için gerekli olabilir |
+- Yeni Supabase project oluşturulur.
+- Production schema migration’ları staging’e uygulanır.
+- Gerekli test verileri eklenir.
+- `.env.local` staging URL ve anon/service key ile çalıştırılır.
 
-## 4. Riskli Policy Listesi
+### Seçenek B — Supabase Branch
 
-| Tablo | Policy | Rol | Komut | Risk Pattern | Staging Aksiyonu |
-|---|---|---|---|---|---|
+Supabase branch özelliği kullanılabiliyorsa tercih edilebilir.
 
-## 5. Tenant Policy ile Değiştirilecek Kritik Tablolar
+- Production benzeri branch oluşturulur.
+- RLS dry-run branch üzerinde yapılır.
+- Başarılı olursa production için ayrı maintenance plan hazırlanır.
 
-| Tablo | Mevcut Risk | Yeni Policy Mantığı |
-|---|---|---|
-| customers | auth.uid() IS NOT NULL | firma_id = current_firma_id() OR is_super_admin() |
-| devices | auth.uid() IS NOT NULL | firma_id = current_firma_id() OR is_super_admin() |
-| service_forms | auth.uid() IS NOT NULL | firma_id = current_firma_id() OR is_super_admin() |
-| service_form_items | auth.uid() IS NOT NULL | firma_id = current_firma_id() OR is_super_admin() |
-| invoices | RLS açık ama policy yok | firma_id = current_firma_id() OR is_super_admin() |
-| invoice_items | RLS açık ama policy yok | firma_id = current_firma_id() OR is_super_admin() |
-| payments | RLS açık ama policy yok | firma_id = current_firma_id() OR is_super_admin() |
-| teklifler | true/public | firma_id = current_firma_id() OR is_super_admin() |
-| teklif_kalemleri | true/public | firma_id = current_firma_id() OR is_super_admin() |
-| teslimatlar | true/public | firma_id = current_firma_id() OR is_super_admin() |
-| teslimat_kalemleri | true/public | firma_id = current_firma_id() OR is_super_admin() |
-| proforma_faturalar | auth.uid() IS NOT NULL | firma_id = current_firma_id() OR is_super_admin() |
-| proforma_fatura_kalemleri | auth.uid() IS NOT NULL | firma_id = current_firma_id() OR is_super_admin() |
-| teknik_raporlar | auth.uid() IS NOT NULL | firma_id = current_firma_id() OR is_super_admin() |
-| brokers | true/authenticated | firma_id = current_firma_id() OR is_super_admin() |
-| araci_cari_hareketleri | anon/public true | firma_id = current_firma_id() OR is_super_admin() |
-| musteri_talepleri | auth.uid() IS NOT NULL + public true | firma_id = current_firma_id() OR is_super_admin() |
-| is_planlari | auth.uid() IS NOT NULL + public true | firma_id = current_firma_id() OR is_super_admin() |
-| planli_isler | auth.uid() IS NOT NULL + public true | firma_id = current_firma_id() OR is_super_admin() |
+### Seçenek C — Local Supabase
 
-## 6. Global/Lookup Olarak Ayrı Değerlendirilecek Tablolar
+Geliştirici makinesinde local Supabase kullanılabilir.
 
-| Tablo | Mevcut Durum | Öneri |
-|---|---|---|
-| urunler | public true | İlk aşamada authenticated read, yazma sadece admin |
-| roller | authenticated true read | kalabilir ama yazma kapalı olmalı |
-| modul_izinleri | authenticated true read | rol bazlı ayrıca incelenecek |
-| device_types | public true read | lookup ise read kalabilir |
-| teknik_hesap_ayarlari | auth all | ayrı ele alınmalı |
+- `supabase start`
+- Migration’lar uygulanır.
+- Seed/test verisi hazırlanır.
+
+## Kesin Uyarı
+
+Production bağlantı bilgileriyle bu dry-run dosyaları çalıştırılmayacak.
+
+Kontrol edilecek `.env.local` değerleri:
+
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+
+Bu değerler production değil staging/local olmalı.
 ```
 
 ---
 
-## 5. tenant_rls_helper_upgrade_staging.sql
+## 5. staging_rls_execution_order.md
 
-Yeni dosya:
+Yeni dosya oluştur:
+
+```txt
+db/staging_rls_execution_order.md
+```
+
+İçerik:
+
+````md
+# Staging RLS Execution Order
+
+## Amaç
+
+Staging/local Supabase üzerinde gerçek RLS cleanup ve tenant policy dry-run çalıştırma sırasını belirlemek.
+
+## Çalıştırma Sırası
+
+### 1. Preflight Kontroller
+
+```txt
+db/staging_rls_preflight_checks.sql
+````
+
+Beklenen:
+
+* Ortam production değil.
+* Kritik tablolar var.
+* firma_id kolonları var.
+* Helper fonksiyonların mevcut durumu görüldü.
+* Tenant audit temiz.
+
+### 2. Helper Upgrade
 
 ```txt
 db/tenant_rls_helper_upgrade_staging.sql
 ```
 
-Bu dosya **yalnızca staging/local içindir**.
+Amaç:
+
+* current_firma_id aktif kullanıcı kontrolüyle iyileştirilir.
+* is_super_admin Admin / Super Admin rol adlarını tanır.
+* current_user_role oluşturulur.
+* current_user_sube_id oluşturulur.
+
+### 3. Riskli Policy Cleanup
+
+```txt
+db/tenant_rls_staging_cleanup_real.sql
+```
+
+Amaç:
+
+* Gerçek production policy adlarına göre staging’de fazla izin veren policy’ler kaldırılır.
+
+### 4. Tenant Policy Apply
+
+```txt
+db/tenant_rls_staging_apply_tenant_policies_real.sql
+```
+
+Amaç:
+
+* Tenant tablolarına firma_id tabanlı SELECT / INSERT / UPDATE policy’leri eklenir.
+* DELETE policy varsayılan olarak eklenmez.
+
+### 5. Post Apply Kontroller
+
+```txt
+db/staging_rls_post_apply_checks.sql
+```
+
+Beklenen:
+
+* Kritik tenant tablolarında tenant policy’ler var.
+* Fazla izin veren policy’ler staging’de kalktı.
+* Helper fonksiyonlar var.
+* Veri audit temiz.
+
+### 6. Manuel Uygulama Testleri
+
+```txt
+db/tenant_rls_staging_test_matrix_real.md
+db/staging_rls_manual_test_results.md
+```
+
+### 7. Rollback Provası
+
+```txt
+db/tenant_rls_staging_rollback_real.sql
+```
+
+Rollback sonrası uygulama tekrar test edilir.
+
+## Go / No-Go
+
+Son karar:
+
+```txt
+db/staging_rls_go_no_go_report.md
+```
+
+````
+
+---
+
+## 6. staging_rls_preflight_checks.sql
+
+Yeni dosya oluştur:
+
+```txt
+db/staging_rls_preflight_checks.sql
+````
+
+Bu dosya sadece SELECT sorguları içermeli.
 
 En üste uyarı koy:
 
 ```sql
 -- ==========================================================
--- STAGING ONLY
--- Production üzerinde çalıştırılmayacak.
--- Helper fonksiyon iyileştirme denemesi içindir.
+-- STAGING / LOCAL PREFLIGHT CHECKS
+-- Sadece SELECT sorguları içerir.
+-- Production üzerinde çalıştırılması amaçlanmamıştır.
+-- Veri değiştirmez.
 -- ==========================================================
 ```
 
 İçerik:
 
-### 5.1 current_firma_id iyileştirmesi
-
-Mevcut fonksiyon aktif kullanıcı kontrolü yapmıyor. Staging’de şu hale getir:
-
 ```sql
-CREATE OR REPLACE FUNCTION public.current_firma_id()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT kp.firma_id
-  FROM public.kullanici_profiller kp
-  WHERE kp.id = auth.uid()
-    AND kp.aktif = true
-  LIMIT 1
-$$;
-```
+-- 1. Kritik tablolar var mı?
+WITH required_tables(table_name) AS (
+  VALUES
+    ('firmalar'),
+    ('kullanici_profiller'),
+    ('subeler'),
+    ('customers'),
+    ('devices'),
+    ('service_forms'),
+    ('service_form_items'),
+    ('invoices'),
+    ('invoice_items'),
+    ('invoice_brokers'),
+    ('payments'),
+    ('teslimatlar'),
+    ('teslimat_kalemleri'),
+    ('teklifler'),
+    ('teklif_kalemleri'),
+    ('proforma_faturalar'),
+    ('proforma_fatura_kalemleri'),
+    ('teknik_raporlar'),
+    ('musteri_talepleri'),
+    ('is_planlari'),
+    ('planli_isler'),
+    ('brokers'),
+    ('araci_cari_hareketleri')
+)
+SELECT
+  rt.table_name,
+  to_regclass('public.' || rt.table_name) IS NOT NULL AS table_exists
+FROM required_tables rt
+ORDER BY rt.table_name;
 
-### 5.2 is_super_admin iyileştirmesi
+-- 2. Kritik firma_id kolonları var mı?
+WITH tenant_tables(table_name) AS (
+  VALUES
+    ('kullanici_profiller'),
+    ('subeler'),
+    ('customers'),
+    ('devices'),
+    ('service_forms'),
+    ('service_form_items'),
+    ('invoices'),
+    ('invoice_items'),
+    ('invoice_brokers'),
+    ('payments'),
+    ('teslimatlar'),
+    ('teslimat_kalemleri'),
+    ('teklifler'),
+    ('teklif_kalemleri'),
+    ('proforma_faturalar'),
+    ('proforma_fatura_kalemleri'),
+    ('teknik_raporlar'),
+    ('musteri_talepleri'),
+    ('is_planlari'),
+    ('planli_isler'),
+    ('brokers'),
+    ('araci_cari_hareketleri')
+)
+SELECT
+  tt.table_name,
+  c.column_name IS NOT NULL AS firma_id_exists
+FROM tenant_tables tt
+LEFT JOIN information_schema.columns c
+  ON c.table_schema = 'public'
+ AND c.table_name = tt.table_name
+ AND c.column_name = 'firma_id'
+ORDER BY tt.table_name;
 
-Production’da rol adı `Admin` görünüyor. Staging’de hem `Super Admin` hem `Admin` desteklensin:
-
-```sql
-CREATE OR REPLACE FUNCTION public.is_super_admin()
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.kullanici_profiller kp
-    JOIN public.roller r ON r.id = kp.rol_id
-    WHERE kp.id = auth.uid()
-      AND kp.aktif = true
-      AND lower(coalesce(r.ad, '')) IN (
-        'super admin',
-        'super_admin',
-        'admin',
-        'sistem yöneticisi'
-      )
+-- 3. Helper fonksiyon durumu
+SELECT
+  p.proname AS function_name,
+  pg_get_function_result(p.oid) AS result_type,
+  p.prosecdef AS security_definer,
+  pg_get_functiondef(p.oid) AS function_definition
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname IN (
+    'current_firma_id',
+    'is_super_admin',
+    'current_user_role',
+    'current_user_sube_id'
   )
-$$;
-```
+ORDER BY p.proname;
 
-### 5.3 current_user_role oluştur
+-- 4. Kullanıcı / firma / rol kontrolü
+SELECT
+  kp.id,
+  kp.firma_id,
+  f.ad AS firma_adi,
+  kp.sube_id,
+  s.ad AS sube_adi,
+  kp.aktif,
+  r.ad AS rol_adi
+FROM public.kullanici_profiller kp
+LEFT JOIN public.firmalar f ON f.id = kp.firma_id
+LEFT JOIN public.subeler s ON s.id = kp.sube_id
+LEFT JOIN public.roller r ON r.id = kp.rol_id
+ORDER BY kp.created_at DESC
+LIMIT 50;
 
-```sql
-CREATE OR REPLACE FUNCTION public.current_user_role()
-RETURNS text
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT r.ad
-  FROM public.kullanici_profiller kp
-  LEFT JOIN public.roller r ON r.id = kp.rol_id
-  WHERE kp.id = auth.uid()
-    AND kp.aktif = true
-  LIMIT 1
-$$;
-```
-
-### 5.4 current_user_sube_id oluştur
-
-```sql
-CREATE OR REPLACE FUNCTION public.current_user_sube_id()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT kp.sube_id
-  FROM public.kullanici_profiller kp
-  WHERE kp.id = auth.uid()
-    AND kp.aktif = true
-  LIMIT 1
-$$;
+-- 5. Fazla izin veren policy sayısı
+SELECT
+  COUNT(*) AS permissive_policy_count
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND (
+    COALESCE(qual, '') ILIKE '%auth.uid() IS NOT NULL%'
+    OR COALESCE(with_check, '') ILIKE '%auth.uid() IS NOT NULL%'
+    OR COALESCE(qual, '') IN ('true', '(true)')
+    OR COALESCE(with_check, '') IN ('true', '(true)')
+    OR COALESCE(qual, '') ILIKE '%true%'
+    OR COALESCE(with_check, '') ILIKE '%true%'
+  );
 ```
 
 ---
 
-## 6. tenant_rls_staging_cleanup_real.sql
+## 7. staging_rls_post_apply_checks.sql
 
-Yeni dosya:
-
-```txt
-db/tenant_rls_staging_cleanup_real.sql
-```
-
-Bu dosya **yalnızca staging/local içindir**.
-
-Amacı: gerçek policy adlarına göre riskli policy’leri staging’de kaldırmak.
-
-En üste uyarı koy:
-
-```sql
--- ==========================================================
--- STAGING ONLY
--- Production üzerinde çalıştırılmayacak.
--- Gerçek production policy adlarına göre hazırlanmıştır.
--- ==========================================================
-```
-
-Aşağıdaki policy’ler staging’de kaldırılacak şekilde `DROP POLICY IF EXISTS` olarak yazılsın.
-
-Öncelik 1 — tenant kritik tablolar:
-
-```sql
-DROP POLICY IF EXISTS customers_insert ON public.customers;
-DROP POLICY IF EXISTS customers_select ON public.customers;
-DROP POLICY IF EXISTS customers_update ON public.customers;
-
-DROP POLICY IF EXISTS devices_insert ON public.devices;
-DROP POLICY IF EXISTS devices_select ON public.devices;
-DROP POLICY IF EXISTS devices_update ON public.devices;
-
-DROP POLICY IF EXISTS sf_delete ON public.service_forms;
-DROP POLICY IF EXISTS sf_insert ON public.service_forms;
-DROP POLICY IF EXISTS sf_select ON public.service_forms;
-DROP POLICY IF EXISTS sf_update ON public.service_forms;
-
-DROP POLICY IF EXISTS sfi_all ON public.service_form_items;
-
-DROP POLICY IF EXISTS proforma_auth_all ON public.proforma_faturalar;
-DROP POLICY IF EXISTS proforma_kalem_auth_all ON public.proforma_fatura_kalemleri;
-
-DROP POLICY IF EXISTS teknik_raporlar_auth_all ON public.teknik_raporlar;
-
-DROP POLICY IF EXISTS "Authenticated users can do everything on brokers" ON public.brokers;
-DROP POLICY IF EXISTS "Authenticated users can do everything on invoice_brokers" ON public.invoice_brokers;
-
-DROP POLICY IF EXISTS anon_all ON public.araci_cari_hareketleri;
-DROP POLICY IF EXISTS auth_all ON public.araci_cari_hareketleri;
-
-DROP POLICY IF EXISTS operasyon_auth_all ON public.musteri_talepleri;
-DROP POLICY IF EXISTS operasyon_service_all ON public.musteri_talepleri;
-
-DROP POLICY IF EXISTS operasyon_auth_all ON public.is_planlari;
-DROP POLICY IF EXISTS operasyon_service_all ON public.is_planlari;
-
-DROP POLICY IF EXISTS operasyon_auth_all ON public.planli_isler;
-DROP POLICY IF EXISTS operasyon_service_all ON public.planli_isler;
-```
-
-Not: Aynı policy adı farklı tablolarda kullanıldığı için `DROP POLICY ... ON public.tablo` şeklinde tabloyla birlikte yazılmalı.
-
-Öncelik 2 — public true / service role isimli ama aslında herkese açık tenant tablolar:
-
-```sql
-DROP POLICY IF EXISTS "Service role has full access" ON public.teklifler;
-DROP POLICY IF EXISTS "Service role has full access" ON public.teklif_kalemleri;
-DROP POLICY IF EXISTS "Service role has full access" ON public.teslimatlar;
-DROP POLICY IF EXISTS "Service role has full access" ON public.teslimat_kalemleri;
-DROP POLICY IF EXISTS "Service role has full access" ON public.teslimat_durum_gecmisi;
-DROP POLICY IF EXISTS "Service role has full access" ON public.on_kayitlar;
-```
-
-`urunler`, `roller`, `modul_izinleri`, `device_types`, `teknik_hesap_ayarlari` gibi lookup/ayar/personel tablolarını bu sprintte staging cleanup içine alma; ayrı güvenlik modeline bırak.
-
----
-
-## 7. tenant_rls_staging_apply_tenant_policies_real.sql
-
-Yeni dosya:
+Yeni dosya oluştur:
 
 ```txt
-db/tenant_rls_staging_apply_tenant_policies_real.sql
+db/staging_rls_post_apply_checks.sql
 ```
 
-Bu dosya **yalnızca staging/local içindir**.
-
-Tenant policy şablonu:
-
-```sql
-CREATE POLICY table_name_tenant_select
-ON public.table_name
-FOR SELECT
-TO authenticated
-USING (
-  public.is_super_admin()
-  OR firma_id = public.current_firma_id()
-);
-```
-
-```sql
-CREATE POLICY table_name_tenant_insert
-ON public.table_name
-FOR INSERT
-TO authenticated
-WITH CHECK (
-  public.is_super_admin()
-  OR firma_id = public.current_firma_id()
-);
-```
-
-```sql
-CREATE POLICY table_name_tenant_update
-ON public.table_name
-FOR UPDATE
-TO authenticated
-USING (
-  public.is_super_admin()
-  OR firma_id = public.current_firma_id()
-)
-WITH CHECK (
-  public.is_super_admin()
-  OR firma_id = public.current_firma_id()
-);
-```
-
-DELETE policy varsayılan olarak eklenmeyecek.
-
-Şu tablolara SELECT/INSERT/UPDATE tenant policy oluştur:
-
-```txt
-customers
-devices
-service_forms
-service_form_items
-invoices
-invoice_items
-invoice_brokers
-payments
-teslimatlar
-teslimat_kalemleri
-teklifler
-teklif_kalemleri
-proforma_faturalar
-proforma_fatura_kalemleri
-teknik_raporlar
-musteri_talepleri
-is_planlari
-planli_isler
-brokers
-araci_cari_hareketleri
-```
-
-Özel notlar:
-
-* `invoices`, `invoice_items`, `payments` tablolarında policy_count 0 olduğu için staging’de doğrudan tenant policy eklenecek.
-* `firmalar`, `kullanici_profiller`, `subeler` özel policy gerektirir; bu dosyanın sonunda ayrı bölüm aç.
-
-### 7.1 firmalar özel policy
-
-```sql
-DROP POLICY IF EXISTS firmalar_tenant_select ON public.firmalar;
-CREATE POLICY firmalar_tenant_select
-ON public.firmalar
-FOR SELECT
-TO authenticated
-USING (
-  public.is_super_admin()
-  OR id = public.current_firma_id()
-);
-```
-
-INSERT/UPDATE şimdilik ekleme veya sadece yorumda bırak.
-
-### 7.2 kullanici_profiller özel policy
-
-```sql
-DROP POLICY IF EXISTS kullanici_profiller_self_select ON public.kullanici_profiller;
-CREATE POLICY kullanici_profiller_self_select
-ON public.kullanici_profiller
-FOR SELECT
-TO authenticated
-USING (
-  public.is_super_admin()
-  OR id = auth.uid()
-  OR firma_id = public.current_firma_id()
-);
-```
-
-UPDATE için ilk aşamada sadece kendi profili:
-
-```sql
-DROP POLICY IF EXISTS kullanici_profiller_self_update ON public.kullanici_profiller;
-CREATE POLICY kullanici_profiller_self_update
-ON public.kullanici_profiller
-FOR UPDATE
-TO authenticated
-USING (
-  public.is_super_admin()
-  OR id = auth.uid()
-)
-WITH CHECK (
-  public.is_super_admin()
-  OR id = auth.uid()
-);
-```
-
-### 7.3 subeler özel policy
-
-```sql
-DROP POLICY IF EXISTS subeler_tenant_select ON public.subeler;
-CREATE POLICY subeler_tenant_select
-ON public.subeler
-FOR SELECT
-TO authenticated
-USING (
-  public.is_super_admin()
-  OR firma_id = public.current_firma_id()
-);
-```
-
----
-
-## 8. tenant_rls_staging_rollback_real.sql
-
-Yeni dosya:
-
-```txt
-db/tenant_rls_staging_rollback_real.sql
-```
-
-Bu dosya staging denemesinde geri dönüş için hazırlanacak.
+Bu dosya da sadece SELECT sorguları içermeli.
 
 İçerik:
 
-* Yeni oluşturulan `*_tenant_select`, `*_tenant_insert`, `*_tenant_update` policy’leri kaldır.
-* Helper fonksiyonları eski hale döndürmek için not ekle.
-* Eski policy’leri geri oluşturmak için doğrudan production’daki riskli policy’lerin birebir CREATE taslağını **yorum satırı olarak** ekle.
-* Rollback dosyası production’da çalıştırılmayacak.
+```sql
+-- ==========================================================
+-- STAGING / LOCAL POST APPLY CHECKS
+-- Sadece SELECT sorguları içerir.
+-- Veri değiştirmez.
+-- ==========================================================
+
+-- 1. Yeni tenant policy’ler var mı?
+SELECT
+  tablename,
+  policyname,
+  cmd,
+  roles,
+  qual,
+  with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND policyname ILIKE '%tenant%'
+ORDER BY tablename, policyname;
+
+-- 2. Kalan fazla izin veren policy’ler
+SELECT
+  schemaname,
+  tablename,
+  policyname,
+  roles,
+  cmd,
+  qual,
+  with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND (
+    COALESCE(qual, '') ILIKE '%auth.uid() IS NOT NULL%'
+    OR COALESCE(with_check, '') ILIKE '%auth.uid() IS NOT NULL%'
+    OR COALESCE(qual, '') IN ('true', '(true)')
+    OR COALESCE(with_check, '') IN ('true', '(true)')
+    OR COALESCE(qual, '') ILIKE '%true%'
+    OR COALESCE(with_check, '') ILIKE '%true%'
+  )
+ORDER BY tablename, policyname;
+
+-- 3. Kritik tablolarda policy sayısı
+WITH tenant_tables(table_name) AS (
+  VALUES
+    ('customers'),
+    ('devices'),
+    ('service_forms'),
+    ('service_form_items'),
+    ('invoices'),
+    ('invoice_items'),
+    ('invoice_brokers'),
+    ('payments'),
+    ('teslimatlar'),
+    ('teslimat_kalemleri'),
+    ('teklifler'),
+    ('teklif_kalemleri'),
+    ('proforma_faturalar'),
+    ('proforma_fatura_kalemleri'),
+    ('teknik_raporlar'),
+    ('musteri_talepleri'),
+    ('is_planlari'),
+    ('planli_isler'),
+    ('brokers'),
+    ('araci_cari_hareketleri')
+)
+SELECT
+  t.table_name,
+  COUNT(p.policyname) AS policy_count
+FROM tenant_tables t
+LEFT JOIN pg_policies p
+  ON p.schemaname = 'public'
+ AND p.tablename = t.table_name
+GROUP BY t.table_name
+ORDER BY t.table_name;
+
+-- 4. Helper fonksiyonlar
+SELECT
+  p.proname AS function_name,
+  pg_get_function_result(p.oid) AS result_type,
+  p.prosecdef AS security_definer
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname IN (
+    'current_firma_id',
+    'is_super_admin',
+    'current_user_role',
+    'current_user_sube_id'
+  )
+ORDER BY p.proname;
+```
 
 ---
 
-## 9. tenant_rls_staging_test_matrix_real.md
+## 8. staging_rls_manual_test_results.md
 
-Yeni dosya:
+Yeni dosya oluştur:
+
+```txt
+db/staging_rls_manual_test_results.md
+```
+
+İçerik:
+
+```md
+# Staging RLS Manual Test Results
+
+## Ortam
+
+| Alan | Değer |
+|---|---|
+| Ortam | Staging / Local |
+| Supabase URL | |
+| Test tarihi | |
+| Test eden | |
+| Production mı? | Hayır |
+
+## Test Sonuçları
+
+| Modül | Test | Beklenen | Sonuç | Not |
+|---|---|---|---|---|
+| customers | Kendi firma müşteri listesi | Görünür |  |  |
+| customers | Başka firma müşteri detayı | 404/yetkisiz |  |  |
+| devices | Kendi firma cihazları | Görünür |  |  |
+| service_forms | Kendi firma servis formları | Görünür |  |  |
+| service_forms | Başka firma servis formu PDF | Engellenir |  |  |
+| invoices | Kendi firma faturaları | Görünür |  |  |
+| payments | Kendi firma faturasına ödeme | Başarılı |  |  |
+| payments | Başka firma faturasına ödeme | Engellenir |  |  |
+| teslimatlar | Kendi firma teslimatları | Görünür |  |  |
+| teklifler | Kendi firma teklifleri | Görünür |  |  |
+| proforma | Kendi firma proformaları | Görünür |  |  |
+| teknik_raporlar | Kendi firma raporları | Görünür |  |  |
+| teknik_raporlar | Başka firma rapor copy/quote/cancel | Engellenir |  |  |
+| dashboard | Sayılar sadece kendi firma | Doğru |  |  |
+```
+
+---
+
+## 9. staging_rls_go_no_go_report.md
+
+Yeni dosya oluştur:
+
+```txt
+db/staging_rls_go_no_go_report.md
+```
+
+İçerik:
+
+```md
+# Staging RLS Go / No-Go Report
+
+## Özet
+
+Bu rapor staging/local RLS dry-run sonucuna göre production’a geçilip geçilmeyeceğini değerlendirir.
+
+## Kontrol Listesi
+
+### Ortam
+
+- [ ] Production kullanılmadı.
+- [ ] Staging/local Supabase kullanıldı.
+- [ ] Backup/snapshot alındı.
+- [ ] Test kullanıcıları hazırlandı.
+- [ ] En az iki firma test edildi.
+
+### SQL Uygulama
+
+- [ ] Helper upgrade uygulandı.
+- [ ] Riskli policy cleanup uygulandı.
+- [ ] Tenant policy apply uygulandı.
+- [ ] Post apply kontroller temiz.
+
+### Uygulama Testleri
+
+- [ ] Liste ekranları çalışıyor.
+- [ ] Detay ekranları çalışıyor.
+- [ ] Yeni kayıt oluşturma çalışıyor.
+- [ ] Güncelleme çalışıyor.
+- [ ] PDF/yazdırma çalışıyor.
+- [ ] Dashboard doğru.
+- [ ] Negatif tenant testleri geçti.
+
+### Rollback
+
+- [ ] Rollback SQL çalıştı.
+- [ ] Rollback sonrası sistem eski davranışına döndü.
+- [ ] Rollback sonrası build/test tekrar kontrol edildi.
+
+## Karar
+
+- [ ] GO — Production planı hazırlanabilir.
+- [ ] NO-GO — Eksikler var.
+- [ ] Tekrar staging testi gerekli.
+
+## Notlar
+
+-
+```
+
+---
+
+## 10. Mevcut Dosyaları Güncelle
+
+Aşağıdaki dosyalara Sprint 2.0 staging hazırlığı notu ekle:
 
 ```txt
 db/tenant_rls_staging_test_matrix_real.md
+db/tenant_rls_production_risk_assessment_real.md
+db/tenant_rls_production_readiness_gate.md
 ```
 
-İçerik:
+Özellikle readiness gate içine şu maddeleri ekle:
 
 ```md
-# Tenant RLS Staging Test Matrix — Real Policy Cleanup
-
-## Ön Koşullar
-
-- Staging/local Supabase kullanılıyor.
-- Production kullanılmıyor.
-- En az iki firma var.
-- En az iki kullanıcı var.
-- Helper upgrade staging’de uygulandı.
-- Cleanup staging’de uygulandı.
-- Tenant policies staging’de uygulandı.
-
-## Test Matrisi
-
-| Modül | Liste | Detay | Oluşturma | Güncelleme | PDF/Yazdırma | Negatif Başka Firma Testi | Sonuç |
-|---|---|---|---|---|---|---|---|
-| customers |  |  |  |  | - |  |  |
-| devices |  |  |  |  | - |  |  |
-| service_forms |  |  |  |  |  |  |  |
-| invoices |  |  |  |  |  |  |  |
-| payments | - | - |  | - | - |  |  |
-| teslimatlar |  |  |  |  |  |  |  |
-| teklifler |  |  |  |  |  |  |  |
-| proforma_faturalar |  |  |  |  |  |  |  |
-| teknik_raporlar |  |  |  |  |  |  |  |
-| operasyon |  |  |  |  |  |  |  |
-| brokers/araci_cari |  |  |  |  | - |  |  |
-| dashboard |  | - | - | - | - |  |  |
-
-## Kritik Negatif Testler
-
-- Başka firma müşterisi listede görünmemeli.
-- Başka firma müşteri detay URL’si 404/yetkisiz olmalı.
-- Başka firma faturasına ödeme eklenememeli.
-- Başka firma servis formu PDF üretilememeli.
-- Başka firma teklif/proforma PDF üretilememeli.
-- Başka firma teknik rapor copy/quote/cancel engellenmeli.
+- [ ] Staging/local ortam production’dan ayrıştırıldı.
+- [ ] Staging preflight checks temiz.
+- [ ] Staging post apply checks temiz.
+- [ ] Manual test results dolduruldu.
+- [ ] Go/No-Go raporu tamamlandı.
 ```
 
 ---
 
-## 10. tenant_rls_production_risk_assessment_real.md
+## 11. Testler
 
-Yeni dosya:
+Kod değişikliği beklenmiyor.
+
+Yine de çalıştır:
+
+```powershell
+npx.cmd tsc --noEmit
+npm run build
+```
+
+Git kontrolü:
+
+```powershell
+git -c core.quotePath=false -c core.autocrlf=false --no-pager status --short
+git -c core.autocrlf=false --no-pager diff --name-only
+```
+
+Beklenen değişiklikler:
 
 ```txt
+GOREV.md
+db/staging_rls_environment_setup.md
+db/staging_rls_execution_order.md
+db/staging_rls_preflight_checks.sql
+db/staging_rls_post_apply_checks.sql
+db/staging_rls_manual_test_results.md
+db/staging_rls_go_no_go_report.md
+db/tenant_rls_staging_test_matrix_real.md
 db/tenant_rls_production_risk_assessment_real.md
+db/tenant_rls_production_readiness_gate.md
 ```
 
-İçerik:
-
-```md
-# Tenant RLS Production Risk Assessment — Real Inventory
-
-## Genel Karar
-
-Production RLS şu anda açılmayacak / policy temizliği yapılmayacak.
-
-## Neden
-
-- 59 adet fazla izin veren policy var.
-- Bazı tenant kritik tablolarda policy yok: invoices, invoice_items, payments.
-- Bazı policy’ler anon/public true veriyor.
-- is_super_admin helper production rol adıyla uyuşmayabilir.
-- current_user_role ve current_user_sube_id helper’ları eksik.
-- Staging dry-run ve rollback provası yapılmadı.
-
-## En Riskli Tablolar
-
-| Tablo | Risk |
-|---|---|
-| araci_cari_hareketleri | anon ALL true |
-| mutabakat_formlari | anon ALL true |
-| sube_gider_gelir | anon ALL true |
-| teklifler | public ALL true |
-| teslimatlar | public ALL true |
-| customers | auth.uid() IS NOT NULL |
-| devices | auth.uid() IS NOT NULL |
-| service_forms | auth.uid() IS NOT NULL |
-| invoices | RLS açık, policy yok |
-| payments | RLS açık, policy yok |
-
-## Production Öncesi Zorunlu Adımlar
-
-- Staging DB oluştur.
-- Helper upgrade staging’de test et.
-- Gerçek policy cleanup staging’de test et.
-- Tenant policy apply staging’de test et.
-- Negatif testleri tamamla.
-- Rollback provasını yap.
-- Sonra production için ayrı bakım penceresi ve backup planı hazırla.
-```
+`src/` değişmemeli.
 
 ---
 
-## 11. Mevcut Dosyaları Güncelle
-
-### 11.1 db/rls_inventory_analysis.md
-
-Gerçek production çıktılarına göre şu bölümleri doldur:
-
-* RLS açık tablo sayısı: 56
-* Force RLS açık tablo sayısı: 0
-* Fazla izin veren policy sayısı: 59
-* Helper durumu:
-
-  * current_firma_id var
-  * is_super_admin var
-  * current_user_role yok
-  * current_user_sube_id yok
-* Veri temizlik özeti: tüm kontroller 0
-
-### 11.2 db/tenant_rls_cleanup_plan.md
-
-Gerçek policy adlarıyla staging cleanup planını güncelle.
-
-### 11.3 db/tenant_rls_production_readiness_gate.md
-
-Şu maddeleri işaretlenmemiş şekilde ekle:
-
-```md
-- [ ] Staging helper upgrade test edildi.
-- [ ] Staging gerçek policy cleanup test edildi.
-- [ ] Staging tenant policy apply test edildi.
-- [ ] Staging negatif testler geçti.
-- [ ] Staging rollback provası yapıldı.
-```
-
----
-
-## 12. Testler
-
-Kod dosyası değiştirme. Sadece `db/*.sql`, `db/*.md`, gerekirse `GOREV.md` değişmeli.
-
-Sonra çalıştır:
-
-```powershell
-npx.cmd tsc --noEmit
-npm run build
-```
-
-Eğer `.next` cache hatası çıkarsa:
-
-```powershell
-Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
-Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
-npx.cmd tsc --noEmit
-npm run build
-```
-
----
-
-## 13. Commit
+## 12. Commit
 
 Stage edilecek dosyalar:
 
 ```powershell
 git add GOREV.md
-git add db/tenant_rls_policy_inventory_real.md
-git add db/tenant_rls_staging_cleanup_real.sql
-git add db/tenant_rls_staging_apply_tenant_policies_real.sql
-git add db/tenant_rls_helper_upgrade_staging.sql
-git add db/tenant_rls_staging_rollback_real.sql
+git add db/staging_rls_environment_setup.md
+git add db/staging_rls_execution_order.md
+git add db/staging_rls_preflight_checks.sql
+git add db/staging_rls_post_apply_checks.sql
+git add db/staging_rls_manual_test_results.md
+git add db/staging_rls_go_no_go_report.md
 git add db/tenant_rls_staging_test_matrix_real.md
 git add db/tenant_rls_production_risk_assessment_real.md
-git add db/rls_inventory_analysis.md
-git add db/tenant_rls_cleanup_plan.md
 git add db/tenant_rls_production_readiness_gate.md
 ```
 
@@ -865,7 +690,7 @@ git diff --cached --name-only
 Commit:
 
 ```powershell
-git commit -m "docs: prepare real tenant RLS staging cleanup plan"
+git commit -m "docs: add staging RLS dry-run execution plan"
 ```
 
 Push:
@@ -876,48 +701,50 @@ git push
 
 ---
 
-## 14. Görev Sonu Raporu
+## 13. Görev Sonu Raporu
 
 Görev bitince şu formatta rapor ver:
 
 ```md
-# Sprint 1.9 Görev Sonu Raporu
+# Sprint 2.0 Görev Sonu Raporu
 
 ## Yapılanlar
 
-- Gerçek production policy envanteri analiz edildi.
-- Staging helper upgrade SQL’i hazırlandı.
-- Gerçek policy adlarına göre staging cleanup SQL’i hazırlandı.
-- Tenant policy apply SQL’i hazırlandı.
-- Rollback SQL’i hazırlandı.
-- Test matrisi hazırlandı.
-- Production risk assessment hazırlandı.
+- Staging/local RLS ortam hazırlık dokümanı oluşturuldu.
+- Execution order hazırlandı.
+- Preflight check SQL oluşturuldu.
+- Post apply check SQL oluşturuldu.
+- Manual test results şablonu oluşturuldu.
+- Go/No-Go raporu oluşturuldu.
 
 ## Production’da İşlem Yapıldı mı?
 
-- RLS değiştirildi mi? Hayır.
-- Policy drop/create yapıldı mı? Hayır.
-- Veri değiştirildi mi? Hayır.
-- NOT NULL yapıldı mı? Hayır.
+- Hayır.
 
-## Hazırlanan Dosyalar
+## Kod Değişikliği Yapıldı mı?
 
-- ...
+- Hayır.
 
-## Kritik Bulgular
+## Üretilen Dosyalar
 
-- Public şemada 56 tabloda RLS açık.
-- Force RLS açık tablo yok.
-- 59 adet fazla izin veren policy var.
-- current_firma_id ve is_super_admin var.
-- current_user_role ve current_user_sube_id eksik.
-- is_super_admin rol adı production ile uyuşmayabilir.
-- Veri temizlik kontrolleri temiz.
+- db/staging_rls_environment_setup.md
+- db/staging_rls_execution_order.md
+- db/staging_rls_preflight_checks.sql
+- db/staging_rls_post_apply_checks.sql
+- db/staging_rls_manual_test_results.md
+- db/staging_rls_go_no_go_report.md
+
+## Güncellenen Dosyalar
+
+- db/tenant_rls_staging_test_matrix_real.md
+- db/tenant_rls_production_risk_assessment_real.md
+- db/tenant_rls_production_readiness_gate.md
+- GOREV.md
 
 ## Testler
 
-- npx.cmd tsc --noEmit:
-- npm run build:
+- npx.cmd tsc --noEmit: PASS
+- npm run build: PASS
 
 ## Commit / Push
 
@@ -926,10 +753,14 @@ Görev bitince şu formatta rapor ver:
 
 ## Sonraki Adım
 
-Production değil, staging/local Supabase üzerinde şu sırayla test yapılacak:
+Production değil, staging/local Supabase üzerinde şu sırayla ilerlenmeli:
 
-1. tenant_rls_helper_upgrade_staging.sql
-2. tenant_rls_staging_cleanup_real.sql
-3. tenant_rls_staging_apply_tenant_policies_real.sql
-4. tenant_rls_staging_test_matrix_real.md testleri
-5. tenant_rls_staging_rollback_real.sql rollback provası
+1. staging_rls_preflight_checks.sql
+2. tenant_rls_helper_upgrade_staging.sql
+3. tenant_rls_staging_cleanup_real.sql
+4. tenant_rls_staging_apply_tenant_policies_real.sql
+5. staging_rls_post_apply_checks.sql
+6. tenant_rls_staging_test_matrix_real.md
+7. staging_rls_manual_test_results.md
+8. tenant_rls_staging_rollback_real.sql
+9. staging_rls_go_no_go_report.md

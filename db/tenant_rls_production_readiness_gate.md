@@ -60,6 +60,15 @@ Production'da RLS açmadan önce bu kapıların tamamı geçmelidir. Bu dosyanı
 - [ ] Uygulama release planı RLS migration ile eşleşiyor.
 - [ ] Log/monitoring kontrol noktaları belirlendi.
 
+## 5.1 Staging Dry-Run Kapısı (Sprint 2.0)
+
+- [ ] Staging ortam kurulumu yapıldı (`staging_rls_environment_setup.md`).
+- [ ] `staging_rls_preflight_checks.sql` çalıştırıldı ve sonuçlar beklenenle uyumlu.
+- [ ] Helper upgrade + cleanup + tenant policy apply sırasıyla uygulandı (`staging_rls_execution_order.md`).
+- [ ] `staging_rls_post_apply_checks.sql` çalıştırıldı ve sonuçlar beklenenle uyumlu.
+- [ ] Manuel test sonuçları dolduruldu (`staging_rls_manual_test_results.md`).
+- [ ] Go/No-Go raporu **Go** olarak işaretlendi (`staging_rls_go_no_go_report.md`).
+
 ## 6. Karar
 
 Production RLS:
