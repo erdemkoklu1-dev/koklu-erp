@@ -57,3 +57,28 @@ Bu script secret'ları ekrana yazmaz; yalnızca eksik değer ve production ipucu
 - [ ] Ortam güvenli: preflight'e geçilebilir.
 - [ ] Ortam belirsiz: preflight'e geçilmez.
 - [ ] Production riski var: işlem durdurulur.
+
+## 7. Sprint 2.2 Ortam Seçim Kararı
+
+Bu bölüm, preflight öncesi staging/local ortam seçiminin ve env güvenlik doğrulamasının sonucunu kayıt altına alır.
+
+| Alan | Değer |
+| --- | --- |
+| Tarih | |
+| Karar veren | |
+| Seçilen ortam | Staging project / Branch / Local / Henüz yok |
+| `scripts/verify-staging-env.mjs` çalıştırıldı mı? | |
+| Script exit kodu | |
+| Production hint yakalandı mı? | |
+| Supabase Dashboard project adı production değil mi? | |
+
+### Sprint 2.2 Kararı
+
+```txt
+[ ] GO     — Production olmayan staging/local ortam doğrulandı, preflight SQL çalıştırılabilir.
+[ ] NO-GO  — Ortam henüz production olmayan ayrı bir ortam olarak doğrulanamadı, preflight çalıştırılmaz.
+```
+
+Gerekçe:
+
+-

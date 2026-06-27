@@ -100,3 +100,29 @@ Gerekçe:
 ## 8. Mevcut Karar
 
 Staging dry-run henüz çalıştırılmadığı için varsayılan karar **NO-GO**'dur. Karar, dry-run tamamlanıp bu rapor doldurulduktan sonra güncellenecektir.
+
+## 9. Sprint 2.2 Preflight Hazırlık Kararı
+
+Bu bölüm, preflight SQL çalıştırılmadan önceki ortam/env güvenlik aşamasının (Sprint 2.2) kararını kaydeder. Bu karar tüm dry-run'ın değil, yalnızca "preflight'e geçilebilir mi" sorusunun cevabıdır.
+
+| Kontrol | Sonuç |
+| --- | --- |
+| Staging/local ortam seçildi | |
+| `scripts/verify-staging-env.mjs` çalıştırıldı | |
+| Script production hint yakaladı mı? | |
+| `npx.cmd tsc --noEmit` geçti | |
+| `npm run build` geçti | |
+| Env safety checklist Sprint 2.2 bölümü dolduruldu | |
+
+### Sprint 2.2 Kararı
+
+```txt
+[ ] GO     — Ayrı staging/local ortam doğrulandı; sonraki adım db/staging_rls_preflight_checks.sql.
+[ ] NO-GO  — Ortam production veya belirsiz; preflight SQL çalıştırılmaz.
+```
+
+Gerekçe:
+
+-
+
+> Bu repodaki mevcut `.env.local` production projesine işaret ettiği sürece `verify-staging-env.mjs` `exit 1` döner ve Sprint 2.2 kararı zorunlu olarak **NO-GO**'dur. GO kararı, ancak production olmayan ayrı bir staging/local ortam `.env.local`'a tanımlanıp script `exit 0` döndürdüğünde verilebilir.

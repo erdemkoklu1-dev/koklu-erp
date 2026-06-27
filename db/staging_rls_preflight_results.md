@@ -12,6 +12,22 @@
 | Test tarihi | |
 | Test eden | |
 
+## 0. Env Safety Doğrulaması (Sprint 2.2)
+
+`scripts/verify-staging-env.mjs` çıktısı ve manuel ortam kontrolü buraya işlenir. Secret değer yazılmaz; yalnızca maskelenmiş/özet sonuç.
+
+| Kontrol | Beklenen | Gözlenen | Sonuç |
+| --- | --- | --- | --- |
+| `.env.local` bulundu mu? | Evet | | |
+| `NEXT_PUBLIC_SUPABASE_URL` mevcut | Evet | | |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` mevcut | Evet | | |
+| `SUPABASE_SERVICE_ROLE_KEY` mevcut | Evet | | |
+| Production hint yakalandı mı? | Hayır (staging için) | | |
+| `verify-staging-env.mjs` exit kodu | 0 (staging) | | |
+| Supabase Dashboard project adı production değil | Doğrulandı | | |
+
+> Not: Script production ortamda `exit 1` döner; bu, "ortam production, dry-run yapılmamalı" anlamına gelir ve beklenen güvenlik davranışıdır. Preflight SQL yalnızca exit 0 alındıktan ve manuel doğrulama yapıldıktan sonra çalıştırılır.
+
 ## 1. Kritik Tablolar Var mı?
 
 | table_name | table_exists |
