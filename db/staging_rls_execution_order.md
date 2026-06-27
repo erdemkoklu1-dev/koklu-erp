@@ -10,7 +10,22 @@ Bu doküman, tenant RLS dry-run'ının hangi sırayla ve hangi kontrol noktalar�
 
 ## Çalıştırma Sırası
 
-### Adım 0 — Ortam ve Snapshot
+### Adım 0 — Environment Safety Check
+
+Önce şu dosyalar incelenir:
+
+- `db/staging_rls_env_safety_checklist.md`
+- `db/staging_rls_dry_run_env_template.md`
+
+Opsiyonel local kontrol:
+
+```bash
+node scripts/verify-staging-env.mjs
+```
+
+Ortam güvenliği onaylanmadan sonraki adımlara geçilmez.
+
+### Adım 0.1 — Ortam ve Snapshot
 
 1. Staging/local Supabase'e bağlandığını doğrula (production değil).
 2. Staging DB snapshot/backup al.

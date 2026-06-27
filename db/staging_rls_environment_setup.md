@@ -88,3 +88,13 @@ Dry-run'a başlamadan önce:
 ## 7. Önemli Not
 
 Bu doküman ve bağlı SQL dosyaları production RLS onayı anlamına gelmez. Production kararı yalnızca staging dry-run, negatif testler ve rollback provası başarıyla tamamlandıktan sonra `db/staging_rls_go_no_go_report.md` ve `db/tenant_rls_production_readiness_gate.md` üzerinden verilir.
+
+## Sprint 2.1 Notu
+
+RLS dry-run işleminden önce staging/local ortamın production'dan ayrıştığı doğrulanacaktır. Bunun için bkz. `db/staging_rls_env_safety_checklist.md`, `db/staging_rls_dry_run_env_template.md` ve `scripts/verify-staging-env.mjs`.
+
+İlk çalıştırılacak dosya:
+
+- `db/staging_rls_preflight_checks.sql`
+
+Policy/helper değişikliği yapan dosyalar ancak preflight temizse çalıştırılacaktır.

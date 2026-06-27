@@ -15,6 +15,16 @@ Bu rapor, tenant RLS dry-run'ının staging/local Supabase üzerinde çalıştı
 
 ## 2. Go Kriterleri (Hepsi Sağlanmalı)
 
+### Environment Safety
+
+- [ ] Production URL kullanılmadı.
+- [ ] Production anon key kullanılmadı.
+- [ ] Production service role key kullanılmadı.
+- [ ] Supabase project adı staging/local olarak doğrulandı.
+- [ ] Preflight başlamadan önce ortam ayrımı onaylandı.
+
+### Dry-Run Kriterleri
+
 - [ ] Ortam doğrulama checklist'i tamamlandı (`staging_rls_environment_setup.md`).
 - [ ] Preflight kontrolleri beklenen sonuçları verdi (`staging_rls_preflight_checks.sql`).
 - [ ] Helper upgrade uygulandı; dört fonksiyon da mevcut.

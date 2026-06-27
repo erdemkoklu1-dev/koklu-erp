@@ -1,602 +1,221 @@
-# GÖREV — Sprint 2.0: Staging/Local Supabase RLS Dry-Run Ortam Hazırlığı
+# GÖREV — Sprint 2.1: Staging Ortam Ayrıştırma ve Preflight Doğrulama
 
 ## Amaç
 
-Sprint 1.8 ve Sprint 1.9 tamamlandı.
+Sprint 2.0 tamamlandı ve staging/local Supabase RLS dry-run için gerekli plan dosyaları oluşturuldu.
 
-Hazır olan dosyalar:
+Bir sonraki adım, production’a dokunmadan staging/local ortamın gerçekten ayrı olduğunu doğrulamak ve RLS dry-run öncesi **preflight kontrol sürecini** güvenli şekilde hazırlamaktır.
 
-```txt
-db/tenant_rls_helper_upgrade_staging.sql
-db/tenant_rls_staging_cleanup_real.sql
-db/tenant_rls_staging_apply_tenant_policies_real.sql
-db/tenant_rls_staging_test_matrix_real.md
-db/tenant_rls_staging_rollback_real.sql
-db/tenant_rls_production_risk_assessment_real.md
-```
+Bu sprintte:
 
-Bu sprintin amacı production’a dokunmadan, **staging/local Supabase ortamında RLS dry-run yapılabilmesi için güvenli çalışma planı ve ortam kontrol dosyalarını hazırlamaktır.**
+1. Production ve staging/local Supabase bağlantılarının karışmaması için güvenlik kontrolü hazırlanacak.
+2. `.env` dosyalarının nasıl yönetileceği belgelenecek.
+3. Production secret/key bilgileri kesinlikle commit edilmeyecek.
+4. Staging/local ortamda çalıştırılacak preflight kontrolleri için sonuç şablonu hazırlanacak.
+5. RLS helper upgrade, cleanup veya tenant policy apply henüz çalıştırılmayacak.
+6. Production üzerinde hiçbir SQL çalıştırılmayacak.
 
-Bu görevde production Supabase üzerinde hiçbir SQL çalıştırılmayacak.
+Bu sprintin çıktısı: **staging/local preflight’e geçebiliriz / geçemeyiz** kararıdır.
 
 ---
 
 ## 1. Kesin Yasaklar
 
-Kesinlikle yapma:
+Bu görevde kesinlikle yapma:
 
 ```txt
 Production Supabase üzerinde SQL çalıştırma.
-Production üzerinde DROP POLICY çalıştırma.
-Production üzerinde CREATE POLICY çalıştırma.
-Production üzerinde ALTER TABLE çalıştırma.
-Production üzerinde RLS enable/disable yapma.
-Production verisi üzerinde INSERT / UPDATE / DELETE / TRUNCATE yapma.
+Production üzerinde RLS veya policy değiştirme.
+DROP POLICY çalıştırma.
+CREATE POLICY çalıştırma.
+ALTER TABLE çalıştırma.
+INSERT / UPDATE / DELETE / TRUNCATE çalıştırma.
 firma_id NOT NULL yapma.
-src kod dosyalarını değiştirme.
-Parser, fatura hesaplama, teknik rapor formülü, teslimat mantığı veya PDF tasarımı değiştirme.
+Production service role key’i dosyaya yazma.
+.env.local, .env.production, .env gibi secret içeren dosyaları commit’e alma.
+src uygulama kodunu değiştirme.
+Parser, fatura hesaplama, teknik rapor formülü, teslimat mantığı veya PDF tasarımını değiştirme.
 ```
 
-Bu sprint sadece staging/local hazırlık sprintidir.
+Bu sprint **ortam güvenliği ve preflight hazırlığı** sprintidir.
 
 ---
 
-## 2. Ön Temizlik
+## 2. Önceki Dosyaları Oku
 
-Repo içinde şu eski/untracked dosya varsa kontrol et:
+Aşağıdaki dosyaları incele:
 
 ```txt
-db/tenant_rls_staging_dry_run.sql
+db/staging_rls_environment_setup.md
+db/staging_rls_execution_order.md
+db/staging_rls_preflight_checks.sql
+db/staging_rls_post_apply_checks.sql
+db/staging_rls_manual_test_results.md
+db/staging_rls_go_no_go_report.md
+
+db/tenant_rls_helper_upgrade_staging.sql
+db/tenant_rls_staging_cleanup_real.sql
+db/tenant_rls_staging_apply_tenant_policies_real.sql
+db/tenant_rls_staging_rollback_real.sql
+db/tenant_rls_staging_test_matrix_real.md
+db/tenant_rls_production_risk_assessment_real.md
+db/tenant_rls_production_readiness_gate.md
 ```
 
-Bu dosya Sprint 1.9 kapsamında commit’e alınmadı ve yeni gerçek dry-run dosyalarının yerine kullanılmamalı.
+Bu sprintte özellikle şu sıraya hazırlık yapılacak:
 
-Eğer artık kullanılmıyorsa sil:
-
-```powershell
-Remove-Item db/tenant_rls_staging_dry_run.sql -Force -ErrorAction SilentlyContinue
+```txt
+preflight → helper upgrade → cleanup → tenant policy apply → post-apply → manuel testler → rollback → Go/No-Go
 ```
 
-Sonra status kontrolü:
-
-```powershell
-git -c core.quotePath=false -c core.autocrlf=false --no-pager status --short
-```
+Ancak bu sprintte yalnızca **preflight öncesi ortam doğrulaması** yapılacak.
 
 ---
 
-## 3. Üretilecek Dosyalar
+## 3. Üretilecek Yeni Dosyalar
 
 Aşağıdaki yeni dosyaları oluştur:
 
 ```txt
-db/staging_rls_environment_setup.md
-db/staging_rls_execution_order.md
-db/staging_rls_preflight_checks.sql
-db/staging_rls_post_apply_checks.sql
-db/staging_rls_manual_test_results.md
-db/staging_rls_go_no_go_report.md
+db/staging_rls_env_safety_checklist.md
+db/staging_rls_preflight_results.md
+db/staging_rls_preflight_interpretation.md
+db/staging_rls_dry_run_env_template.md
+scripts/verify-staging-env.mjs
 ```
 
-Kod dosyası değiştirme.
-
----
-
-## 4. staging_rls_environment_setup.md
-
-Yeni dosya oluştur:
+Mevcut şu dosyaları gerekirse küçük notlarla güncelle:
 
 ```txt
 db/staging_rls_environment_setup.md
+db/staging_rls_execution_order.md
+db/staging_rls_go_no_go_report.md
+GOREV.md
+```
+
+Kod tarafında uygulama mantığı değiştirme. `scripts/verify-staging-env.mjs` yalnızca local environment güvenlik kontrol scripti olacak.
+
+---
+
+## 4. staging_rls_env_safety_checklist.md
+
+Yeni dosya:
+
+```txt
+db/staging_rls_env_safety_checklist.md
 ```
 
 İçerik:
 
 ```md
-# Staging RLS Environment Setup
+# Staging RLS Environment Safety Checklist
 
 ## Amaç
 
-Bu dosya production’a dokunmadan RLS dry-run yapabilmek için staging/local Supabase ortamının nasıl hazırlanacağını açıklar.
+Bu checklist, RLS dry-run işlemlerinin yanlışlıkla production Supabase üzerinde çalıştırılmasını engellemek için hazırlanmıştır.
 
-## Ortam Seçenekleri
+## 1. Ortam Kararı
 
-### Seçenek A — Supabase Staging Project
+Seçilen ortam:
 
-Önerilen yöntem.
+- [ ] Ayrı Supabase staging project
+- [ ] Supabase branch
+- [ ] Local Supabase
+- [ ] Henüz seçilmedi
 
-- Yeni Supabase project oluşturulur.
-- Production schema migration’ları staging’e uygulanır.
-- Gerekli test verileri eklenir.
-- `.env.local` staging URL ve anon/service key ile çalıştırılır.
+## 2. Production’dan Ayrışma Kontrolü
 
-### Seçenek B — Supabase Branch
+Aşağıdaki maddelerin tamamı doğrulanmadan helper upgrade / cleanup / tenant policy apply çalıştırılmayacak.
 
-Supabase branch özelliği kullanılabiliyorsa tercih edilebilir.
+- [ ] NEXT_PUBLIC_SUPABASE_URL production URL değil.
+- [ ] NEXT_PUBLIC_SUPABASE_ANON_KEY production anon key değil.
+- [ ] SUPABASE_SERVICE_ROLE_KEY production service role key değil.
+- [ ] Supabase Dashboard’da staging/local project adı doğrulandı.
+- [ ] SQL Editor’da görünen proje adı production değil.
+- [ ] Test verileri staging/local üzerinde.
+- [ ] Production verisi üzerinde işlem yapılmıyor.
 
-- Production benzeri branch oluşturulur.
-- RLS dry-run branch üzerinde yapılır.
-- Başarılı olursa production için ayrı maintenance plan hazırlanır.
+## 3. Yasak Dosyalar
 
-### Seçenek C — Local Supabase
+Aşağıdaki dosyalar production’da çalıştırılmayacak:
 
-Geliştirici makinesinde local Supabase kullanılabilir.
+- db/tenant_rls_helper_upgrade_staging.sql
+- db/tenant_rls_staging_cleanup_real.sql
+- db/tenant_rls_staging_apply_tenant_policies_real.sql
+- db/tenant_rls_staging_rollback_real.sql
 
-- `supabase start`
-- Migration’lar uygulanır.
-- Seed/test verisi hazırlanır.
+## 4. İzinli İlk SQL
 
-## Kesin Uyarı
+İlk aşamada yalnızca şu dosya çalıştırılabilir:
 
-Production bağlantı bilgileriyle bu dry-run dosyaları çalıştırılmayacak.
+- db/staging_rls_preflight_checks.sql
 
-Kontrol edilecek `.env.local` değerleri:
+Bu dosya sadece SELECT sorguları içerir.
 
-- NEXT_PUBLIC_SUPABASE_URL
-- NEXT_PUBLIC_SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY
+## 5. Go / No-Go
 
-Bu değerler production değil staging/local olmalı.
+- [ ] Ortam güvenli: preflight’e geçilebilir.
+- [ ] Ortam belirsiz: preflight’e geçilmez.
+- [ ] Production riski var: işlem durdurulur.
 ```
 
 ---
 
-## 5. staging_rls_execution_order.md
+## 5. staging_rls_preflight_results.md
 
-Yeni dosya oluştur:
-
-```txt
-db/staging_rls_execution_order.md
-```
-
-İçerik:
-
-````md
-# Staging RLS Execution Order
-
-## Amaç
-
-Staging/local Supabase üzerinde gerçek RLS cleanup ve tenant policy dry-run çalıştırma sırasını belirlemek.
-
-## Çalıştırma Sırası
-
-### 1. Preflight Kontroller
+Yeni dosya:
 
 ```txt
-db/staging_rls_preflight_checks.sql
-````
-
-Beklenen:
-
-* Ortam production değil.
-* Kritik tablolar var.
-* firma_id kolonları var.
-* Helper fonksiyonların mevcut durumu görüldü.
-* Tenant audit temiz.
-
-### 2. Helper Upgrade
-
-```txt
-db/tenant_rls_helper_upgrade_staging.sql
+db/staging_rls_preflight_results.md
 ```
 
-Amaç:
-
-* current_firma_id aktif kullanıcı kontrolüyle iyileştirilir.
-* is_super_admin Admin / Super Admin rol adlarını tanır.
-* current_user_role oluşturulur.
-* current_user_sube_id oluşturulur.
-
-### 3. Riskli Policy Cleanup
-
-```txt
-db/tenant_rls_staging_cleanup_real.sql
-```
-
-Amaç:
-
-* Gerçek production policy adlarına göre staging’de fazla izin veren policy’ler kaldırılır.
-
-### 4. Tenant Policy Apply
-
-```txt
-db/tenant_rls_staging_apply_tenant_policies_real.sql
-```
-
-Amaç:
-
-* Tenant tablolarına firma_id tabanlı SELECT / INSERT / UPDATE policy’leri eklenir.
-* DELETE policy varsayılan olarak eklenmez.
-
-### 5. Post Apply Kontroller
-
-```txt
-db/staging_rls_post_apply_checks.sql
-```
-
-Beklenen:
-
-* Kritik tenant tablolarında tenant policy’ler var.
-* Fazla izin veren policy’ler staging’de kalktı.
-* Helper fonksiyonlar var.
-* Veri audit temiz.
-
-### 6. Manuel Uygulama Testleri
-
-```txt
-db/tenant_rls_staging_test_matrix_real.md
-db/staging_rls_manual_test_results.md
-```
-
-### 7. Rollback Provası
-
-```txt
-db/tenant_rls_staging_rollback_real.sql
-```
-
-Rollback sonrası uygulama tekrar test edilir.
-
-## Go / No-Go
-
-Son karar:
-
-```txt
-db/staging_rls_go_no_go_report.md
-```
-
-````
-
----
-
-## 6. staging_rls_preflight_checks.sql
-
-Yeni dosya oluştur:
-
-```txt
-db/staging_rls_preflight_checks.sql
-````
-
-Bu dosya sadece SELECT sorguları içermeli.
-
-En üste uyarı koy:
-
-```sql
--- ==========================================================
--- STAGING / LOCAL PREFLIGHT CHECKS
--- Sadece SELECT sorguları içerir.
--- Production üzerinde çalıştırılması amaçlanmamıştır.
--- Veri değiştirmez.
--- ==========================================================
-```
-
-İçerik:
-
-```sql
--- 1. Kritik tablolar var mı?
-WITH required_tables(table_name) AS (
-  VALUES
-    ('firmalar'),
-    ('kullanici_profiller'),
-    ('subeler'),
-    ('customers'),
-    ('devices'),
-    ('service_forms'),
-    ('service_form_items'),
-    ('invoices'),
-    ('invoice_items'),
-    ('invoice_brokers'),
-    ('payments'),
-    ('teslimatlar'),
-    ('teslimat_kalemleri'),
-    ('teklifler'),
-    ('teklif_kalemleri'),
-    ('proforma_faturalar'),
-    ('proforma_fatura_kalemleri'),
-    ('teknik_raporlar'),
-    ('musteri_talepleri'),
-    ('is_planlari'),
-    ('planli_isler'),
-    ('brokers'),
-    ('araci_cari_hareketleri')
-)
-SELECT
-  rt.table_name,
-  to_regclass('public.' || rt.table_name) IS NOT NULL AS table_exists
-FROM required_tables rt
-ORDER BY rt.table_name;
-
--- 2. Kritik firma_id kolonları var mı?
-WITH tenant_tables(table_name) AS (
-  VALUES
-    ('kullanici_profiller'),
-    ('subeler'),
-    ('customers'),
-    ('devices'),
-    ('service_forms'),
-    ('service_form_items'),
-    ('invoices'),
-    ('invoice_items'),
-    ('invoice_brokers'),
-    ('payments'),
-    ('teslimatlar'),
-    ('teslimat_kalemleri'),
-    ('teklifler'),
-    ('teklif_kalemleri'),
-    ('proforma_faturalar'),
-    ('proforma_fatura_kalemleri'),
-    ('teknik_raporlar'),
-    ('musteri_talepleri'),
-    ('is_planlari'),
-    ('planli_isler'),
-    ('brokers'),
-    ('araci_cari_hareketleri')
-)
-SELECT
-  tt.table_name,
-  c.column_name IS NOT NULL AS firma_id_exists
-FROM tenant_tables tt
-LEFT JOIN information_schema.columns c
-  ON c.table_schema = 'public'
- AND c.table_name = tt.table_name
- AND c.column_name = 'firma_id'
-ORDER BY tt.table_name;
-
--- 3. Helper fonksiyon durumu
-SELECT
-  p.proname AS function_name,
-  pg_get_function_result(p.oid) AS result_type,
-  p.prosecdef AS security_definer,
-  pg_get_functiondef(p.oid) AS function_definition
-FROM pg_proc p
-JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
-  AND p.proname IN (
-    'current_firma_id',
-    'is_super_admin',
-    'current_user_role',
-    'current_user_sube_id'
-  )
-ORDER BY p.proname;
-
--- 4. Kullanıcı / firma / rol kontrolü
-SELECT
-  kp.id,
-  kp.firma_id,
-  f.ad AS firma_adi,
-  kp.sube_id,
-  s.ad AS sube_adi,
-  kp.aktif,
-  r.ad AS rol_adi
-FROM public.kullanici_profiller kp
-LEFT JOIN public.firmalar f ON f.id = kp.firma_id
-LEFT JOIN public.subeler s ON s.id = kp.sube_id
-LEFT JOIN public.roller r ON r.id = kp.rol_id
-ORDER BY kp.created_at DESC
-LIMIT 50;
-
--- 5. Fazla izin veren policy sayısı
-SELECT
-  COUNT(*) AS permissive_policy_count
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND (
-    COALESCE(qual, '') ILIKE '%auth.uid() IS NOT NULL%'
-    OR COALESCE(with_check, '') ILIKE '%auth.uid() IS NOT NULL%'
-    OR COALESCE(qual, '') IN ('true', '(true)')
-    OR COALESCE(with_check, '') IN ('true', '(true)')
-    OR COALESCE(qual, '') ILIKE '%true%'
-    OR COALESCE(with_check, '') ILIKE '%true%'
-  );
-```
-
----
-
-## 7. staging_rls_post_apply_checks.sql
-
-Yeni dosya oluştur:
-
-```txt
-db/staging_rls_post_apply_checks.sql
-```
-
-Bu dosya da sadece SELECT sorguları içermeli.
-
-İçerik:
-
-```sql
--- ==========================================================
--- STAGING / LOCAL POST APPLY CHECKS
--- Sadece SELECT sorguları içerir.
--- Veri değiştirmez.
--- ==========================================================
-
--- 1. Yeni tenant policy’ler var mı?
-SELECT
-  tablename,
-  policyname,
-  cmd,
-  roles,
-  qual,
-  with_check
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND policyname ILIKE '%tenant%'
-ORDER BY tablename, policyname;
-
--- 2. Kalan fazla izin veren policy’ler
-SELECT
-  schemaname,
-  tablename,
-  policyname,
-  roles,
-  cmd,
-  qual,
-  with_check
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND (
-    COALESCE(qual, '') ILIKE '%auth.uid() IS NOT NULL%'
-    OR COALESCE(with_check, '') ILIKE '%auth.uid() IS NOT NULL%'
-    OR COALESCE(qual, '') IN ('true', '(true)')
-    OR COALESCE(with_check, '') IN ('true', '(true)')
-    OR COALESCE(qual, '') ILIKE '%true%'
-    OR COALESCE(with_check, '') ILIKE '%true%'
-  )
-ORDER BY tablename, policyname;
-
--- 3. Kritik tablolarda policy sayısı
-WITH tenant_tables(table_name) AS (
-  VALUES
-    ('customers'),
-    ('devices'),
-    ('service_forms'),
-    ('service_form_items'),
-    ('invoices'),
-    ('invoice_items'),
-    ('invoice_brokers'),
-    ('payments'),
-    ('teslimatlar'),
-    ('teslimat_kalemleri'),
-    ('teklifler'),
-    ('teklif_kalemleri'),
-    ('proforma_faturalar'),
-    ('proforma_fatura_kalemleri'),
-    ('teknik_raporlar'),
-    ('musteri_talepleri'),
-    ('is_planlari'),
-    ('planli_isler'),
-    ('brokers'),
-    ('araci_cari_hareketleri')
-)
-SELECT
-  t.table_name,
-  COUNT(p.policyname) AS policy_count
-FROM tenant_tables t
-LEFT JOIN pg_policies p
-  ON p.schemaname = 'public'
- AND p.tablename = t.table_name
-GROUP BY t.table_name
-ORDER BY t.table_name;
-
--- 4. Helper fonksiyonlar
-SELECT
-  p.proname AS function_name,
-  pg_get_function_result(p.oid) AS result_type,
-  p.prosecdef AS security_definer
-FROM pg_proc p
-JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
-  AND p.proname IN (
-    'current_firma_id',
-    'is_super_admin',
-    'current_user_role',
-    'current_user_sube_id'
-  )
-ORDER BY p.proname;
-```
-
----
-
-## 8. staging_rls_manual_test_results.md
-
-Yeni dosya oluştur:
-
-```txt
-db/staging_rls_manual_test_results.md
-```
+Bu dosya, staging/local üzerinde `db/staging_rls_preflight_checks.sql` çalıştırıldıktan sonra sonuçların yapıştırılacağı şablon olacak.
 
 İçerik:
 
 ```md
-# Staging RLS Manual Test Results
+# Staging RLS Preflight Results
 
-## Ortam
+## Ortam Bilgisi
 
 | Alan | Değer |
 |---|---|
-| Ortam | Staging / Local |
-| Supabase URL | |
+| Ortam tipi | Staging / Branch / Local |
+| Supabase project adı | |
+| Production mı? | Hayır |
 | Test tarihi | |
 | Test eden | |
-| Production mı? | Hayır |
 
-## Test Sonuçları
+## 1. Kritik Tablolar Var mı?
 
-| Modül | Test | Beklenen | Sonuç | Not |
-|---|---|---|---|---|
-| customers | Kendi firma müşteri listesi | Görünür |  |  |
-| customers | Başka firma müşteri detayı | 404/yetkisiz |  |  |
-| devices | Kendi firma cihazları | Görünür |  |  |
-| service_forms | Kendi firma servis formları | Görünür |  |  |
-| service_forms | Başka firma servis formu PDF | Engellenir |  |  |
-| invoices | Kendi firma faturaları | Görünür |  |  |
-| payments | Kendi firma faturasına ödeme | Başarılı |  |  |
-| payments | Başka firma faturasına ödeme | Engellenir |  |  |
-| teslimatlar | Kendi firma teslimatları | Görünür |  |  |
-| teklifler | Kendi firma teklifleri | Görünür |  |  |
-| proforma | Kendi firma proformaları | Görünür |  |  |
-| teknik_raporlar | Kendi firma raporları | Görünür |  |  |
-| teknik_raporlar | Başka firma rapor copy/quote/cancel | Engellenir |  |  |
-| dashboard | Sayılar sadece kendi firma | Doğru |  |  |
-```
+| table_name | table_exists |
+|---|---|
 
----
+## 2. firma_id Kolonları Var mı?
 
-## 9. staging_rls_go_no_go_report.md
+| table_name | firma_id_exists |
+|---|---|
 
-Yeni dosya oluştur:
+## 3. Helper Fonksiyon Durumu
 
-```txt
-db/staging_rls_go_no_go_report.md
-```
+| function_name | result_type | security_definer | not |
+|---|---|---|---|
 
-İçerik:
+## 4. Kullanıcı / Firma / Rol Kontrolü
 
-```md
-# Staging RLS Go / No-Go Report
+| id | firma_id | firma_adi | sube_id | sube_adi | aktif | rol_adi |
+|---|---|---|---|---|---|---|
 
-## Özet
+## 5. Fazla İzin Veren Policy Sayısı
 
-Bu rapor staging/local RLS dry-run sonucuna göre production’a geçilip geçilmeyeceğini değerlendirir.
+| permissive_policy_count |
+|---|
 
-## Kontrol Listesi
+## 6. Preflight Kararı
 
-### Ortam
-
-- [ ] Production kullanılmadı.
-- [ ] Staging/local Supabase kullanıldı.
-- [ ] Backup/snapshot alındı.
-- [ ] Test kullanıcıları hazırlandı.
-- [ ] En az iki firma test edildi.
-
-### SQL Uygulama
-
-- [ ] Helper upgrade uygulandı.
-- [ ] Riskli policy cleanup uygulandı.
-- [ ] Tenant policy apply uygulandı.
-- [ ] Post apply kontroller temiz.
-
-### Uygulama Testleri
-
-- [ ] Liste ekranları çalışıyor.
-- [ ] Detay ekranları çalışıyor.
-- [ ] Yeni kayıt oluşturma çalışıyor.
-- [ ] Güncelleme çalışıyor.
-- [ ] PDF/yazdırma çalışıyor.
-- [ ] Dashboard doğru.
-- [ ] Negatif tenant testleri geçti.
-
-### Rollback
-
-- [ ] Rollback SQL çalıştı.
-- [ ] Rollback sonrası sistem eski davranışına döndü.
-- [ ] Rollback sonrası build/test tekrar kontrol edildi.
-
-## Karar
-
-- [ ] GO — Production planı hazırlanabilir.
-- [ ] NO-GO — Eksikler var.
-- [ ] Tekrar staging testi gerekli.
+- [ ] Temiz, helper upgrade aşamasına geçilebilir.
+- [ ] Eksikler var, helper upgrade aşamasına geçilmez.
+- [ ] Ortam production olabilir, işlem durduruldu.
 
 ## Notlar
 
@@ -605,38 +224,296 @@ Bu rapor staging/local RLS dry-run sonucuna göre production’a geçilip geçil
 
 ---
 
-## 10. Mevcut Dosyaları Güncelle
+## 6. staging_rls_preflight_interpretation.md
 
-Aşağıdaki dosyalara Sprint 2.0 staging hazırlığı notu ekle:
+Yeni dosya:
 
 ```txt
-db/tenant_rls_staging_test_matrix_real.md
-db/tenant_rls_production_risk_assessment_real.md
-db/tenant_rls_production_readiness_gate.md
+db/staging_rls_preflight_interpretation.md
 ```
 
-Özellikle readiness gate içine şu maddeleri ekle:
+İçerik:
 
 ```md
-- [ ] Staging/local ortam production’dan ayrıştırıldı.
-- [ ] Staging preflight checks temiz.
-- [ ] Staging post apply checks temiz.
-- [ ] Manual test results dolduruldu.
-- [ ] Go/No-Go raporu tamamlandı.
+# Staging RLS Preflight Interpretation
+
+## Amaç
+
+Bu dosya, preflight sonuçlarının nasıl yorumlanacağını açıklar.
+
+## 1. Kritik Tablo Kontrolü
+
+Eğer herhangi bir kritik tabloda `table_exists = false` ise RLS dry-run’a geçilmez.
+
+Eksik tablo varsa önce staging schema eşitlemesi yapılmalıdır.
+
+## 2. firma_id Kolon Kontrolü
+
+Aşağıdaki kritik tablolarda `firma_id_exists = true` olmalıdır:
+
+- customers
+- devices
+- service_forms
+- service_form_items
+- invoices
+- invoice_items
+- invoice_brokers
+- payments
+- teslimatlar
+- teslimat_kalemleri
+- teklifler
+- teklif_kalemleri
+- proforma_faturalar
+- proforma_fatura_kalemleri
+- teknik_raporlar
+- musteri_talepleri
+- is_planlari
+- planli_isler
+- brokers
+- araci_cari_hareketleri
+- subeler
+- kullanici_profiller
+
+## 3. Helper Fonksiyon Kontrolü
+
+Preflight aşamasında mevcut helper fonksiyonlar görülebilir.
+
+Helper upgrade sonrasında beklenen fonksiyonlar:
+
+- current_firma_id
+- is_super_admin
+- current_user_role
+- current_user_sube_id
+
+## 4. Kullanıcı / Firma / Rol Kontrolü
+
+En az iki firma ve mümkünse iki kullanıcı olmalıdır.
+
+Minimum test senaryosu:
+
+- Köklü Yangın kullanıcısı
+- Test Yangın Firması kullanıcısı
+
+Eğer tek firma varsa negatif tenant testi yapılamaz. Bu durumda staging test verisi hazırlanmalıdır.
+
+## 5. Fazla İzin Veren Policy Sayısı
+
+Production envanterinde fazla izin veren policy sayısı 59 idi.
+
+Staging preflight’te bu sayı benzer olabilir. Cleanup sonrası azalması beklenir.
+
+## 6. Geçiş Kararı
+
+Helper upgrade aşamasına yalnızca şu şartlarda geç:
+
+- Ortam production değil.
+- Kritik tablolar var.
+- firma_id kolonları var.
+- Kullanıcı/firma verisi test için yeterli.
+- Preflight SQL hata vermeden çalıştı.
 ```
 
 ---
 
-## 11. Testler
+## 7. staging_rls_dry_run_env_template.md
 
-Kod değişikliği beklenmiyor.
+Yeni dosya:
 
-Yine de çalıştır:
+```txt
+db/staging_rls_dry_run_env_template.md
+```
+
+Bu dosya `.env` örneği olacak ama gerçek secret içermeyecek.
+
+İçerik:
+
+````md
+# Staging RLS Dry-Run Environment Template
+
+Bu dosya gerçek `.env` değildir. Secret içermez.
+
+Staging/local RLS dry-run için gerekli environment alanları:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-STAGING-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_STAGING_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_STAGING_SERVICE_ROLE_KEY
+````
+
+## Güvenlik Notları
+
+* Production key buraya yazılmayacak.
+* Gerçek `.env.local` dosyası commit edilmeyecek.
+* Service role key hiçbir dokümana yapıştırılmayacak.
+* Testten önce Supabase Dashboard’daki project adı kontrol edilecek.
+
+## Kontrol
+
+Aşağıdaki komutla local env kontrol edilebilir:
+
+```bash
+node scripts/verify-staging-env.mjs
+```
+
+````
+
+---
+
+## 8. scripts/verify-staging-env.mjs
+
+Yeni dosya:
+
+```txt
+scripts/verify-staging-env.mjs
+````
+
+Bu script sadece local ortamda `.env.local` değerlerini kontrol edecek. Secret’ları ekrana yazmayacak.
+
+Amaç:
+
+* Production URL gibi görünen değerleri yakalamak.
+* Eksik env değerlerini raporlamak.
+* Kullanıcıya staging/local olduğundan emin olması gerektiğini hatırlatmak.
+
+İçerik önerisi:
+
+```js
+const required = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+];
+
+const productionHints = [
+  'koklu-erp',
+  'hbcbpirbcpthftddzjau',
+];
+
+let hasError = false;
+
+console.log('Staging RLS environment safety check');
+console.log('------------------------------------');
+
+for (const key of required) {
+  const value = process.env[key];
+
+  if (!value) {
+    console.error(`MISSING: ${key}`);
+    hasError = true;
+    continue;
+  }
+
+  const masked =
+    value.length > 12
+      ? `${value.slice(0, 6)}...${value.slice(-4)}`
+      : '***';
+
+  console.log(`FOUND: ${key} = ${masked}`);
+
+  if (key.includes('KEY')) {
+    continue;
+  }
+
+  const lower = value.toLowerCase();
+  for (const hint of productionHints) {
+    if (lower.includes(hint.toLowerCase())) {
+      console.error(
+        `POSSIBLE PRODUCTION VALUE DETECTED in ${key}. Do not run staging RLS dry-run with this environment.`
+      );
+      hasError = true;
+    }
+  }
+}
+
+if (hasError) {
+  console.error('Environment safety check FAILED.');
+  process.exit(1);
+}
+
+console.log('Environment variables exist and no production hint was detected.');
+console.log('Still manually verify Supabase project name before running SQL.');
+```
+
+Not:
+
+* Script `.env.local` dosyasını otomatik okumuyorsa raporda belirt.
+* Projede dotenv kullanımı varsa gerekirse `dotenv` import etmeden çalışacak şekilde bırak.
+* Yeni dependency ekleme.
+
+---
+
+## 9. Mevcut Dosyaları Güncelle
+
+### 9.1 db/staging_rls_environment_setup.md
+
+Şu bölümü ekle:
+
+```md
+## Sprint 2.1 Notu
+
+RLS dry-run işleminden önce staging/local ortamın production’dan ayrıştığı doğrulanacaktır.
+
+İlk çalıştırılacak dosya:
+
+- db/staging_rls_preflight_checks.sql
+
+Policy/helper değişikliği yapan dosyalar ancak preflight temizse çalıştırılacaktır.
+```
+
+### 9.2 db/staging_rls_execution_order.md
+
+Preflight öncesine şu adımı ekle:
+
+````md
+## 0. Environment Safety Check
+
+Önce şu dosyalar incelenir:
+
+- db/staging_rls_env_safety_checklist.md
+- db/staging_rls_dry_run_env_template.md
+
+Opsiyonel local kontrol:
+
+```bash
+node scripts/verify-staging-env.mjs
+````
+
+````
+
+### 9.3 db/staging_rls_go_no_go_report.md
+
+Go/No-Go raporuna şu maddeyi ekle:
+
+```md
+### Environment Safety
+
+- [ ] Production URL kullanılmadı.
+- [ ] Production anon key kullanılmadı.
+- [ ] Production service role key kullanılmadı.
+- [ ] Supabase project adı staging/local olarak doğrulandı.
+- [ ] Preflight başlamadan önce ortam ayrımı onaylandı.
+````
+
+---
+
+## 10. Testler
+
+Kod iş mantığı değişmeyecek. Sadece docs ve küçük local safety script eklenecek.
+
+Çalıştır:
 
 ```powershell
 npx.cmd tsc --noEmit
 npm run build
 ```
+
+Opsiyonel script kontrolü:
+
+```powershell
+node scripts/verify-staging-env.mjs
+```
+
+Bu script production hint yakalarsa hata verebilir; bu normaldir. Görev raporunda “production env tespit ettiği için dry-run yapılmadı” şeklinde belirt.
 
 Git kontrolü:
 
@@ -649,36 +526,34 @@ Beklenen değişiklikler:
 
 ```txt
 GOREV.md
+db/staging_rls_env_safety_checklist.md
+db/staging_rls_preflight_results.md
+db/staging_rls_preflight_interpretation.md
+db/staging_rls_dry_run_env_template.md
 db/staging_rls_environment_setup.md
 db/staging_rls_execution_order.md
-db/staging_rls_preflight_checks.sql
-db/staging_rls_post_apply_checks.sql
-db/staging_rls_manual_test_results.md
 db/staging_rls_go_no_go_report.md
-db/tenant_rls_staging_test_matrix_real.md
-db/tenant_rls_production_risk_assessment_real.md
-db/tenant_rls_production_readiness_gate.md
+scripts/verify-staging-env.mjs
 ```
 
 `src/` değişmemeli.
 
 ---
 
-## 12. Commit
+## 11. Commit
 
 Stage edilecek dosyalar:
 
 ```powershell
 git add GOREV.md
+git add db/staging_rls_env_safety_checklist.md
+git add db/staging_rls_preflight_results.md
+git add db/staging_rls_preflight_interpretation.md
+git add db/staging_rls_dry_run_env_template.md
 git add db/staging_rls_environment_setup.md
 git add db/staging_rls_execution_order.md
-git add db/staging_rls_preflight_checks.sql
-git add db/staging_rls_post_apply_checks.sql
-git add db/staging_rls_manual_test_results.md
 git add db/staging_rls_go_no_go_report.md
-git add db/tenant_rls_staging_test_matrix_real.md
-git add db/tenant_rls_production_risk_assessment_real.md
-git add db/tenant_rls_production_readiness_gate.md
+git add scripts/verify-staging-env.mjs
 ```
 
 Kontrol:
@@ -690,7 +565,7 @@ git diff --cached --name-only
 Commit:
 
 ```powershell
-git commit -m "docs: add staging RLS dry-run execution plan"
+git commit -m "docs: add staging RLS environment safety checks"
 ```
 
 Push:
@@ -701,50 +576,54 @@ git push
 
 ---
 
-## 13. Görev Sonu Raporu
+## 12. Görev Sonu Raporu
 
 Görev bitince şu formatta rapor ver:
 
 ```md
-# Sprint 2.0 Görev Sonu Raporu
+# Sprint 2.1 Görev Sonu Raporu
 
 ## Yapılanlar
 
-- Staging/local RLS ortam hazırlık dokümanı oluşturuldu.
-- Execution order hazırlandı.
-- Preflight check SQL oluşturuldu.
-- Post apply check SQL oluşturuldu.
-- Manual test results şablonu oluşturuldu.
-- Go/No-Go raporu oluşturuldu.
+- Staging RLS environment safety checklist oluşturuldu.
+- Preflight sonuç şablonu oluşturuldu.
+- Preflight interpretation dokümanı oluşturuldu.
+- Dry-run env template oluşturuldu.
+- Local env safety script oluşturuldu.
+- Execution order ve Go/No-Go raporu güncellendi.
 
 ## Production’da İşlem Yapıldı mı?
 
-- Hayır.
+Hayır.
 
-## Kod Değişikliği Yapıldı mı?
+## SQL Çalıştırıldı mı?
 
-- Hayır.
+Hayır.
+
+## Kod İş Mantığı Değişti mi?
+
+Hayır.
 
 ## Üretilen Dosyalar
 
-- db/staging_rls_environment_setup.md
-- db/staging_rls_execution_order.md
-- db/staging_rls_preflight_checks.sql
-- db/staging_rls_post_apply_checks.sql
-- db/staging_rls_manual_test_results.md
-- db/staging_rls_go_no_go_report.md
+- db/staging_rls_env_safety_checklist.md
+- db/staging_rls_preflight_results.md
+- db/staging_rls_preflight_interpretation.md
+- db/staging_rls_dry_run_env_template.md
+- scripts/verify-staging-env.mjs
 
 ## Güncellenen Dosyalar
 
-- db/tenant_rls_staging_test_matrix_real.md
-- db/tenant_rls_production_risk_assessment_real.md
-- db/tenant_rls_production_readiness_gate.md
+- db/staging_rls_environment_setup.md
+- db/staging_rls_execution_order.md
+- db/staging_rls_go_no_go_report.md
 - GOREV.md
 
 ## Testler
 
 - npx.cmd tsc --noEmit: PASS
 - npm run build: PASS
+- node scripts/verify-staging-env.mjs: Çalıştı (sonuç ortamdaki .env.local değerlerine bağlı; production hint yakalanırsa hata vermesi beklenen davranış)
 
 ## Commit / Push
 
@@ -753,14 +632,14 @@ Görev bitince şu formatta rapor ver:
 
 ## Sonraki Adım
 
-Production değil, staging/local Supabase üzerinde şu sırayla ilerlenmeli:
+Staging/local Supabase ortamı seçilecek.
 
-1. staging_rls_preflight_checks.sql
-2. tenant_rls_helper_upgrade_staging.sql
-3. tenant_rls_staging_cleanup_real.sql
-4. tenant_rls_staging_apply_tenant_policies_real.sql
-5. staging_rls_post_apply_checks.sql
-6. tenant_rls_staging_test_matrix_real.md
-7. staging_rls_manual_test_results.md
-8. tenant_rls_staging_rollback_real.sql
-9. staging_rls_go_no_go_report.md
+Production olmayan ortam doğrulandıktan sonra ilk çalıştırılacak SQL:
+
+- db/staging_rls_preflight_checks.sql
+
+Preflight temiz çıkmadan şu dosyalar çalıştırılmayacak:
+
+- db/tenant_rls_helper_upgrade_staging.sql
+- db/tenant_rls_staging_cleanup_real.sql
+- db/tenant_rls_staging_apply_tenant_policies_real.sql
