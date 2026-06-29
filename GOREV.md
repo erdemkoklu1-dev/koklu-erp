@@ -1,473 +1,272 @@
-# GÖREV — Sprint 2.2: Staging Ortam Seçimi, Env Doğrulama ve Preflight Sonuç Toplama
+# GÖREV: Fatura Yükle — KDV Hesaplama Hatası + musteri_adres Schema Hatası
 
-## Amaç
+## ⚠️ KRİTİK KURAL
+**Çalışan sistemleri BOZMA.** Sadece bu iki hataya odaklan:
+1. KDV hesaplama hatası (sadece tek PDF yükleme akışında)
+2. `musteri_adres` schema cache hatası (her iki yükleme akışında)
 
-Sprint 2.1 tamamlandı. Staging/local RLS dry-run öncesi environment safety dosyaları, preflight sonuç şablonları ve local env kontrol scripti hazırlandı.
-
-Bu sprintin amacı:
-
-1. Production olmayan bir staging/local Supabase ortamı seçmek.
-2. `.env.local` değerlerinin production olmadığını doğrulamak.
-3. `scripts/verify-staging-env.mjs` kontrolünü çalıştırmak.
-4. Staging/local Supabase SQL Editor’da yalnızca `db/staging_rls_preflight_checks.sql` dosyasını çalıştırmak.
-5. Preflight çıktılarını `db/staging_rls_preflight_results.md` dosyasına işlemek.
-6. Preflight sonucuna göre helper upgrade aşamasına geçilebilir mi kararını raporlamak.
-
-Bu sprintte **RLS helper upgrade, policy cleanup veya tenant policy apply çalıştırılmayacak.**
+ZIP yükleme akışı KDV açısından doğru çalışıyor — oraya KDV mantığıyla dokunma.
 
 ---
 
-## 1. Kesin Yasaklar
+## 🔴 SORUN 1: KDV Yanlış Hesaplanıyor (Tek PDF Yükleme)
 
-Kesinlikle yapma:
+### Test PDF: Drilteks_Fatura_102024.pdf
 
-```txt
-Production Supabase üzerinde SQL çalıştırma.
-Production `.env.local` ile dry-run yapma.
-Production service role key kullanma.
-DROP POLICY çalıştırma.
-CREATE POLICY çalıştırma.
-ALTER TABLE çalıştırma.
-ENABLE / DISABLE RLS yapma.
-INSERT / UPDATE / DELETE / TRUNCATE çalıştırma.
-firma_id NOT NULL yapma.
-src uygulama kodunu değiştirme.
-Secret veya gerçek key içeren dosyaları commit’e alma.
-.env.local, .env.production, .env dosyalarını commit’e alma.
+PDF'deki gerçek değerler:
+```
+1. 6 Kg KKT Yangın Söndürme Cihazı Dolumu      10 Adet × 333,34 TL = 3.333,40 TL (KDV %20 = 666,68 TL)
+2. 6 Kg KKT Yangın Söndürme Cihazı T. Vana D.   1 Adet × 100,00 TL =   100,00 TL (KDV %20 =  20,00 TL)
+3. Manometre Değişimi                            2 Adet ×  20,00 TL =    40,00 TL (KDV %20 =   8,00 TL)
+4. Yangın Söndürme Cihazı Hortum Değişimi        2 Adet ×  50,00 TL =   100,00 TL (KDV %20 =  20,00 TL)
+
+KDV Matrahı (KDV Hariç):  3.573,40 TL
+KDV (%20):                  714,68 TL
+GENEL TOPLAM (KDV Dahil): 4.288,08 TL
 ```
 
-Bu sprint yalnızca staging/local ortam doğrulama ve read-only preflight sprintidir.
+Sistemin gösterdiği YANLIŞ değerler:
+```
+1. Birim Fiyat: 277,78 TL  ❌ (333,34 olmalı)  → 333,34 / 1.20 = 277,78 (KDV'yi tekrar düşmüş)
+   Satır Top:  2.777,80 TL ❌
+2. Birim Fiyat:  83,33 TL  ❌ (100,00 olmalı)
+3. Birim Fiyat:  16,67 TL  ❌ (20,00 olmalı)
+4. Birim Fiyat:  41,67 TL  ❌ (50,00 olmalı)
+```
+
+### Kök Neden
+PDF'deki "Birim Fiyat" KDV hariç. Sistem yine de KDV dahilmiş varsayıp `birim_fiyat / 1.20` yapıyor.
+
+### Yapılacak
+
+**1.1. Tek PDF yükleme parse kodunu bul:**
+```bash
+grep -rn "cari-hesap/faturalar/new\|fatura.*yeni\|/api/parse-fatura\|parse-single-pdf" src/ --include="*.ts" --include="*.tsx" -l
+```
+
+**1.2. KDV hesaplama mantığını incele:**
+```bash
+grep -rn "kdv_dahil\|kdv_haric\|/ 1\.\?20\|/ 1\.2\|birim_fiyat.*kdv\|kdv.*birim_fiyat" src/ --include="*.ts" --include="*.tsx"
+```
+
+**1.3. e-Fatura/e-Arşiv PDF'lerinde KURAL:**
+
+Türk e-Fatura/e-Arşiv PDF formatında **kalem tablosundaki "Birim Fiyat" HER ZAMAN KDV HARİÇ**'tir. Bu standarttır.
+
+Tablo yapısı:
+```
+Miktar | Birim Fiyat (KDV HARİÇ) | KDV Oranı | KDV Tutarı | Mal Hizmet Tutarı (KDV HARİÇ)
+```
+
+Toplam = Miktar × Birim Fiyat (KDV HARİÇ)
+KDV Tutarı = Toplam × KDV Oranı
+KDV Dahil Toplam = Toplam + KDV Tutarı
+
+**1.4. Parse fonksiyonunda düzeltme:**
+
+```typescript
+// HATALI mantık (büyük ihtimalle şu an böyle):
+const birimFiyatKdvHaric = pdfBirimFiyat / (1 + kdvOrani / 100); // ❌ YANLIŞ — PDF zaten KDV hariç
+
+// DOĞRU mantık:
+const birimFiyatKdvHaric = pdfBirimFiyat; // ✅ PDF'deki birim fiyat ZATEN KDV hariç
+const satirTutarKdvHaric = miktar * birimFiyatKdvHaric;
+const kdvTutari = satirTutarKdvHaric * (kdvOrani / 100);
+const satirTutarKdvDahil = satirTutarKdvHaric + kdvTutari;
+```
+
+**1.5. AI parse prompt'una net kural ekle:**
+
+Tek PDF yükleme AI parse kullanıyorsa system prompt'una EKLE:
+
+```
+KRİTİK KDV KURALI:
+e-Fatura/e-Arşiv PDF'lerinde kalem tablosundaki "Birim Fiyat" DAİMA KDV HARİÇ'tir.
+Bu fiyatı asla KDV'den ayırma, asla 1.20'ye bölme.
+- birim_fiyat = PDF'deki "Birim Fiyat" sütunundaki değer (KDV HARİÇ)
+- satir_tutar_kdv_haric = miktar × birim_fiyat
+- kdv_tutari = PDF'deki "KDV Tutarı" sütunundaki değer
+- satir_tutar = PDF'deki "Mal Hizmet Tutarı" sütunundaki değer (KDV HARİÇ)
+- toplam_kdv_dahil = PDF'deki "Vergiler Dahil Toplam Tutar" veya "Ödenecek Tutar"
+
+ÖRNEK doğru parse (Drilteks faturası):
+{
+  "kalemler": [
+    {
+      "aciklama": "6 Kg KKT Yangın Söndürme Cihazı Dolumu",
+      "miktar": 10,
+      "birim_fiyat": 333.34,  // PDF'deki "333,34TL" — KDV HARİÇ, böl-me!
+      "kdv_orani": 20,
+      "kdv_tutari": 666.68,
+      "tutar": 3333.40
+    }
+  ],
+  "toplam_kdv_haric": 3573.40,
+  "kdv_toplam": 714.68,
+  "toplam_kdv_dahil": 4288.08
+}
+```
+
+**1.6. ZIP yükleme akışını KARŞILAŞTIR — değişiklik yapma:**
+
+ZIP yükleme akışında bu sorun YOK. Demek ki ZIP parse fonksiyonu doğru çalışıyor. Tek PDF parse fonksiyonunu ZIP parse mantığıyla aynı hale getir. ZIP koduna DOKUNMA.
+
+```bash
+# ZIP parse fonksiyonunu bul ve KDV mantığını incele:
+grep -rn "gelen-pdf-parse\|adm-zip\|JSZip" src/app/api/ --include="*.ts"
+```
+
+Bu fonksiyondaki KDV/birim fiyat işleme mantığını al, tek PDF parse'a uygula.
 
 ---
 
-## 2. Önce Mevcut Dosyaları Oku
+## 🔴 SORUN 2: `Could not find the 'musteri_adres' column of 'invoices' in the schema cache`
 
-Aşağıdaki dosyaları incele:
+### Kök Neden
+Kod hâlâ `invoices` tablosuna yazmaya çalışıyor. Doğru tablo adı `faturalar` veya `gelen_faturalar`. Ayrıca `musteri_adres` kolonu o tabloda yok.
 
-```txt
-db/staging_rls_env_safety_checklist.md
-db/staging_rls_environment_setup.md
-db/staging_rls_execution_order.md
-db/staging_rls_dry_run_env_template.md
-db/staging_rls_preflight_checks.sql
-db/staging_rls_preflight_results.md
-db/staging_rls_preflight_interpretation.md
-scripts/verify-staging-env.mjs
-db/staging_rls_go_no_go_report.md
-db/tenant_rls_production_readiness_gate.md
+Bu hata iki yerde çıkıyor:
+- Cari Hesap → Faturalar → Dosyadan yükle → Kaydet
+- Cari Hesap → e-Fatura Import → ZIP yükle → Kaydet
+
+### Yapılacak
+
+**2.1. `invoices` referanslarını bul:**
+```bash
+grep -rn "'invoices'\|\"invoices\"\|from('invoices')\|.from(\"invoices\")" src/ --include="*.ts" --include="*.tsx"
 ```
+
+**2.2. Doğru tablo adını kullan:**
+- Giden fatura → `faturalar`
+- Gelen fatura → `gelen_faturalar`
+
+Bulduğun her `invoices` → uygun tablo adıyla değiştir.
+
+**2.3. `musteri_adres` alanını insert/update'ten çıkar:**
+
+```bash
+grep -rn "musteri_adres" src/ --include="*.ts" --include="*.tsx"
+```
+
+İki seçenek var:
+
+**Seçenek A (Önerilen — güvenli):** Bu alanı insert/update nesnesinden çıkar. Adres bilgisi `customers.address` tablosundan zaten geliyor, faturaya yazmaya gerek yok.
+
+```typescript
+// ÖNCE:
+const insertData = {
+  musteri_adi: '...',
+  musteri_vkn: '...',
+  musteri_adres: '...',  // ← BU SATIRI SİL
+  fatura_no: '...',
+  // ...
+};
+
+// SONRA:
+const insertData = {
+  musteri_adi: '...',
+  musteri_vkn: '...',
+  fatura_no: '...',
+  // musteri_adres yok
+};
+```
+
+**Seçenek B:** Kolonu DB'ye ekle (eğer adresi faturada saklamak gerçekten gerekiyorsa):
+
+```sql
+ALTER TABLE public.faturalar ADD COLUMN IF NOT EXISTS musteri_adres TEXT;
+ALTER TABLE public.gelen_faturalar ADD COLUMN IF NOT EXISTS musteri_adres TEXT;
+
+-- Supabase schema cache'i yenile:
+NOTIFY pgrst, 'reload schema';
+```
+
+**Önerim: Seçenek A** — gereksiz veri çoğaltmayalım, müşteri adresi `customers` tablosundan çekilsin.
+
+**2.4. Aynı sorun başka kolon isimleri için var mı kontrol et:**
+```bash
+grep -rn "tedarikci_adres\|gider_kategorisi\|firma_id" src/ --include="*.ts" --include="*.tsx" | head -20
+```
+
+DB'de olmayan bir kolona yazılmaya çalışılıyorsa çıkar.
 
 ---
 
-## 3. Ortam Seçimi
-
-Kullanıcı hangi ortamla ilerleyecekse bunu rapora yaz.
-
-Önerilen sıralama:
-
-```txt
-1. Ayrı Supabase staging project — önerilen yöntem
-2. Supabase branch — mümkünse kullanılabilir
-3. Local Supabase — teknik kurulum uygunsa kullanılabilir
-```
-
-Bu sprintte seçilen ortam şu dosyaya işlenecek:
-
-```txt
-db/staging_rls_preflight_results.md
-```
-
-Şu alanları doldur:
-
-```md
-## Ortam Bilgisi
-
-| Alan | Değer |
-|---|---|
-| Ortam tipi | Staging / Branch / Local |
-| Supabase project adı | |
-| Production mı? | Hayır |
-| Test tarihi | |
-| Test eden | Erdem Köklü |
-```
-
-Eğer ortam hâlâ seçilmediyse görev sonunda `NO-GO: Staging ortam seçilmedi` diye raporla.
-
----
-
-## 4. Env Güvenlik Kontrolü
-
-`.env.local` dosyasını **içeriğini ekrana yazmadan** kontrol et.
-
-Şu değerlerin varlığı doğrulanmalı:
-
-```txt
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-```
-
-Kesinlikle key değerlerini rapora yazma.
-
-Şu komutu çalıştır:
-
-```powershell
-node scripts/verify-staging-env.mjs
-```
-
-Olası sonuçlar:
-
-### A. Script PASS
-
-Devam et. Ancak yine de raporda şu notu yaz:
-
-```txt
-Env script temiz geçti; yine de Supabase Dashboard project adı manuel doğrulanmalıdır.
-```
-
-### B. Script production hint yakaladı
-
-Dur. Preflight’e geçme.
-
-Raporla:
-
-```txt
-NO-GO: Env production değerine benziyor. Preflight çalıştırılmadı.
-```
-
-### C. Env eksik
-
-Dur. Preflight’e geçme.
-
-Raporla:
-
-```txt
-NO-GO: Staging env eksik. .env.local staging/local değerlerle ayarlanmalı.
-```
-
----
-
-## 5. Preflight SQL Çalıştırma Hazırlığı
-
-Sadece şu dosya kullanılacak:
-
-```txt
-db/staging_rls_preflight_checks.sql
-```
-
-Bu dosya yalnızca SELECT sorguları içermelidir.
-
-Kesinlikle çalıştırılmayacak dosyalar:
-
-```txt
-db/tenant_rls_helper_upgrade_staging.sql
-db/tenant_rls_staging_cleanup_real.sql
-db/tenant_rls_staging_apply_tenant_policies_real.sql
-db/tenant_rls_staging_rollback_real.sql
-```
-
-Codex bu dosyaları çalıştırmayacak. Kullanıcı staging/local Supabase SQL Editor’da bölüm bölüm çalıştıracak.
-
----
-
-## 6. Kullanıcıya Verilecek Preflight Çalıştırma Sırası
-
-Görev sonunda kullanıcıya şu sırayı açıkça ver:
-
-```txt
-1. Staging/local Supabase SQL Editor aç.
-2. Production project olmadığını üst bardan doğrula.
-3. db/staging_rls_preflight_checks.sql dosyasını aç.
-4. Bölüm 1’i çalıştır: Kritik tablolar var mı?
-5. Çıktıyı db/staging_rls_preflight_results.md içine işle.
-6. Bölüm 2’yi çalıştır: firma_id kolonları var mı?
-7. Bölüm 3’ü çalıştır: Helper fonksiyon durumu.
-8. Bölüm 4’ü çalıştır: Kullanıcı / firma / rol kontrolü.
-9. Bölüm 5’i çalıştır: Fazla izin veren policy sayısı.
-10. Tüm çıktıları kullanıcı ChatGPT’ye gönderecek.
-```
-
----
-
-## 7. Preflight Sonuç Dosyasını Güncelle
-
-`db/staging_rls_preflight_results.md` dosyasını şu başlıklarla hazır ve doldurulabilir hale getir:
-
-```md
-# Staging RLS Preflight Results
-
-## Ortam Bilgisi
-
-| Alan | Değer |
-|---|---|
-| Ortam tipi | |
-| Supabase project adı | |
-| Production mı? | Hayır |
-| Test tarihi | |
-| Test eden | Erdem Köklü |
-
-## Env Safety Check
-
-| Kontrol | Sonuç | Not |
-|---|---|---|
-| NEXT_PUBLIC_SUPABASE_URL var mı? | | Değer yazılmayacak |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY var mı? | | Değer yazılmayacak |
-| SUPABASE_SERVICE_ROLE_KEY var mı? | | Değer yazılmayacak |
-| Production hint var mı? | | |
-| scripts/verify-staging-env.mjs sonucu | | |
-
-## 1. Kritik Tablolar Var mı?
-
-| table_name | table_exists |
-|---|---|
-
-## 2. firma_id Kolonları Var mı?
-
-| table_name | firma_id_exists |
-|---|---|
-
-## 3. Helper Fonksiyon Durumu
-
-| function_name | result_type | security_definer | not |
-|---|---|---|---|
-
-## 4. Kullanıcı / Firma / Rol Kontrolü
-
-| id | firma_id | firma_adi | sube_id | sube_adi | aktif | rol_adi |
-|---|---|---|---|---|---|---|
-
-## 5. Fazla İzin Veren Policy Sayısı
-
-| permissive_policy_count |
-|---|
-
-## Preflight Kararı
-
-- [ ] GO — Helper upgrade aşamasına geçilebilir.
-- [ ] NO-GO — Eksikler var.
-- [ ] NO-GO — Ortam production olabilir.
-- [ ] NO-GO — Staging ortam henüz seçilmedi.
-
-## Notlar
-
--
-```
-
----
-
-## 8. Go / No-Go Mantığı
-
-Preflight sonrası karar şu kurala göre verilecek:
-
-### GO
-
-Aşağıdakilerin tamamı sağlanırsa:
-
-```txt
-Ortam production değil.
-Env kontrolü production hint vermedi.
-Kritik tablolar var.
-firma_id kolonları var.
-Kullanıcı/firma/rol verisi test için yeterli.
-Preflight SQL hata vermedi.
-```
-
-### NO-GO
-
-Aşağıdaki durumlardan biri varsa:
-
-```txt
-Ortam production olabilir.
-Env production hint verdi.
-Staging project adı doğrulanamadı.
-Kritik tablo eksik.
-firma_id kolonu eksik.
-Test kullanıcısı/firma verisi yetersiz.
-Preflight SQL hata verdi.
-```
-
----
-
-## 9. GOREV.md Görev Sonu Raporu
-
-Görev sonunda `GOREV.md` içine şu formatta rapor ekle:
-
-```md
-# Sprint 2.2 Görev Sonu Raporu
-
-## Yapılanlar
-
-- Staging/local ortam seçimi kontrol edildi.
-- Env safety kontrolü çalıştırıldı.
-- Preflight sonuç şablonu güncellendi.
-- Kullanıcıya staging/local SQL Editor’da çalıştırılacak preflight sırası hazırlandı.
-
-## Production’da İşlem Yapıldı mı?
-
-Hayır.
-
-## SQL Çalıştırıldı mı?
-
-Codex tarafından hayır.
-
-## Env Kontrol Sonucu
-
-- node scripts/verify-staging-env.mjs:
-- Production hint:
-- Eksik env:
-
-## Preflight Durumu
-
-- Preflight SQL çalıştırıldı mı? Kullanıcı tarafından staging/local ortamda çalıştırılacak.
-- Sonuçlar işlendi mi?
-- GO / NO-GO:
-
-## Güncellenen Dosyalar
-
-- db/staging_rls_preflight_results.md
-- db/staging_rls_env_safety_checklist.md
-- db/staging_rls_go_no_go_report.md
-- GOREV.md
-
-## Sonraki Adım
-
-Eğer GO ise sıradaki sprint:
-
-Sprint 2.3 — Staging Helper Upgrade Uygulama ve Doğrulama
-
-Eğer NO-GO ise önce staging/local ortam eksikleri giderilecek.
-```
-
----
-
-## 10. Testler
-
-Kod iş mantığı değişmeyecek. Yine de çalıştır:
-
-```powershell
-npx.cmd tsc --noEmit
-npm run build
-```
-
-Env script kontrolü:
-
-```powershell
-node scripts/verify-staging-env.mjs
-```
-
-Bu script production hint yakalarsa hata vermesi beklenen davranıştır. Böyle olursa bunu görev sonu raporunda belirt ve preflight’e geçme.
-
-Git kontrolü:
-
-```powershell
-git -c core.quotePath=false -c core.autocrlf=false --no-pager status --short
-git -c core.autocrlf=false --no-pager diff --name-only
-```
-
-Beklenen değişiklikler:
-
-```txt
-GOREV.md
-db/staging_rls_preflight_results.md
-db/staging_rls_env_safety_checklist.md
-db/staging_rls_go_no_go_report.md
-```
-
-`scripts/verify-staging-env.mjs` sadece gerekli küçük düzeltme varsa değişebilir.
-
-`src/` değişmemeli.
-
----
-
-## 11. Commit
-
-Stage edilecek dosyalar:
-
-```powershell
-git add GOREV.md
-git add db/staging_rls_preflight_results.md
-git add db/staging_rls_env_safety_checklist.md
-git add db/staging_rls_go_no_go_report.md
-```
-
-Eğer env scriptte küçük düzeltme yapıldıysa:
-
-```powershell
-git add scripts/verify-staging-env.mjs
-```
-
-Stage kontrolü:
-
-```powershell
-git diff --cached --name-only
-```
-
-Commit:
-
-```powershell
-git commit -m "docs: prepare staging RLS preflight run"
-```
-
-Push:
-
-```powershell
+## 🧪 TEST PLANI
+
+Değişiklikler yapıldıktan SONRA bu testleri sırayla çalıştır:
+
+### Test 1: KDV Hesaplama (Tek PDF)
+1. Cari Hesap → Faturalar → Yeni Fatura → Dosyadan yükle
+2. `Drilteks_Fatura_102024.pdf` yükle
+3. Önizleme ekranında beklenen değerleri kontrol et:
+   - [ ] Kalem 1 Birim Fiyat: **333,34 TL** (277,78 DEĞİL)
+   - [ ] Kalem 1 Satır Top: **3.333,40 TL**
+   - [ ] Kalem 2 Birim Fiyat: **100,00 TL**
+   - [ ] Kalem 3 Birim Fiyat: **20,00 TL**
+   - [ ] Kalem 4 Birim Fiyat: **50,00 TL**
+   - [ ] Ara Toplam (KDV Hariç): **3.573,40 TL**
+   - [ ] KDV: **714,68 TL**
+   - [ ] Genel Toplam: **4.288,08 TL**
+
+### Test 2: musteri_adres Hatası (Tek PDF Kaydet)
+1. Yukarıdaki yüklenen faturayı "Faturayı Kaydet" ile kaydet
+2. Beklenen: Hata YOK, fatura başarıyla kaydedildi
+3. [ ] "Could not find the 'musteri_adres' column" hatası ÇIKMAMALI
+4. [ ] Fatura veritabanına yazılmış olmalı
+5. [ ] Faturalar listesinde görünmeli
+
+### Test 3: ZIP Yükleme (Mevcut çalışan akış bozulmamış mı?)
+1. e-Fatura Import sekmesine git
+2. Bir ZIP dosyası yükle (önceden test ettiğin gibi)
+3. [ ] Parse hâlâ doğru çalışıyor
+4. [ ] KDV hâlâ doğru hesaplanıyor (bozulmadı)
+5. [ ] Bir faturayı içe aktar — `musteri_adres` hatası ÇIKMAMALI
+6. [ ] Tedarikçi eşleştirme hâlâ çalışıyor
+
+### Test 4: Genel Bozulma Kontrolü
+1. Faturalar listesi açılıyor mu?
+2. Mevcut bir faturayı düzenle, kaydet — çalışıyor mu?
+3. Müşteri listesi açılıyor mu?
+4. Servis formu oluşturma çalışıyor mu?
+
+### Test Sonucu Raporu
+
+Tüm testler ✅ olduktan SONRA git push yap:
+
+```bash
+cd C:\Projects\koklu-erp
+
+# Önce değişiklikleri kontrol et
+git status
+git diff --stat
+
+# Sonra commit ve push
+git add .
+git commit -m "Fix: Tek PDF yüklemede KDV hesaplama hatası + musteri_adres schema cache hatası"
 git push
 ```
 
+Vercel deploy tamamlanınca canlıda da aynı testleri tekrarla.
+
 ---
 
-# Sprint 2.3 Görev Sonu Raporu
+## ⚠️ Dikkat Edilecekler
 
-## Yapılanlar
+- ZIP yükleme akışındaki KDV mantığına DOKUNMA — orası çalışıyor
+- Diğer modüllere (müşteri, servis, teklif, teslimat) dokunma
+- `musteri_adres` kullanan başka modüller varsa onları da kontrol et ama bozma
+- Test 3 ÖNEMLİ — ZIP akışının bozulmadığından emin ol
+- Schema cache hatası devam ederse Supabase Dashboard'da Database → Tables'a git, ilgili tablodan "Reload schema" yap
 
-- Production'dan ayrı Supabase staging project kurulum runbook'u oluşturuldu.
-- Minimum anonim seed planı oluşturuldu (iki firma + test verisi).
-- Manuel Auth kullanıcı kurulum dokümanı oluşturuldu (auth.users → kullanici_profiller eşleme).
-- Preflight öncesi (SQL öncesi) checklist oluşturuldu.
-- Env switching guide oluşturuldu (.env.local production ↔ staging güvenli geçiş).
-- Mevcut ortam dosyaları Sprint 2.3 referanslarıyla güncellendi.
+## 📋 Kontrol Özeti
 
-## Production'da İşlem Yapıldı mı?
-
-Hayır.
-
-## SQL Çalıştırıldı mı?
-
-Hayır. RLS helper upgrade / cleanup / tenant policy apply çalıştırılmadı.
-
-## Kod İş Mantığı Değişti mi?
-
-Hayır. `src/` değişmedi.
-
-## Üretilen Dosyalar
-
-- db/staging_project_setup_runbook.md
-- db/staging_minimal_seed_plan.md
-- db/staging_manual_auth_user_setup.md
-- db/staging_preflight_before_sql_checklist.md
-- db/staging_env_switching_guide.md
-
-## Güncellenen Dosyalar
-
-- db/staging_rls_environment_setup.md
-- db/staging_rls_env_safety_checklist.md
-- db/staging_rls_preflight_results.md
-- GOREV.md
-
-## Testler
-
-- npx.cmd tsc --noEmit: PASS
-- npm run build: PASS
-- node scripts/verify-staging-env.mjs: exit 1 (production hint yakalandı)
-
-## GO / NO-GO
-
-NO-GO — `scripts/verify-staging-env.mjs` mevcut `.env.local` ortamında production hint yakaladı (exit 1). Bu repodaki aktif ortam production'a bağlı olduğu sürece staging kurulumu ve preflight SQL başlatılmaz. GO için production olmayan ayrı bir staging projesi `.env.local`'a tanımlanıp script exit 0 dönmelidir.
-
-## Sonraki Adım
-
-1. `db/staging_project_setup_runbook.md` ile ayrı staging projesi kur.
-2. `db/staging_minimal_seed_plan.md` ve `db/staging_manual_auth_user_setup.md` ile veri/kullanıcı hazırla.
-3. `db/staging_env_switching_guide.md` ile `.env.local`'ı staging'e al; `node scripts/verify-staging-env.mjs` exit 0 olmalı.
-4. `db/staging_preflight_before_sql_checklist.md` tamamla.
-5. Ardından `db/staging_rls_preflight_checks.sql` çalıştır.
+- [ ] Sorun 1 (KDV) — kod düzeltildi
+- [ ] Sorun 2 (musteri_adres) — kod düzeltildi
+- [ ] Test 1 — KDV hesaplama doğru
+- [ ] Test 2 — musteri_adres hatası gitti
+- [ ] Test 3 — ZIP akışı bozulmadı
+- [ ] Test 4 — diğer modüller etkilenmedi
+- [ ] git push yapıldı
+- [ ] Vercel canlı deploy tamamlandı
+- [ ] Canlıda da tüm testler tekrar yapıldı

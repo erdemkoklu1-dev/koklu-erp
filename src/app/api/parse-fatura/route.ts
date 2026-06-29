@@ -24,15 +24,17 @@ const PROMPT = `Bu bir fatura veya satış belgesidir. Faturadan aşağıdaki bi
       "description": "ürün veya hizmet açıklaması",
       "quantity": miktar (sayısal),
       "unit": "adet veya kg veya m veya saat veya set veya paket",
-      "unit_price": birim fiyat (KDV hariç, sayısal),
+      "unit_price": PDF'deki "Birim Fiyat" sütunundaki değer — ZATEN KDV HARİÇ, olduğu gibi al, bölme yapma (sayısal),
       "kdv_rate": bu kalemin KDV oranı (sayısal)
     }
   ]
 }
 
 ÖNEMLİ KURALLAR:
-- Tüm fiyatlar KDV HARİÇ (net) olmalı.
-- Eğer toplam tutar KDV dahilse, KDV'yi düşerek net tutarı hesapla.
+- KRİTİK KDV KURALI: e-Fatura/e-Arşiv PDF'lerinde kalem tablosundaki "Birim Fiyat" sütunu DAİMA KDV HARİÇ'tir. Bu değeri OLDUĞU GİBİ al; ASLA 1.20'ye (veya KDV oranına) BÖLME, KDV'yi tekrar DÜŞME.
+- unit_price = PDF'deki "Birim Fiyat" sütunundaki değer (zaten KDV hariç).
+- Satır toplamı = quantity × unit_price (KDV hariç) ve PDF'deki "Mal Hizmet Tutarı" sütunuyla eşleşmelidir.
+- ÖRNEK: "Birim Fiyat" sütununda "333,34 TL" yazıyorsa unit_price = 333.34 olmalı (277.78 DEĞİL — 1.20'ye bölme!).
 - Miktar (quantity) her zaman pozitif sayı olmalı.
 - Birim fiyat (unit_price) her zaman pozitif sayı olmalı.
 - Eğer bir bilgi faturada yoksa null kullan.

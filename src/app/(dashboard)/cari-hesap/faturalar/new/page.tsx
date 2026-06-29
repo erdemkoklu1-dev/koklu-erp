@@ -37,6 +37,8 @@ export default function NewFaturaPage() {
   const [parseError, setParseError] = useState('')
   const [showParseSection, setShowParseSection] = useState(false)
   const [customerNotFound, setCustomerNotFound] = useState(false)
+  // Yüklenen faturanın sistemde zaten kayıtlı olup olmadığı (dosyadan yükleme dedup)
+  const [duplicateInvoice, setDuplicateInvoice] = useState<{ invoice_number: string; total_amount: number } | null>(null)
 
   // Aracı state
   const [allBrokers, setAllBrokers] = useState<any[]>([])
@@ -272,9 +274,39 @@ export default function NewFaturaPage() {
     return new File([blob], f.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' })
   }
 
+  // Yüklenen faturanın aynısı sistemde var mı? Sunucuda (firma-scope) tutar + VKN ile eşleştir.
+  // Satışta müşteri VKN, alışta tedarikçi VKN kullanılır.
+  async function checkDuplicateInvoice(data: any) {
+    const isAlis = form.invoice_type === 'alis'
+    const taxNo = String((isAlis ? data.supplier?.tax_no : data.customer?.tax_number) ?? '').replace(/\D/g, '')
+    const parsedTotal = (data.items ?? []).reduce((sum: number, it: any) => {
+      const q = Number(it.quantity) || 0
+      const up = Number(it.unit_price) || 0
+      const kdv = Number(it.kdv_rate) || 0
+      return sum + q * up * (1 + kdv / 100)
+    }, 0)
+    if (parsedTotal <= 0) return
+
+    try {
+      const res = await fetch('/api/check-duplicate-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ total_amount: parsedTotal, tax_no: taxNo, invoice_type: form.invoice_type }),
+      })
+      if (!res.ok) return
+      const { duplicate } = await res.json()
+      if (duplicate?.invoice_number) {
+        setDuplicateInvoice({ invoice_number: duplicate.invoice_number, total_amount: Number(duplicate.total_amount) || 0 })
+      }
+    } catch {
+      // Dedup başarısız olursa kaydı engelleme — sadece uyarı gösteremeyiz.
+    }
+  }
+
   async function handleParseFatura(f: File) {
     setParsing(true)
     setParseError('')
+    setDuplicateInvoice(null)
     try {
       const uploadFile = f.type === 'application/pdf' ? await pdfToImageFile(f) : f
       const fd = new FormData()
@@ -361,6 +393,9 @@ export default function NewFaturaPage() {
         setItems(parsedLines)
       }
 
+      // ── Aynı fatura sistemde zaten kayıtlı mı? (tarih + tutar + VKN ile) ──
+      await checkDuplicateInvoice(data)
+
       setShowParseSection(false)
     } catch (e: any) {
       setParseError(e.message ?? 'Beklenmeyen hata')
@@ -380,6 +415,12 @@ export default function NewFaturaPage() {
     }
     if (!form.invoice_date) { setError('Fatura tarihi zorunludur.'); return }
     if (items.every(i => !i.description.trim())) { setError('En az bir kalem ekleyin.'); return }
+    if (duplicateInvoice) {
+      const onay = window.confirm(
+        `Bu fatura sistemde zaten kayıtlı görünüyor (Fatura No: ${duplicateInvoice.invoice_number}, Tutar: ${formatCurrency(duplicateInvoice.total_amount)}).\n\nYine de kaydetmek istiyor musunuz?`
+      )
+      if (!onay) { setError('Kayıt iptal edildi: fatura sistemde zaten mevcut.'); return }
+    }
     setLoading(true); setError('')
 
     try {
@@ -537,6 +578,17 @@ export default function NewFaturaPage() {
               {parseError}
             </div>
           )}
+        </div>
+      )}
+
+      {duplicateInvoice && (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+          <span className="text-base leading-none">⚠️</span>
+          <span>
+            Bu fatura sistemde zaten kayıtlı görünüyor (Fatura No: <strong>{duplicateInvoice.invoice_number}</strong>,
+            Tutar: <strong>{formatCurrency(duplicateInvoice.total_amount)}</strong>). Kaydetmeden önce kontrol edin;
+            yine de devam ederseniz onay istenecek.
+          </span>
         </div>
       )}
 
