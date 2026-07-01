@@ -42,3 +42,12 @@ Preflight temiz çıkmadan aşağıdakiler çalıştırılmayacak:
 - [ ] `db/tenant_rls_helper_upgrade_staging.sql`
 - [ ] `db/tenant_rls_staging_cleanup_real.sql`
 - [ ] `db/tenant_rls_staging_apply_tenant_policies_real.sql`
+
+## G. Sprint 2.5 Schema Apply Planı
+
+- [ ] `db/staging_migration_inventory.md` okundu.
+- [ ] `db/staging_schema_apply_order.md` okundu.
+- [ ] `db/staging_schema_apply_checklist.md` hazır.
+- [ ] `db/staging_sql_file_safety_matrix.md` review edildi.
+- [ ] `db/staging_preflight_go_gate.md` GO demeden RLS dosyaları çalıştırılmadı.
+- [ ] Temel tablo migration kaynakları doğrulandı.

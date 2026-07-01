@@ -91,3 +91,16 @@ Staging project oluşturulduktan sonra schema ve seed hazırlığı için şu do
 - db/staging_auth_profile_link_template.sql
 - db/staging_seed_verification.sql
 - db/staging_bootstrap_execution_checklist.md
+
+## Sprint 2.5 Schema Apply Notu
+
+Staging schema kurulumu için migration envanteri, önerilen apply sırası ve SQL güvenlik matrisi şu dosyalarda tutulur:
+
+- db/staging_migration_inventory.md
+- db/staging_schema_apply_order.md
+- db/staging_schema_apply_checklist.md
+- db/staging_schema_apply_results.md
+- db/staging_sql_file_safety_matrix.md
+- db/staging_preflight_go_gate.md
+
+Bu dosyalar SQL çalıştırmaz. Production veya staging üzerinde işlem yapmadan önce güvenlik matrisi ve GO gate kontrol edilmelidir.

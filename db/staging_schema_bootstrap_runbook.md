@@ -29,3 +29,15 @@ Production üzerinde:
 - test kullanıcısı oluşturulmaz
 - policy değiştirilmez
 - RLS cleanup yapılmaz
+
+## Sprint 2.5 Schema Apply Planı
+
+Schema migration'larını staging'e uygulamadan önce Sprint 2.5 analiz dosyaları kontrol edilmelidir:
+
+- `db/staging_migration_inventory.md`
+- `db/staging_schema_apply_order.md`
+- `db/staging_schema_apply_checklist.md`
+- `db/staging_sql_file_safety_matrix.md`
+- `db/staging_preflight_go_gate.md`
+
+Özellikle `customers`, `devices`, `service_forms` ve `service_form_items` temel tablolarının migration kaynağı doğrulanmadan schema apply başlatılmaz.
