@@ -52,3 +52,9 @@ Sonuçlar `db/staging_rls_preflight_results.md` şablonuna işlenir.
 Gerekçe:
 
 -
+
+## Sprint 2.4 Schema/Seed Kontrolleri
+
+- [ ] staging_schema_required_objects_check.sql temiz.
+- [ ] staging_seed_verification.sql temiz.
+- [ ] auth user/profile eşleşmesi doğrulandı.

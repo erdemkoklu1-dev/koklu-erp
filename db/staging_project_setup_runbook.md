@@ -80,3 +80,14 @@ Bu runbook tamamlandığında:
 - RLS policy/helper dosyaları **henüz çalıştırılmamış**.
 
 Sonraki adım, `db/staging_preflight_before_sql_checklist.md` tamamlanıp `db/staging_rls_preflight_checks.sql` çalıştırılmasıdır.
+
+## Sprint 2.4 Bootstrap Notu
+
+Staging project oluşturulduktan sonra schema ve seed hazırlığı için şu dosyalar kullanılacaktır:
+
+- db/staging_schema_bootstrap_runbook.md
+- db/staging_schema_required_objects_check.sql
+- db/staging_minimal_seed_template.sql
+- db/staging_auth_profile_link_template.sql
+- db/staging_seed_verification.sql
+- db/staging_bootstrap_execution_checklist.md

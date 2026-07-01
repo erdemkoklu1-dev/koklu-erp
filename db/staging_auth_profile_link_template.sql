@@ -1,0 +1,58 @@
+﻿-- ==========================================================
+-- STAGING ONLY — AUTH PROFILE LINK TEMPLATE
+-- Production üzerinde çalıştırılmayacak.
+-- Auth user UUID değerlerini staging Dashboard'dan manuel al.
+-- Gerçek kullanıcı e-postası/şifresi yazma.
+-- ==========================================================
+
+-- 1. Önce staging Auth kullanıcılarını manuel oluştur:
+-- koklu.test@example.com
+-- testfirma.user@example.com
+--
+-- 2. Auth UUID değerlerini aşağıdaki placeholder alanlara yaz:
+-- <KOKLU_AUTH_USER_ID>
+-- <TEST_FIRMA_AUTH_USER_ID>
+--
+-- 3. Gerçek UUID değerlerini commit'e yazma.
+
+-- Eğer kullanici_profiller tablosunda email kolonu varsa örnek:
+--
+-- UPDATE public.kullanici_profiller
+-- SET id = '<KOKLU_AUTH_USER_ID>'::uuid
+-- WHERE email = 'koklu.test@example.com';
+
+-- Eğer kullanici_profiller tablosunda email kolonu yoksa örnek INSERT:
+--
+-- INSERT INTO public.kullanici_profiller (
+--   id,
+--   ad_soyad,
+--   firma_id,
+--   sube_id,
+--   rol_id,
+--   aktif
+-- )
+-- VALUES (
+--   '<KOKLU_AUTH_USER_ID>'::uuid,
+--   'STAGING Köklü Test Kullanıcı',
+--   (SELECT id FROM public.firmalar WHERE slug = 'koklu-yangin-staging' LIMIT 1),
+--   (SELECT id FROM public.subeler WHERE ad = 'Erzincan Merkez' LIMIT 1),
+--   (SELECT id FROM public.roller WHERE ad = 'Admin' LIMIT 1),
+--   true
+-- );
+
+-- INSERT INTO public.kullanici_profiller (
+--   id,
+--   ad_soyad,
+--   firma_id,
+--   sube_id,
+--   rol_id,
+--   aktif
+-- )
+-- VALUES (
+--   '<TEST_FIRMA_AUTH_USER_ID>'::uuid,
+--   'STAGING Test Firma Kullanıcı',
+--   (SELECT id FROM public.firmalar WHERE slug = 'test-yangin-firmasi-staging' LIMIT 1),
+--   (SELECT id FROM public.subeler WHERE ad = 'Merkez' LIMIT 1),
+--   (SELECT id FROM public.roller WHERE ad = 'Admin' LIMIT 1),
+--   true
+-- );

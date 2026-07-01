@@ -86,3 +86,11 @@ Beklenen:
 - Production Auth kullanıcılarına dokunulmaz.
 - Şifre/secret commit edilmez.
 - UUID'ler örnek doldurma için kullanılabilir ama gerçek değerler `<...>` placeholder olarak bırakılır.
+
+## Sprint 2.4 Notu
+
+Auth user UUID eşleştirme şablonu:
+
+- db/staging_auth_profile_link_template.sql
+
+Gerçek UUID değerleri commit'e yazılmayacak.

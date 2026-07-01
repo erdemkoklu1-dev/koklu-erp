@@ -86,3 +86,11 @@ Kural: her child kaydın `firma_id` değeri parent ile **aynı** firmaya işaret
 - `firma_id` boş kayıt yok (kontrol: `db/staging_rls_preflight_checks.sql` Bölüm 8).
 
 Doğrulama tamamlanınca `db/staging_preflight_before_sql_checklist.md` adımına geçilir.
+
+## Sprint 2.4 Notu
+
+Minimal seed için SQL şablonu:
+
+- db/staging_minimal_seed_template.sql
+
+Bu dosya production'da çalıştırılmayacak.
