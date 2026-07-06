@@ -1,6 +1,6 @@
 ﻿# Staging Preflight GO Gate
 
-> Bu gate geçmeden RLS helper, cleanup veya tenant policy apply dosyaları çalıştırılmaz. Sprint 2.7 kapsamında SQL çalıştırılmadı.
+> Bu gate geçmeden RLS helper, cleanup veya tenant policy apply dosyaları çalıştırılmaz. Sprint 2.8 kapsamında SQL çalıştırılmadı.
 
 ## Sprint 2.6 Ön Gate
 
@@ -15,8 +15,17 @@
 - [ ] `db/staging_env_verification_session.md` sonucu güncel.
 - [ ] `db/staging_first_schema_check_session.md` hazır.
 - [ ] İlk read-only schema check sonucu `db/staging_schema_apply_results.md` içine işlenecek.
-- [ ] Env doğrulama `NO-GO` ise schema apply başlatılmayacak.
-- [ ] Production hint varsa karar `NO-GO: .env.local hâlâ production`.
+- [x] Env doğrulama `NO-GO` ise schema apply başlatılmayacak.
+- [x] Production hint varsa karar `NO-GO: .env.local hâlâ production`.
+
+## Sprint 2.8 Env PASS Gate
+
+- [x] `db/staging_env_pass_report.md` oluşturuldu.
+- [x] `node scripts/verify-staging-env.mjs` çalıştırıldı.
+- [x] Production hint yakalandı.
+- [x] Karar `NO-GO: .env.local hâlâ production` olarak kaydedildi.
+- [x] Production veya staging üzerinde SQL çalıştırılmadı.
+- [x] RLS/policy/veri değişikliği yapılmadı.
 
 ## 1. Environment Gate
 
@@ -24,7 +33,7 @@
 - [ ] `node scripts/verify-staging-env.mjs` exit 0 döndü.
 - [ ] Production hint yakalanmadı.
 - [ ] Supabase Dashboard project adı production değil.
-- [ ] Secret/key değerleri dokümana veya commit'e yazılmadı.
+- [x] Secret/key değerleri dokümana veya commit'e yazılmadı.
 
 ## 2. Schema Source Gate
 
@@ -32,16 +41,16 @@
 - [ ] `devices` temel migration kaynağı doğrulandı.
 - [ ] `service_forms` temel migration kaynağı doğrulandı.
 - [ ] `service_form_items` temel migration kaynağı doğrulandı.
-- [ ] Eksik kaynak varsa karar `NO-GO`.
+- [x] Eksik kaynak veya env `NO-GO` varsa karar `NO-GO`.
 
 ## 3. Apply Safety Gate
 
 - [ ] `db/staging_migration_inventory.md` review edildi.
 - [ ] `db/staging_schema_apply_order.md` review edildi.
 - [ ] `db/staging_sql_file_safety_matrix.md` review edildi.
-- [ ] Data-fix dosyaları çalıştırılmadı.
-- [ ] RLS dry-run/apply/rollback dosyaları çalıştırılmadı.
-- [ ] Production/read-only koleksiyon dosyaları apply sırasına alınmadı.
+- [x] Data-fix dosyaları çalıştırılmadı.
+- [x] RLS dry-run/apply/rollback dosyaları çalıştırılmadı.
+- [x] Production/read-only koleksiyon dosyaları apply sırasına alınmadı.
 
 ## 4. Schema Verification Gate
 
@@ -62,8 +71,8 @@
 
 ```txt
 [ ] GO     — RLS preflight çalıştırılabilir.
-[ ] NO-GO  — Env, schema, seed veya güvenlik matrisi eksik.
-[ ] NO-GO  — .env.local hâlâ production.
+[x] NO-GO  — Env, schema, seed veya güvenlik matrisi eksik.
+[x] NO-GO  — .env.local hâlâ production.
 ```
 
 ## Sprint 2.5 Varsayılan Karar
@@ -73,6 +82,7 @@ Bu dokümantasyon sprintinde SQL çalıştırılmadı. Mevcut local env producti
 ```txt
 NO-GO: .env.local hâlâ production
 ```
+
 ## Sprint 2.6 Varsayılan Karar
 
 Bu sprint dokümantasyon ve oturum hazırlığı sprintidir. Production veya staging üzerinde SQL çalıştırılmadıysa ve staging env henüz doğrulanmadıysa karar:
@@ -85,6 +95,14 @@ NO-GO: staging env doğrulama oturumu bekleniyor
 
 Bu sprint env doğrulama sonucunu takip eden oturum dosyalarını ve ilk read-only schema check oturum dosyasını hazırlar. Production veya staging üzerinde SQL çalıştırılmadıysa ve env doğrulama sonucu henüz `GO` değilse karar:
 
-``txt
+```txt
 NO-GO: staging env doğrulama sonucu bekleniyor
-``
+```
+
+## Sprint 2.8 Kararı
+
+`node scripts/verify-staging-env.mjs` production hint yakaladığı için güncel karar:
+
+```txt
+NO-GO: .env.local hâlâ production
+```

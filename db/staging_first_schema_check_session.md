@@ -1,6 +1,6 @@
 ﻿# Staging First Schema Check Session
 
-> Sprint 2.7 read-only schema check oturum şablonudur. Bu dosya SQL çalıştırmaz; staging SQL Editor'da yapılacak ilk read-only kontrolün kayıt formudur.
+> Sprint 2.8 read-only schema check gate kaydıdır. Bu dosya SQL çalıştırmaz; env doğrulama `GO` olmadan schema check başlatılmaz.
 
 ## Amaç
 
@@ -22,29 +22,29 @@ Staging project açıldıktan ve env doğrulama oturumu `GO` olduktan sonra, sch
 - [ ] Production hint yakalanmadı.
 - [ ] Supabase Dashboard'da görünen project adı production değil.
 - [ ] Project ref production ref değerinden farklı.
-- [ ] `.env.local` git status çıktısında commit adayı değil.
+- [x] `.env.local` git status çıktısında commit adayı değil.
 
 ## Oturum Bilgisi
 
 | Alan | Değer |
 | --- | --- |
-| Tarih | |
-| Yürüten | |
-| Staging project adı | |
-| Staging project ref son 4 karakter | |
-| Branch | |
-| Başlangıç saati | |
-| Bitiş saati | |
-| Oturum sonucu | GO / NO-GO / DURDURULDU |
+| Tarih | 2026-07-07 |
+| Yürüten | Codex |
+| Staging project adı | Doğrulanamadı |
+| Staging project ref son 4 karakter | Secret/ref kaydı yapılmadı |
+| Branch | main |
+| Başlangıç saati | Başlatılmadı |
+| Bitiş saati | Başlatılmadı |
+| Oturum sonucu | NO-GO |
 
 ## Read-only Kontrol Kapsamı
 
 | Kontrol | Kaynak | Sonuç | Not |
 | --- | --- | --- | --- |
-| Kritik tablolar mevcut mu? | `db/staging_schema_required_objects_check.sql` | | |
-| Kritik tablolarda `firma_id` mevcut mu? | `db/staging_schema_required_objects_check.sql` | | |
-| Tenant bütünlüğü read-only kontrol edildi mi? | `db/tenant_audit_checks.sql` | | |
-| Seed/Auth kontrolüne geçmek güvenli mi? | Manuel değerlendirme | | |
+| Kritik tablolar mevcut mu? | `db/staging_schema_required_objects_check.sql` | Çalıştırılmadı | Env gate `NO-GO`. |
+| Kritik tablolarda `firma_id` mevcut mu? | `db/staging_schema_required_objects_check.sql` | Çalıştırılmadı | Env gate `NO-GO`. |
+| Tenant bütünlüğü read-only kontrol edildi mi? | `db/tenant_audit_checks.sql` | Çalıştırılmadı | Env gate `NO-GO`. |
+| Seed/Auth kontrolüne geçmek güvenli mi? | Manuel değerlendirme | Hayır | `.env.local` production hint veriyor. |
 
 ## Durdurma Kriterleri
 
@@ -58,19 +58,19 @@ Staging project açıldıktan ve env doğrulama oturumu `GO` olduktan sonra, sch
 
 ## Oturum Sonu
 
-- [ ] Sonuçlar `db/staging_schema_apply_results.md` dosyasına işlendi.
-- [ ] GO/NO-GO kararı `db/staging_preflight_go_gate.md` dosyasına yansıtıldı.
+- [x] Sonuçlar `db/staging_schema_apply_results.md` dosyasına işlendi.
+- [x] GO/NO-GO kararı `db/staging_preflight_go_gate.md` dosyasına yansıtıldı.
 - [ ] Hata veya belirsizlik varsa `db/staging_schema_apply_manual_session.md` notlarına eklendi.
-- [ ] Secret veya `.env` dosyaları commit'e alınmadı.
+- [x] Secret veya `.env` dosyaları commit'e alınmadı.
 
 ## Karar
 
 ```txt
 [ ] GO     — Manuel schema apply oturumu için mevcut schema durumu kayıt altına alındı.
-[ ] NO-GO  — Env doğrulama, project ayrımı veya read-only schema kontrolü eksik.
-[ ] NO-GO  — .env.local hâlâ production.
+[x] NO-GO  — Env doğrulama, project ayrımı veya read-only schema kontrolü eksik.
+[x] NO-GO  — .env.local hâlâ production.
 ```
 
 ## Oturum Notları
 
--
+- 2026-07-07: Env doğrulama `NO-GO` olduğu için read-only schema check başlatılmadı. Production veya staging üzerinde SQL çalıştırılmadı.

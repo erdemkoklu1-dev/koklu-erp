@@ -1,10 +1,10 @@
-﻿# GÖREV — Sprint 2.7: Staging Env Verification ve Read-only Schema Check Oturum Hazırlığı
+﻿# GÖREV — Sprint 2.8: Staging Env PASS Raporu ve Gate Güncellemesi
 
 ## Amaç
 
-Staging project açıldıktan sonra env doğrulama sonucunu takip edecek session dosyalarını ve ilk read-only schema check oturum dosyasını hazırla.
+Staging project açıldıktan sonra `.env.local` doğrulama sonucunu kaydedecek staging env PASS raporunu oluşturmak ve ilgili session/gate dosyalarını güncellemek.
 
-Bu sprint yalnızca dokümantasyon ve oturum hazırlığı üretir. Production veya staging Supabase üzerinde SQL çalıştırılmayacak.
+Bu sprint yalnızca dokümantasyon ve gate kaydı üretir. Production veya staging Supabase üzerinde SQL çalıştırılmayacak.
 
 ## Kesin Yasaklar
 
@@ -17,12 +17,12 @@ Bu sprint yalnızca dokümantasyon ve oturum hazırlığı üretir. Production v
 
 ## Üretilecek Dosyalar
 
-- `db/staging_first_schema_check_session.md`
+- `db/staging_env_pass_report.md`
 
 ## Güncellenecek Dosyalar
 
 - `db/staging_env_verification_session.md`
-- `db/staging_schema_apply_manual_session.md`
+- `db/staging_first_schema_check_session.md`
 - `db/staging_schema_apply_results.md`
 - `db/staging_preflight_go_gate.md`
 - `GOREV.md`
@@ -33,24 +33,35 @@ Bu sprint yalnızca dokümantasyon ve oturum hazırlığı üretir. Production v
 - `npm run build`
 - `node scripts/verify-staging-env.mjs`
 
-Not: `verify-staging-env.mjs` production hint yakalarsa görev sonu raporunda `NO-GO: .env.local hâlâ production` yaz. Bu sprint dokümantasyon/oturum hazırlığı görevi olarak tamamlanabilir.
+Not: `verify-staging-env.mjs` production hint yakalarsa görev sonu raporunda `NO-GO: .env.local hâlâ production` yaz. Bu sprint dokümantasyon/gate görevi olarak tamamlanabilir.
+
+## Sprint 2.8 Sonucu
+
+`node scripts/verify-staging-env.mjs` çalıştırıldı ve production hint yakaladı.
+
+```txt
+NO-GO: .env.local hâlâ production
+```
+
+Bu sonuç nedeniyle schema apply, RLS preflight, policy veya veri işlemlerine geçilmez.
 
 ## Commit
 
 Commit mesajı:
 
 ```txt
-docs: add staging env verification session
+docs: record staging env verification gate
 ```
 
 Commit sonrası push yapılacak.
 
 ## Görev Sonu Kontrolü
 
-- Production'da SQL çalıştırılmadı.
-- Staging'de SQL çalıştırılmadı.
-- RLS/policy/veri değişikliği yapılmadı.
-- Secret commit edilmedi.
-- `src/` altında değişiklik yapılmadı.
-- `.claude` değişiklikleri commit edilmedi.
-- `db/staging_first_schema_check_session.md` hazırlandı.
+- [x] Production'da SQL çalıştırılmadı.
+- [x] Staging'de SQL çalıştırılmadı.
+- [x] RLS/policy/veri değişikliği yapılmadı.
+- [x] Secret commit edilmedi.
+- [x] `src/` altında değişiklik yapılmadı.
+- [x] `.claude` değişiklikleri commit edilmedi.
+- [x] `db/staging_env_pass_report.md` hazırlandı.
+- [x] Gate kararı `NO-GO: .env.local hâlâ production` olarak kaydedildi.
