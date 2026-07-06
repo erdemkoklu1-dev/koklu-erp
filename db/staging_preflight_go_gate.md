@@ -2,10 +2,19 @@
 
 > Bu gate geçmeden RLS helper, cleanup veya tenant policy apply dosyaları çalıştırılmaz. Sprint 2.5 kapsamında SQL çalıştırılmadı.
 
+## Sprint 2.6 Ön Gate
+
+- [ ] `db/staging_env_verification_session.md` GO.
+- [ ] `db/staging_schema_apply_manual_session.md` tamamlandı.
+- [ ] `db/staging_schema_apply_results.md` sonuçları işlendi.
+- [ ] `db/staging_schema_apply_error_log.md` içinde açık kritik hata yok.
+- [ ] `db/staging_schema_apply_next_steps.md` GO/NO-GO kararı güncel.
+
 ## 1. Environment Gate
 
 - [ ] `.env.local` staging Supabase project'e bağlı.
 - [ ] `node scripts/verify-staging-env.mjs` exit 0 döndü.
+- [ ] Production hint yakalanmadı.
 - [ ] Supabase Dashboard project adı production değil.
 - [ ] Secret/key değerleri dokümana veya commit'e yazılmadı.
 
@@ -45,6 +54,7 @@
 ```txt
 [ ] GO     — RLS preflight çalıştırılabilir.
 [ ] NO-GO  — Env, schema, seed veya güvenlik matrisi eksik.
+[ ] NO-GO  — .env.local hâlâ production.
 ```
 
 ## Sprint 2.5 Varsayılan Karar
@@ -53,4 +63,11 @@ Bu dokümantasyon sprintinde SQL çalıştırılmadı. Mevcut local env producti
 
 ```txt
 NO-GO: .env.local hâlâ production
+```
+## Sprint 2.6 Varsayılan Karar
+
+Bu sprint dokümantasyon ve oturum hazırlığı sprintidir. Production veya staging üzerinde SQL çalıştırılmadıysa ve staging env henüz doğrulanmadıysa karar:
+
+```txt
+NO-GO: staging env doğrulama oturumu bekleniyor
 ```

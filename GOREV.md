@@ -1,10 +1,12 @@
-﻿# GÖREV — Sprint 2.5: Staging Schema Apply Planı ve SQL Güvenlik Matrisi
+﻿# GÖREV — Sprint 2.6: Staging Schema Apply Oturum Hazırlığı
 
 ## Amaç
 
-Repo içindeki `db/*.sql` dosyalarını staging schema kurulumu açısından sınıflandır, staging schema apply sırasını ve SQL güvenlik matrisini oluştur.
+Staging project açıldıktan sonra kullanılacak env doğrulama oturumu, schema apply manuel oturumu, hata logu ve sonraki adımlar dokümanlarını hazırla.
 
-Bu sprint yalnızca dokümantasyon ve analiz üretir. Production veya staging Supabase üzerinde SQL çalıştırılmayacak.
+Mevcut schema apply order/checklist/results ve preflight GO gate dosyalarını Sprint 2.6 notlarıyla güncelle.
+
+Bu sprint yalnızca dokümantasyon ve oturum hazırlığı üretir. Production veya staging Supabase üzerinde SQL çalıştırılmayacak.
 
 ## Kesin Yasaklar
 
@@ -17,18 +19,17 @@ Bu sprint yalnızca dokümantasyon ve analiz üretir. Production veya staging Su
 
 ## Üretilecek Dosyalar
 
-- `db/staging_migration_inventory.md`
-- `db/staging_schema_apply_order.md`
-- `db/staging_schema_apply_checklist.md`
-- `db/staging_schema_apply_results.md`
-- `db/staging_sql_file_safety_matrix.md`
-- `db/staging_preflight_go_gate.md`
+- `db/staging_env_verification_session.md`
+- `db/staging_schema_apply_manual_session.md`
+- `db/staging_schema_apply_error_log.md`
+- `db/staging_schema_apply_next_steps.md`
 
 ## Güncellenecek Dosyalar
 
-- `db/staging_schema_bootstrap_runbook.md`
-- `db/staging_bootstrap_execution_checklist.md`
-- `db/staging_project_setup_runbook.md`
+- `db/staging_schema_apply_order.md`
+- `db/staging_schema_apply_checklist.md`
+- `db/staging_schema_apply_results.md`
+- `db/staging_preflight_go_gate.md`
 - `GOREV.md`
 
 ## Testler
@@ -37,14 +38,14 @@ Bu sprint yalnızca dokümantasyon ve analiz üretir. Production veya staging Su
 - `npm run build`
 - `node scripts/verify-staging-env.mjs`
 
-Not: `verify-staging-env.mjs` production hint yakalarsa görev sonu raporunda `NO-GO: .env.local hâlâ production` yaz. Bu sprint dokümantasyon/analiz görevi olarak tamamlanabilir.
+Not: `verify-staging-env.mjs` production hint yakalarsa görev sonu raporunda `NO-GO: .env.local hâlâ production` yaz. Bu sprint dokümantasyon/oturum hazırlığı görevi olarak tamamlanabilir.
 
 ## Commit
 
 Commit mesajı:
 
 ```txt
-docs: add staging schema apply plan
+docs: add staging schema apply session docs
 ```
 
 Commit sonrası push yapılacak.

@@ -2,12 +2,24 @@
 
 > Sprint 2.5 planıdır. Bu dosya SQL çalıştırmaz. Production veya staging üzerinde işlem yapılmadı.
 
+## Sprint 2.6 Oturum Notu
+
+Staging project açıldıktan sonra bu sıra doğrudan uygulanmaz; önce Sprint 2.6 oturum dokümanları doldurulur:
+
+1. `db/staging_env_verification_session.md`
+2. `db/staging_schema_apply_manual_session.md`
+3. `db/staging_schema_apply_error_log.md`
+4. `db/staging_schema_apply_next_steps.md`
+
+`db/staging_env_verification_session.md` GO olmadan manuel schema apply oturumu başlatılmaz. Production hint yakalanırsa karar `NO-GO: .env.local hâlâ production` olur.
+
 ## Ana Kural
 
 Staging schema apply başlamadan önce şu iki koşul sağlanmalıdır:
 
 1. `.env.local` staging project'e bağlı ve `node scripts/verify-staging-env.mjs` exit 0 dönmüş olmalı.
 2. `customers`, `devices`, `service_forms`, `service_form_items` temel tablolarının migration kaynağı doğrulanmış olmalı.
+3. Sprint 2.6 manuel oturum kaydı `db/staging_schema_apply_manual_session.md` içinde başlatılmış olmalı.
 
 Repo içindeki `db/*.sql` envanterinde bu dört temel tablo için açık `CREATE TABLE` dosyası bulunamadığı için bu plan şimdilik **NO-GO gate** içerir.
 
@@ -21,6 +33,8 @@ Repo içindeki `db/*.sql` envanterinde bu dört temel tablo için açık `CREATE
 2. Supabase Dashboard project adı production'dan farklı mı?
 3. Temel tablo migration kaynağı var mı?
 4. `db/staging_sql_file_safety_matrix.md` review edildi mi?
+5. `db/staging_env_verification_session.md` GO mu?
+6. `db/staging_schema_apply_error_log.md` içinde açık kritik hata var mı?
 
 ### Faz 1 — Auth/RBAC Temeli
 
@@ -123,3 +137,11 @@ Sadece read-only kontrol:
 - `staging_rls_post_apply_checks.sql` (yalnızca apply sonrası kontrol)
 - `backup_migration.sql` (ayrı karar)
 - `app_settings_migration.sql` (ayrı karar)
+## Sprint 2.6 Kayıt Akışı
+
+Her fazdan sonra:
+
+1. Sonuç `db/staging_schema_apply_manual_session.md` içine işlenir.
+2. Hata varsa `db/staging_schema_apply_error_log.md` içine maskelenmiş kayıt açılır.
+3. Faz sonucu `db/staging_schema_apply_results.md` içine özetlenir.
+4. Devam veya durdurma kararı `db/staging_schema_apply_next_steps.md` içine yansıtılır.

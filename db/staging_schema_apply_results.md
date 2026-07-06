@@ -2,6 +2,15 @@
 
 > Bu dosya staging schema apply denemesi yapıldığında sonuçların işleneceği şablondur. Sprint 2.5 kapsamında SQL çalıştırılmadı.
 
+## Sprint 2.6 Oturum Bağlantıları
+
+| Doküman | Durum | Not |
+| --- | --- | --- |
+| `db/staging_env_verification_session.md` | | |
+| `db/staging_schema_apply_manual_session.md` | | |
+| `db/staging_schema_apply_error_log.md` | | |
+| `db/staging_schema_apply_next_steps.md` | | |
+
 ## Ortam Bilgisi
 
 | Alan | Değer |
@@ -12,6 +21,7 @@
 | Test tarihi | |
 | Test eden | |
 | `verify-staging-env.mjs` exit kodu | |
+| Production hint sonucu | |
 
 ## Önkoşul Sonucu
 
@@ -22,6 +32,8 @@
 | SQL güvenlik matrisi review edildi mi? | | |
 | Data-fix dosyaları dışarıda mı? | | |
 | RLS dry-run dosyaları dışarıda mı? | | |
+| Env doğrulama oturumu GO mu? | | |
+| Açık kritik hata var mı? | | |
 
 ## Apply Faz Sonuçları
 
@@ -59,6 +71,13 @@
 - [ ] GO — RLS preflight aşamasına geçilebilir.
 - [ ] NO-GO — Eksik schema/seed/env var.
 - [ ] NO-GO — Ortam production olabilir.
+- [ ] NO-GO — `.env.local` production hint veriyor.
+
+## Sprint 2.6 Hata Özeti
+
+| Hata ID | Faz | Özet | Durum | Sonraki adım |
+| --- | --- | --- | --- | --- |
+| | | | | |
 
 ## Notlar
 
