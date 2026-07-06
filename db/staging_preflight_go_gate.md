@@ -1,6 +1,6 @@
 ﻿# Staging Preflight GO Gate
 
-> Bu gate geçmeden RLS helper, cleanup veya tenant policy apply dosyaları çalıştırılmaz. Sprint 2.5 kapsamında SQL çalıştırılmadı.
+> Bu gate geçmeden RLS helper, cleanup veya tenant policy apply dosyaları çalıştırılmaz. Sprint 2.7 kapsamında SQL çalıştırılmadı.
 
 ## Sprint 2.6 Ön Gate
 
@@ -9,6 +9,14 @@
 - [ ] `db/staging_schema_apply_results.md` sonuçları işlendi.
 - [ ] `db/staging_schema_apply_error_log.md` içinde açık kritik hata yok.
 - [ ] `db/staging_schema_apply_next_steps.md` GO/NO-GO kararı güncel.
+
+## Sprint 2.7 Ön Gate
+
+- [ ] `db/staging_env_verification_session.md` sonucu güncel.
+- [ ] `db/staging_first_schema_check_session.md` hazır.
+- [ ] İlk read-only schema check sonucu `db/staging_schema_apply_results.md` içine işlenecek.
+- [ ] Env doğrulama `NO-GO` ise schema apply başlatılmayacak.
+- [ ] Production hint varsa karar `NO-GO: .env.local hâlâ production`.
 
 ## 1. Environment Gate
 
@@ -40,6 +48,7 @@
 - [ ] `db/staging_schema_required_objects_check.sql` tüm kritik tabloları var gösterdi.
 - [ ] Kritik tenant tablolarında `firma_id` mevcut.
 - [ ] `db/tenant_audit_checks.sql` sonuçlarında tenant bütünlüğü temiz.
+- [ ] İlk read-only schema check oturumu `GO`.
 
 ## 5. Seed/Auth Gate
 
@@ -71,3 +80,11 @@ Bu sprint dokümantasyon ve oturum hazırlığı sprintidir. Production veya sta
 ```txt
 NO-GO: staging env doğrulama oturumu bekleniyor
 ```
+
+## Sprint 2.7 Varsayılan Karar
+
+Bu sprint env doğrulama sonucunu takip eden oturum dosyalarını ve ilk read-only schema check oturum dosyasını hazırlar. Production veya staging üzerinde SQL çalıştırılmadıysa ve env doğrulama sonucu henüz `GO` değilse karar:
+
+``txt
+NO-GO: staging env doğrulama sonucu bekleniyor
+``

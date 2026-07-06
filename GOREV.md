@@ -1,10 +1,8 @@
-﻿# GÖREV — Sprint 2.6: Staging Schema Apply Oturum Hazırlığı
+﻿# GÖREV — Sprint 2.7: Staging Env Verification ve Read-only Schema Check Oturum Hazırlığı
 
 ## Amaç
 
-Staging project açıldıktan sonra kullanılacak env doğrulama oturumu, schema apply manuel oturumu, hata logu ve sonraki adımlar dokümanlarını hazırla.
-
-Mevcut schema apply order/checklist/results ve preflight GO gate dosyalarını Sprint 2.6 notlarıyla güncelle.
+Staging project açıldıktan sonra env doğrulama sonucunu takip edecek session dosyalarını ve ilk read-only schema check oturum dosyasını hazırla.
 
 Bu sprint yalnızca dokümantasyon ve oturum hazırlığı üretir. Production veya staging Supabase üzerinde SQL çalıştırılmayacak.
 
@@ -19,15 +17,12 @@ Bu sprint yalnızca dokümantasyon ve oturum hazırlığı üretir. Production v
 
 ## Üretilecek Dosyalar
 
-- `db/staging_env_verification_session.md`
-- `db/staging_schema_apply_manual_session.md`
-- `db/staging_schema_apply_error_log.md`
-- `db/staging_schema_apply_next_steps.md`
+- `db/staging_first_schema_check_session.md`
 
 ## Güncellenecek Dosyalar
 
-- `db/staging_schema_apply_order.md`
-- `db/staging_schema_apply_checklist.md`
+- `db/staging_env_verification_session.md`
+- `db/staging_schema_apply_manual_session.md`
 - `db/staging_schema_apply_results.md`
 - `db/staging_preflight_go_gate.md`
 - `GOREV.md`
@@ -45,7 +40,7 @@ Not: `verify-staging-env.mjs` production hint yakalarsa görev sonu raporunda `N
 Commit mesajı:
 
 ```txt
-docs: add staging schema apply session docs
+docs: add staging env verification session
 ```
 
 Commit sonrası push yapılacak.
@@ -58,3 +53,4 @@ Commit sonrası push yapılacak.
 - Secret commit edilmedi.
 - `src/` altında değişiklik yapılmadı.
 - `.claude` değişiklikleri commit edilmedi.
+- `db/staging_first_schema_check_session.md` hazırlandı.

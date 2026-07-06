@@ -1,10 +1,12 @@
 ﻿# Staging Env Verification Session
 
-> Sprint 2.6 oturum şablonudur. Bu dosya secret içermez ve SQL çalıştırmaz.
+> Sprint 2.7 env doğrulama takip oturumudur. Bu dosya secret içermez ve SQL çalıştırmaz.
 
 ## Amaç
 
 Staging project açıldıktan sonra local `.env.local` değerlerinin production'a değil staging Supabase project'e bağlı olduğunu doğrulamak.
+
+Sprint 2.7 kapsamında bu dosya, doğrulama sonucunu ilk read-only schema check oturumuna gate olarak taşır.
 
 ## Kesin Kurallar
 
@@ -47,6 +49,16 @@ node scripts/verify-staging-env.mjs
 | Production hint var mı? | | |
 | Staging project ayrımı net mi? | | |
 | Secret sızıntısı yok mu? | | |
+
+## Sprint 2.7 Sonuç Takibi
+
+| Takip Alanı | Durum | Not |
+| --- | --- | --- |
+| Env doğrulama oturumu tamamlandı mı? | | |
+| Karar `GO` ise `db/staging_first_schema_check_session.md` başlatıldı mı? | | |
+| Karar `NO-GO` ise nedeni kaydedildi mi? | | |
+| Production hint varsa görev sonu raporuna taşındı mı? | | |
+| `.env.local` commit dışında bırakıldı mı? | | |
 
 ## Karar
 

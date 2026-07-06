@@ -1,6 +1,6 @@
 ﻿# Staging Schema Apply Manual Session
 
-> Sprint 2.6 manuel oturum şablonudur. Bu dosya SQL çalıştırmaz; staging SQL Editor'da yapılacak manuel işlemin kayıt formudur.
+> Sprint 2.7 manuel oturum şablonudur. Bu dosya SQL çalıştırmaz; staging SQL Editor'da yapılacak manuel işlemin kayıt formudur.
 
 ## Amaç
 
@@ -17,6 +17,7 @@ Staging schema apply oturumunu kontrollü, faz bazlı ve geri izlenebilir hale g
 ## Başlamadan Önce
 
 - [ ] `db/staging_env_verification_session.md` GO.
+- [ ] `db/staging_first_schema_check_session.md` GO veya açık NO-GO nedeni kayıtlı.
 - [ ] `db/staging_schema_apply_order.md` okundu.
 - [ ] `db/staging_schema_apply_checklist.md` A, B ve C bölümleri tamam.
 - [ ] `db/staging_sql_file_safety_matrix.md` review edildi.
@@ -33,6 +34,15 @@ Staging schema apply oturumunu kontrollü, faz bazlı ve geri izlenebilir hale g
 | Başlangıç saati | |
 | Bitiş saati | |
 | Oturum sonucu | GO / NO-GO / DURDURULDU |
+
+## Sprint 2.7 Read-only Schema Check Bağlantısı
+
+| Kontrol | Durum | Not |
+| --- | --- | --- |
+| Env doğrulama sonucu manuel apply öncesi incelendi mi? | | |
+| İlk read-only schema check sonucu incelendi mi? | | |
+| Read-only check sırasında write/RLS/policy komutu çalıştırılmadı mı? | | |
+| NO-GO varsa apply oturumu başlatılmadan durduruldu mu? | | |
 
 ## Faz Bazlı Uygulama Kaydı
 
@@ -54,6 +64,7 @@ Staging schema apply oturumunu kontrollü, faz bazlı ve geri izlenebilir hale g
 
 - Supabase Dashboard project adında production şüphesi.
 - `verify-staging-env.mjs` production hint veriyor.
+- `db/staging_first_schema_check_session.md` NO-GO.
 - Temel tablo migration kaynağı eksik.
 - SQL dosyası beklenmeyen DML, RLS/policy veya production-only içerik taşıyor.
 - Migration hatası sonraki fazın güvenli uygulanmasını belirsiz hale getiriyor.

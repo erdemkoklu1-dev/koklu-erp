@@ -1,6 +1,6 @@
 ﻿# Staging Schema Apply Results
 
-> Bu dosya staging schema apply denemesi yapıldığında sonuçların işleneceği şablondur. Sprint 2.5 kapsamında SQL çalıştırılmadı.
+> Bu dosya staging schema apply denemesi yapıldığında sonuçların işleneceği şablondur. Sprint 2.7 kapsamında SQL çalıştırılmadı.
 
 ## Sprint 2.6 Oturum Bağlantıları
 
@@ -10,6 +10,14 @@
 | `db/staging_schema_apply_manual_session.md` | | |
 | `db/staging_schema_apply_error_log.md` | | |
 | `db/staging_schema_apply_next_steps.md` | | |
+
+## Sprint 2.7 Oturum Bağlantıları
+
+| Doküman | Durum | Not |
+| --- | --- | --- |
+| `db/staging_env_verification_session.md` | | Env doğrulama sonucunun takip edildiği gate dokümanı. |
+| `db/staging_first_schema_check_session.md` | | İlk read-only schema check oturum kaydı. |
+| `db/staging_schema_apply_manual_session.md` | | Apply öncesi read-only check bağlantısı eklendi. |
 
 ## Ortam Bilgisi
 
@@ -33,6 +41,7 @@
 | Data-fix dosyaları dışarıda mı? | | |
 | RLS dry-run dosyaları dışarıda mı? | | |
 | Env doğrulama oturumu GO mu? | | |
+| İlk read-only schema check oturumu GO mu? | | |
 | Açık kritik hata var mı? | | |
 
 ## Apply Faz Sonuçları
@@ -52,6 +61,8 @@
 ## Required Objects Check
 
 `db/staging_schema_required_objects_check.sql` sonuçları buraya işlenir.
+
+Sprint 2.7 notu: İlk kontrol sadece read-only schema check oturumunda kayıt altına alınır; bu dokümantasyon sprintinde production veya staging üzerinde SQL çalıştırılmadı.
 
 | table_name | table_exists |
 | --- | --- |
