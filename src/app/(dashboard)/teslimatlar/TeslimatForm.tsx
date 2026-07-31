@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createTeslimatAction, updateTeslimatAction } from './actions'
 import {
@@ -16,7 +16,20 @@ import {
 
 type Option = { id: string; label: string; meta?: string | null; kategori?: string | null; birim?: string | null; fiyat?: number | null }
 
+function newIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 type KalemState = {
+  /**
+   * Mevcut kalemin veritabanı kimliği. Yeni kalemlerde `null`.
+   * Bu alan olmadan kimlik bazlı diff imkânsızdır ve sunucu tarafı
+   * delete-then-insert'e mahkûm kalır (bkz. docs/teslimat_atomic_update_design.md §2.7).
+   */
+  dbId: string | null
   urun_mode: 'kayitli' | 'manuel'
   urun_id: string
   aciklama: string
@@ -36,6 +49,7 @@ type KalemState = {
 }
 
 const emptyKalem = (hedefTarih = ''): KalemState => ({
+  dbId: null,
   urun_mode: 'kayitli',
   urun_id: '',
   aciklama: '',
@@ -65,6 +79,8 @@ export type TeslimatFormInitialValue = {
   on_kayit_secimi: 'olusturulsun' | 'mevcut_kayda_eklensin' | 'olusturulmasin'
   aciklama: string | null
   notlar: string | null
+  /** `updated_at` — optimistic concurrency için ekran açıldığı andaki değer. */
+  updated_at?: string | null
   kalemler: Array<Partial<KalemState> & { urun_id: string | null }>
 }
 
@@ -101,11 +117,19 @@ export default function TeslimatForm({
   const [aciklama, setAciklama] = useState(initialValue?.aciklama ?? '')
   const [notlar, setNotlar] = useState(initialValue?.notlar ?? '')
   const [gelismisAcik, setGelismisAcik] = useState<Set<number>>(new Set())
+  const [deletedLineIds, setDeletedLineIds] = useState<string[]>([])
+  /**
+   * Idempotency anahtarı **her render'da değil**, tek kullanıcı kaydetme işlemi
+   * boyunca stabil kalmalıdır. `useRef` ile tutulur; başarılı kayıttan sonra
+   * yenilenir ki sonraki kaydetme ayrı bir işlem sayılsın.
+   */
+  const idempotencyKeyRef = useRef<string>(newIdempotencyKey())
   const [kalemler, setKalemler] = useState<KalemState[]>(() => {
     if (!initialValue?.kalemler?.length) return [emptyKalem()]
     return initialValue.kalemler.map(k => ({
       ...emptyKalem(initialValue.hedef_tarih ?? ''),
       ...k,
+      dbId: k.dbId ?? null,
       urun_mode: k.urun_id ? 'kayitli' : 'manuel',
       urun_id: k.urun_id ?? '',
       miktar: String(k.miktar ?? 1),
@@ -123,6 +147,19 @@ export default function TeslimatForm({
 
   function updateKalem(index: number, patch: Partial<KalemState>) {
     setKalemler(prev => prev.map((item, i) => i === index ? { ...item, ...patch } : item))
+  }
+
+  /**
+   * Silme **açık niyet** olarak taşınır: kaydedilmiş bir kalem ekrandan
+   * kaldırıldığında kimliği `deletedLineIds`'e yazılır. Böylece "listede yok"
+   * ile "silinsin" karıştırılmaz.
+   */
+  function removeKalem(index: number) {
+    const removed = kalemler[index]
+    if (removed?.dbId) {
+      setDeletedLineIds(prev => (prev.includes(removed.dbId!) ? prev : [...prev, removed.dbId!]))
+    }
+    setKalemler(prev => prev.filter((_, i) => i !== index))
   }
 
   function updateHedefTarih(value: string) {
@@ -188,24 +225,35 @@ export default function TeslimatForm({
       on_kayit_secimi: onKayitSecimi,
       aciklama,
       notlar,
+      // Ekranda kalan kaydedilmiş kalemler kimlikleriyle gider ⇒ sunucu kimlik
+      // bazlı diff yapabilir; silme yalnızca `deleteLineIds` ile olur.
       kalemler: kalemler.map(item => ({
         ...item,
+        id: item.dbId ?? null,
         urun_id: item.urun_id || null,
         miktar: Number(item.miktar) || 0,
         birim_fiyat: item.tutarli_gir ? Number(item.birim_fiyat) || 0 : 0,
         hedef_tarih: item.hedef_tarih || null,
       })),
+      deleteLineIds: deletedLineIds,
     }
 
     startTransition(async () => {
       const result = initialValue?.id
-        ? await updateTeslimatAction(initialValue.id, JSON.stringify(payload))
+        ? await updateTeslimatAction(initialValue.id, JSON.stringify(payload), {
+            expectedUpdatedAt: initialValue.updated_at ?? null,
+            idempotencyKey: idempotencyKeyRef.current,
+          })
         : await createTeslimatAction(JSON.stringify(payload))
       if (!result.ok || !result.id) {
         setError(result.message)
         return
       }
+      // Başarılı kayıttan sonra anahtar yenilenir: sonraki kaydetme ayrı işlemdir.
+      idempotencyKeyRef.current = newIdempotencyKey()
+      setDeletedLineIds([])
       router.push(`/teslimatlar/${result.id}`)
+      router.refresh()
     })
   }
 
@@ -386,7 +434,7 @@ export default function TeslimatForm({
               </div>
                 {kalemler.length > 1 && (
                   <div className="flex justify-end">
-                    <button type="button" onClick={() => setKalemler(prev => prev.filter((_, i) => i !== index))} className="text-sm text-red-600">Sil</button>
+                    <button type="button" onClick={() => removeKalem(index)} className="text-sm text-red-600">Sil</button>
                   </div>
                 )}
               </div>

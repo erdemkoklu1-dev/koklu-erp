@@ -1,4 +1,14 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { createTypedServiceClient } from '@/lib/supabase/typed'
+import {
+  TESLIMAT_ERROR,
+  computeStokDelta,
+  computeStokEtkisi,
+  mapRpcError,
+  planTeslimatLines,
+  type TeslimatError,
+  type ExistingTeslimatKalem,
+} from '@/lib/teslimat/teslimat-update'
 export {
   TESLIMAT_CANCELLED_STATUS_ALIASES,
   isCancelledTeslimatStatus,
@@ -72,6 +82,14 @@ export const GERI_TESLIM_GEREKTIREN_TIPLER = new Set<HareketTipi>([
 ])
 
 export type TeslimatKalemInput = {
+  /**
+   * Mevcut kalemin veritabanı kimliği. `null`/`undefined` ⇒ yeni kalem.
+   *
+   * Bu alan olmadan kimlik bazlı diff **teknik olarak imkânsızdır** ve
+   * delete-then-insert bir tasarım zorunluluğu haline gelir
+   * (bkz. `docs/teslimat_atomic_update_design.md` §2.7).
+   */
+  id?: string | null
   urun_id: string | null
   aciklama: string
   hareket_yonu: HareketYonu
@@ -101,6 +119,31 @@ export type TeslimatInput = {
   aciklama: string | null
   notlar: string | null
   kalemler: TeslimatKalemInput[]
+  /** Kullanıcının açıkça silmeyi seçtiği kalem kimlikleri. */
+  deleteLineIds?: string[]
+  /** Sonuçta hiç kalem kalmayacaksa zorunlu açık onay. */
+  confirmDeleteAllLines?: boolean
+}
+
+/** `updateTeslimat` için istemci tarafından taşınan eşzamanlılık/idempotency bilgisi. */
+export type TeslimatUpdateOptions = {
+  /** İstemcinin ekranı açtığı andaki `teslimatlar.updated_at`. */
+  expectedUpdatedAt?: string | null
+  /** Tek kullanıcı kaydetme işlemi boyunca stabil kalan anahtar. */
+  idempotencyKey?: string | null
+}
+
+/** Stabil kodlu teslimat hatası; ham veritabanı mesajı kullanıcıya sızmaz. */
+export class TeslimatUpdateError extends Error {
+  code: TeslimatError['code']
+  retryable: boolean
+
+  constructor(error: TeslimatError) {
+    super(error.message)
+    this.name = 'TeslimatUpdateError'
+    this.code = error.code
+    this.retryable = error.retryable
+  }
 }
 
 export function todayISO() {
@@ -261,9 +304,13 @@ export async function reverseUrunStok(urunId: string, miktar: number, referansNo
   })
 }
 
-function toKalemRows(teslimatId: string, input: TeslimatInput, kalemler: TeslimatKalemInput[]) {
-  return kalemler.map(k => ({
-    teslimat_id: teslimatId,
+/**
+ * Tek kalemin veritabanı alanları. `teslimat_id` ve `firma_id` bilinçli olarak
+ * BURADA ÜRETİLMEZ — atomik RPC bunları doğrulanmış üst kayıttan yazar, böylece
+ * istemciden gelen değer tenant sınırını aşamaz.
+ */
+function toKalemFields(input: TeslimatInput, k: TeslimatKalemInput) {
+  return {
     urun_id: k.urun_id,
     aciklama: k.aciklama.trim(),
     hareket_yonu: k.hareket_yonu,
@@ -280,6 +327,13 @@ function toKalemRows(teslimatId: string, input: TeslimatInput, kalemler: Teslima
     faturalanir_mi: k.faturalanir_mi,
     onceki_kalem_id: k.onceki_kalem_id ?? null,
     notlar: k.notlar ?? null,
+  }
+}
+
+function toKalemRows(teslimatId: string, input: TeslimatInput, kalemler: TeslimatKalemInput[]) {
+  return kalemler.map(k => ({
+    teslimat_id: teslimatId,
+    ...toKalemFields(input, k),
     firma_id: input.firma_id,
   }))
 }
@@ -630,22 +684,19 @@ export async function createOnKayitFromTeslimatKalem(kalemId: string, input: {
   return { id: onKayit.id as string, created: true }
 }
 
-async function reverseExistingStock(teslimatId: string, teslimatNo: string) {
-  const supabase = createServiceClient()
-  const { data: oldKalemler, error } = await supabase
-    .from('teslimat_kalemleri')
-    .select('urun_id, aciklama, miktar, stoktan_duser_mi')
-    .eq('teslimat_id', teslimatId)
-  if (error) throw error
-
-  for (const kalem of oldKalemler ?? []) {
-    const urunId = kalem.urun_id as string | null
-    const miktar = Number(kalem.miktar ?? 0)
-    if (urunId && kalem.stoktan_duser_mi && miktar > 0) {
-      await reverseUrunStok(urunId, miktar, teslimatNo, `${teslimatNo} iptal - ${kalem.aciklama}`)
-    }
-  }
-}
+/*
+ * NOT — `reverseExistingStock` KALDIRILDI.
+ *
+ * Eski hâli (`teslimatlar.ts:633-648`) teslimatın **eski durumuna bakmadan** bütün
+ * stok etkisini geri alıyordu; oysa düşüm yalnızca `durum = 'tamamlandi'` iken
+ * yapılıyordu. Bu yüzden `taslak → taslak` bir düzenleme, hiç yapılmamış bir düşümü
+ * geri alarak stoku şişiriyordu (kanıt: `docs/teslimat_atomic_update_design.md` §2.1 / T1).
+ *
+ * Yerine `db/teslimat_atomic_update_rpc.sql` içindeki **net delta** modeli geçti;
+ * eşdeğerlik ispatı tasarım belgesi §4, testi `tests/teslimat-stock-delta.test.ts`.
+ * Referans taraması yapıldı: fonksiyonun başka çağıranı yoktu.
+ * (`reverseUrunStok` dışa açık API olduğu için korunmuştur.)
+ */
 
 export async function createTeslimat(input: TeslimatInput, userId?: string | null) {
   if (!input.customer_id) throw new Error('Müşteri seçimi zorunlu.')
@@ -699,31 +750,71 @@ export async function createTeslimat(input: TeslimatInput, userId?: string | nul
   return teslimat
 }
 
-export async function updateTeslimat(id: string, input: TeslimatInput, userId?: string | null) {
+/**
+ * Teslimat güncellemesi — **tek PostgreSQL transaction** içinde.
+ *
+ * Eski akış altı bağımsız yazma yapıyordu (stok geri alma → emanet sil → geri teslim
+ * sil → kalem sil → üst kayıt → kalem ekle). Ortadaki herhangi bir hata kalemleri,
+ * emanet ve geri teslim takiplerini kalıcı olarak kaybediyordu ve stok hareketleri
+ * zaten geri alınmış oluyordu (denetim raporu §2.4).
+ *
+ * Artık üst kayıt, kalemler, stok (`urun_stok` + `depo_hareketleri`), emanet
+ * takipleri, geri teslim takipleri ve durum geçmişi **tek RPC çağrısında**, tek
+ * transaction kapsamında yazılır. Herhangi bir hata bütün değişikliği rollback eder.
+ *
+ * Kapsam sınırı (bilinçli): ön kayıt (`on_kayitlar`) üretimi transaction DIŞINDADIR.
+ * Gerekçe ve kullanıcı kararı: `docs/teslimat_atomic_update_design.md` §8.
+ */
+export async function updateTeslimat(
+  id: string,
+  input: TeslimatInput,
+  userId?: string | null,
+  options: TeslimatUpdateOptions = {},
+) {
   if (!input.customer_id) throw new Error('Müşteri seçimi zorunlu.')
+
   const validKalemler = input.kalemler.filter(k => k.aciklama.trim() && k.miktar > 0)
-  if (validKalemler.length === 0) throw new Error('En az bir teslimat kalemi girilmeli.')
+  if (validKalemler.length === 0 && input.confirmDeleteAllLines !== true) {
+    throw new Error('En az bir teslimat kalemi girilmeli.')
+  }
 
-  const supabase = createServiceClient()
-  const { data: mevcut, error: mevcutError } = await supabase
-    .from('teslimatlar')
-    .select('id, teslimat_no, durum')
-    .eq('id', id)
-    .single()
-  if (mevcutError) throw mevcutError
+  // Generated `Database` şemasına bağlı istemci: RPC argümanları ve kalem
+  // sorguları `any` değil, gerçek şema tipiyle derlenir.
+  const supabase = createTypedServiceClient()
 
-  await reverseExistingStock(id, mevcut.teslimat_no)
+  // ── Mevcut kalemler: kimlik doğrulaması için (yetki kararı RPC'nindir) ──
+  const { data: existingRows, error: existingError } = await supabase
+    .from('teslimat_kalemleri')
+    .select('id, urun_id, miktar, stoktan_duser_mi')
+    .eq('teslimat_id', id)
+  if (existingError) {
+    throw new TeslimatUpdateError(mapRpcError(existingError))
+  }
 
-  const { error: emanetError } = await supabase.from('emanet_takipleri').delete().eq('teslimat_id', id)
-  if (emanetError) throw emanetError
-  const { error: geriError } = await supabase.from('geri_teslim_takipleri').delete().eq('teslimat_id', id)
-  if (geriError) throw geriError
-  const { error: kalemDeleteError } = await supabase.from('teslimat_kalemleri').delete().eq('teslimat_id', id)
-  if (kalemDeleteError) throw kalemDeleteError
+  const existing: ExistingTeslimatKalem[] = (existingRows ?? []).map(row => ({
+    id: String(row.id),
+    urun_id: (row.urun_id as string | null) ?? null,
+    miktar: Number(row.miktar ?? 0),
+    stoktan_duser_mi: Boolean(row.stoktan_duser_mi),
+  }))
 
-  const { data: teslimat, error: teslimatError } = await supabase
-    .from('teslimatlar')
-    .update({
+  // ── Yabancı kalem kimliği daha DB'ye gitmeden reddedilir ──
+  const plan = planTeslimatLines(existing, {
+    lines: validKalemler.map(kalem => ({ id: kalem.id ?? null, fields: kalem })),
+    deleteLineIds: input.deleteLineIds,
+    confirmDeleteAllLines: input.confirmDeleteAllLines,
+  })
+  if (!plan.ok) throw new TeslimatUpdateError(plan.error)
+
+  const rpcLines = (plan.value.lines ?? []).map(line => ({
+    id: line.id ?? null,
+    fields: toKalemFields(input, line.fields as TeslimatKalemInput),
+  }))
+
+  // ── Tek atomik çağrı ──
+  const { data, error: rpcError } = await supabase.rpc('teslimat_update_atomic', {
+    p_teslimat_id: id,
+    p_parent_patch: {
       customer_id: input.customer_id,
       sube_id: input.sube_id,
       personel_id: input.personel_id,
@@ -733,39 +824,85 @@ export async function updateTeslimat(id: string, input: TeslimatInput, userId?: 
       on_kayit_secimi: input.on_kayit_secimi,
       aciklama: input.aciklama,
       notlar: input.notlar,
-      on_kayit_olusturuldu: false,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .select('id, teslimat_no')
-    .single()
-  if (teslimatError) throw teslimatError
+    },
+    p_lines: rpcLines,
+    p_delete_line_ids: plan.value.deleteLineIds,
+    p_confirm_delete_all: input.confirmDeleteAllLines === true,
+    p_expected_updated_at: options.expectedUpdatedAt ?? null,
+    p_idempotency_key: options.idempotencyKey ?? null,
+    p_user_id: userId ?? null,
+    p_firma_id: input.firma_id ?? null,
+  })
 
-  const { data: kalemler, error: kalemError } = await supabase
-    .from('teslimat_kalemleri')
-    .insert(toKalemRows(id, input, validKalemler))
-    .select('id, urun_id, aciklama, hareket_tipi, miktar, stoktan_duser_mi, emanet_mi, geri_alinmasi_gerekir_mi, hedef_tarih, faturalanir_mi, birim, birim_fiyat, toplam_tutar, notlar')
-  if (kalemError) throw kalemError
-
-  if (mevcut.durum !== input.durum) {
-    await supabase.from('teslimat_durum_gecmisi').insert({
-      teslimat_id: id,
-      eski_durum: mevcut.durum,
-      yeni_durum: input.durum,
-      aciklama: 'Teslimat düzenlendi',
-      created_by: userId ?? null,
-    })
+  if (rpcError) {
+    // Sessizce eski güvensiz akışa DÜŞÜLMEZ (GOREV.md §8). RPC apply edilmemişse
+    // `TESLIMAT_RPC_MISSING` ile açık ve teşhis edilebilir hata döner.
+    console.error('[teslimat-update] rpc', { id, code: rpcError.code })
+    throw new TeslimatUpdateError(mapRpcError(rpcError))
   }
 
-  await applyKalemSideEffects(teslimat, input, kalemler ?? [])
-
-  const onKayitOlustu = await createOnKayitlarForTeslimat(teslimat, input, kalemler ?? [])
-  if (onKayitOlustu) {
-    await supabase.from('teslimatlar').update({ on_kayit_olusturuldu: true }).eq('id', id)
+  const result = (data ?? {}) as {
+    teslimat_id?: string
+    teslimat_no?: string
+    updated_at?: string
+    replayed?: boolean
   }
 
-  return teslimat
+  // ── Transaction commit oldu. Ön kayıt üretimi ayrı ve sınırı belgelenmiş adım. ──
+  let onKayitStatus: 'skipped' | 'created' | 'failed' = 'skipped'
+  if (result.replayed !== true) {
+    try {
+      const { data: kalemler } = await supabase
+        .from('teslimat_kalemleri')
+        .select('id, urun_id, aciklama, hareket_tipi, miktar, stoktan_duser_mi, emanet_mi, geri_alinmasi_gerekir_mi, hedef_tarih, faturalanir_mi, birim, birim_fiyat, toplam_tutar, notlar')
+        .eq('teslimat_id', id)
+        .order('created_at')
+
+      const teslimatRef = { id, teslimat_no: result.teslimat_no ?? '' }
+      const onKayitOlustu = await createOnKayitlarForTeslimat(
+        teslimatRef,
+        input,
+        (kalemler ?? []) as PersistedKalem[],
+      )
+      if (onKayitOlustu) {
+        await supabase.from('teslimatlar').update({ on_kayit_olusturuldu: true }).eq('id', id)
+        onKayitStatus = 'created'
+      }
+    } catch (error) {
+      // Ön kayıt hatası teslimat güncellemesini GERİ ALMAZ — sınır belgelenmiştir.
+      console.error('[teslimat-update] on-kayit', { id, error })
+      onKayitStatus = 'failed'
+    }
+  }
+
+  return {
+    id,
+    teslimat_no: result.teslimat_no ?? '',
+    updated_at: result.updated_at ?? null,
+    replayed: result.replayed === true,
+    onKayitStatus,
+    atomic: true as const,
+  }
 }
+
+/**
+ * Stok delta önizlemesi — yazma yapmaz.
+ * `updateTeslimat` çağrılmadan önce kullanıcıya "bu kayıt stoku nasıl etkileyecek"
+ * bilgisini göstermek ve delta modelini test etmek için kullanılır.
+ */
+export function previewStokDelta(
+  eskiKalemler: ExistingTeslimatKalem[],
+  eskiDurum: string,
+  yeniKalemler: TeslimatKalemInput[],
+  yeniDurum: string,
+) {
+  return computeStokDelta(
+    computeStokEtkisi(eskiKalemler, eskiDurum),
+    computeStokEtkisi(yeniKalemler, yeniDurum),
+  )
+}
+
+export { TESLIMAT_ERROR }
 
 async function countRows(
   supabase: ReturnType<typeof createServiceClient>,
@@ -959,7 +1096,12 @@ export function normalizeTeslimatInput(raw: unknown): TeslimatInput {
   if (!raw || typeof raw !== 'object') throw new Error('Form verisi geçersiz.')
   const data = raw as Record<string, unknown>
   const kalemler = Array.isArray(data.kalemler) ? data.kalemler : []
+  const deleteLineIds = Array.isArray(data.deleteLineIds)
+    ? data.deleteLineIds.filter((x): x is string => typeof x === 'string' && x.length > 0)
+    : undefined
   return {
+    deleteLineIds,
+    confirmDeleteAllLines: data.confirmDeleteAllLines === true,
     customer_id: String(data.customer_id ?? ''),
     sube_id: data.sube_id ? String(data.sube_id) : null,
     personel_id: data.personel_id ? String(data.personel_id) : null,
@@ -975,6 +1117,8 @@ export function normalizeTeslimatInput(raw: unknown): TeslimatInput {
         ? k.hareket_tipi as HareketTipi
         : 'diger'
       return {
+      // Stabil veritabanı kimliği; yoksa yeni kalem (bkz. tasarım belgesi §2.7).
+      id: k.id ? String(k.id) : null,
       urun_id: k.urun_id ? String(k.urun_id) : null,
       aciklama: String(k.aciklama ?? ''),
       hareket_yonu: k.hareket_yonu === 'gelen' ? 'gelen' : 'giden',

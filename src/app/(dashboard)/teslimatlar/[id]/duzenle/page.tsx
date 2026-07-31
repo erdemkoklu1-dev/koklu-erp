@@ -48,7 +48,12 @@ export default async function TeslimatDuzenlePage({ params }: { params: Promise<
           on_kayit_secimi: teslimat.on_kayit_secimi,
           aciklama: teslimat.aciklama,
           notlar: teslimat.notlar,
+          updated_at: teslimat.updated_at,
           kalemler: (kalemler ?? []).map(k => ({
+            // Gerçek kalem kimliği istemciye TAŞINIR. Eskiden atılıyordu ve bu,
+            // kimlik bazlı diff'i imkânsız kılıp delete-then-insert'i zorunlu
+            // hale getiriyordu (docs/teslimat_atomic_update_design.md §2.7).
+            dbId: k.id,
             urun_id: k.urun_id,
             aciklama: k.aciklama,
             hareket_yonu: k.hareket_yonu,

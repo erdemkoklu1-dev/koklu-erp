@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
-import { createOnKayitFromTeslimatKalem, createTeslimat, deleteTeslimat, normalizeTeslimatInput, syncTeslimatSideEffects, updateTeslimat } from '@/lib/teslimatlar'
+import { createOnKayitFromTeslimatKalem, createTeslimat, deleteTeslimat, normalizeTeslimatInput, syncTeslimatSideEffects, updateTeslimat, TeslimatUpdateError } from '@/lib/teslimatlar'
 import { getSetting } from '@/lib/settings'
 import { getTeslimFormData, teslimFormFileName } from '@/lib/teslim-form-data'
 import { TeslimFormPdfDocument } from '@/lib/teslim-form-pdf'
@@ -83,7 +83,11 @@ export async function goToTeslimat(id: string) {
   redirect(`/teslimatlar/${id}`)
 }
 
-export async function updateTeslimatAction(id: string, payload: string) {
+export async function updateTeslimatAction(
+  id: string,
+  payload: string,
+  options: { expectedUpdatedAt?: string | null; idempotencyKey?: string | null } = {},
+) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, message: 'Oturum gerekli.' }
@@ -104,11 +108,32 @@ export async function updateTeslimatAction(id: string, payload: string) {
       await assertBranchBelongsToFirma(input.sube_id, firmaId)
       await assertCustomerBelongsToFirma(input.customer_id, firmaId)
     }
-    const teslimat = await updateTeslimat(id, input, user.id)
+
+    // Tek atomik RPC. Kalıcı yan etki bu çağrıdan ÖNCE başlatılmaz.
+    const teslimat = await updateTeslimat(id, input, user.id, {
+      expectedUpdatedAt: options.expectedUpdatedAt ?? null,
+      idempotencyKey: options.idempotencyKey ?? null,
+    })
+
     revalidatePath('/teslimatlar/liste')
+    revalidatePath('/teslimatlar')
+    revalidatePath('/teslimatlar/emanetler')
+    revalidatePath('/teslimatlar/geri-teslim')
     revalidatePath(`/teslimatlar/${id}`)
-    return { ok: true, id: teslimat.id as string, message: 'Teslimat güncellendi.' }
+    return {
+      ok: true,
+      id: teslimat.id,
+      message: teslimat.replayed
+        ? 'Bu kayıt zaten güncellenmişti.'
+        : teslimat.onKayitStatus === 'failed'
+          ? 'Teslimat güncellendi, ancak ön kayıt oluşturulamadı.'
+          : 'Teslimat güncellendi.',
+    }
   } catch (error) {
+    if (error instanceof TeslimatUpdateError) {
+      // Stabil kodlu hata; ham veritabanı mesajı kullanıcıya gösterilmez.
+      return { ok: false, code: error.code, message: error.message }
+    }
     return { ok: false, message: error instanceof Error ? error.message : 'Teslimat güncellenemedi.' }
   }
 }
