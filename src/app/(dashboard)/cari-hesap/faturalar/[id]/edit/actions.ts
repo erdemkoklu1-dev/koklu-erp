@@ -2,11 +2,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createTypedServiceClient } from '@/lib/supabase/typed'
 import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
+import { mapInvoiceRpcError, planInvoiceLines, type InvoiceErrorCode } from '@/lib/invoice/invoice-update'
 
 export type UpdateInvoiceResult =
   | { success: true }
-  | { success: false; error: string }
+  | { success: false; error: string; code?: InvoiceErrorCode }
 
 interface ItemUpdate {
   id: string
@@ -38,7 +41,7 @@ interface BrokerInsert {
   commission_amount: number
 }
 
-interface InvoiceData {
+type InvoiceData = {
   invoice_type: string
   customer_id: string | null
   musteri_unvan?: string | null
@@ -65,6 +68,20 @@ interface InvoiceData {
   sube_id: string | null
 }
 
+/**
+ * Fatura düzenleme — **tek PostgreSQL transaction** içinde.
+ *
+ * Eski akış (denetim raporu §2.5):
+ *   - yazmalar sıralı ve transaction dışındaydı ⇒ ortada hata olursa fatura
+ *     kısmen güncellenmiş kalıyordu;
+ *   - **silme ilk adımdaydı** ⇒ kayıpsız sıra kuralına aykırı;
+ *   - `invoice_items` silme/güncelleme yalnızca `eq('id', ...)` ile yapılıyordu
+ *     ⇒ başka faturaya ait bir kalem kimliği gönderilirse o satır siliniyordu.
+ *
+ * Artık her `invoice_items` / `invoice_brokers` mutasyonu `id + invoice_id`
+ * çiftiyle sınırlıdır, etkilenen satır sayısı doğrulanır ve uyuşmazlıkta bütün
+ * işlem rollback olur.
+ */
 export async function updateInvoiceAction(
   invoiceId: string,
   invoiceData: InvoiceData,
@@ -73,13 +90,21 @@ export async function updateInvoiceAction(
   itemsToInsert: ItemInsert[],
   brokersToDelete: string[],
   brokersToUpdate: BrokerUpdate[],
-  brokersToInsert: BrokerInsert[]
+  brokersToInsert: BrokerInsert[],
+  options: { expectedUpdatedAt?: string | null; idempotencyKey?: string | null } = {},
 ): Promise<UpdateInvoiceResult> {
   const supabase = createServiceClient()
 
-  // Tenant güvenliği: fatura kullanıcının firmasına ait mi + şube/müşteri uyumu
+  let firmaId: string
+  let userId: string | null = null
+
+  // ── Tenant güvenliği: fatura kullanıcının firmasına ait mi + şube/müşteri uyumu ──
   try {
-    const firmaId = await requireCurrentFirmaId()
+    firmaId = await requireCurrentFirmaId()
+    const authClient = await createServerClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    userId = user?.id ?? null
+
     const { data: existing, error: readErr } = await supabase
       .from('invoices')
       .select('id, firma_id')
@@ -96,69 +121,87 @@ export async function updateInvoiceAction(
     return { success: false, error: err instanceof Error ? err.message : 'Firma doğrulaması başarısız.' }
   }
 
-  const { error: invErr } = await supabase
-    .from('invoices')
-    .update(invoiceData)
-    .eq('id', invoiceId)
+  // ── Mevcut alt satır kimlikleri: YALNIZCA bu faturaya ait olanlar ──
+  const [{ data: existingItems, error: itemsReadErr }, { data: existingBrokers, error: brokersReadErr }] =
+    await Promise.all([
+      supabase.from('invoice_items').select('id').eq('invoice_id', invoiceId),
+      supabase.from('invoice_brokers').select('id').eq('invoice_id', invoiceId),
+    ])
+  if (itemsReadErr) return { success: false, error: mapInvoiceRpcError(itemsReadErr).message }
+  if (brokersReadErr) return { success: false, error: mapInvoiceRpcError(brokersReadErr).message }
 
-  if (invErr) {
-    console.error('[updateInvoiceAction] invoices update hatası:', invErr)
-    const schemaMismatch = /schema cache|column|could not find/i.test(invErr.message)
-    return {
-      success: false,
-      error: schemaMismatch
-        ? 'Fatura güncellenemedi. Kayıt alanları ile veritabanı şeması arasında uyumsuzluk var.'
-        : invErr.message,
-    }
-  }
+  // ── Yabancı kimlik daha DB'ye gitmeden reddedilir (son söz RPC'nindir) ──
+  const plan = planInvoiceLines(
+    (existingItems ?? []).map(row => String(row.id)),
+    (existingBrokers ?? []).map(row => String(row.id)),
+    {
+      items: [
+        ...itemsToUpdate.map(item => ({
+          id: item.id,
+          fields: {
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
+            unit_price: item.unit_price,
+            kdv_rate: item.kdv_rate,
+          },
+        })),
+        ...itemsToInsert.map(item => ({
+          id: null,
+          fields: {
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
+            unit_price: item.unit_price,
+            kdv_rate: item.kdv_rate,
+            line_order: item.line_order,
+          },
+        })),
+      ],
+      deleteItemIds: itemsToDelete,
+      brokers: [
+        ...brokersToUpdate.map(b => ({
+          id: b.id,
+          fields: { commission_rate: b.commission_rate, commission_amount: b.commission_amount },
+        })),
+        ...brokersToInsert.map(b => ({
+          id: null,
+          fields: {
+            broker_id: b.broker_id,
+            commission_rate: b.commission_rate,
+            commission_amount: b.commission_amount,
+          },
+        })),
+      ],
+      deleteBrokerIds: brokersToDelete,
+      // Kullanıcı bütün kalemleri silmek istiyorsa bunu açık niyetle taşımalı.
+      confirmDeleteAllLines: false,
+    },
+  )
+  if (!plan.ok) return { success: false, error: plan.error.message, code: plan.error.code }
 
-  for (const id of itemsToDelete) {
-    const { error } = await supabase.from('invoice_items').delete().eq('id', id)
-    if (error) return { success: false, error: error.message }
-  }
+  // ── Tek atomik çağrı ──
+  // Generated `Database` şemasına bağlı istemci: RPC argümanları `any` değildir.
+  const typed = createTypedServiceClient()
+  const { error: rpcError } = await typed.rpc('invoice_update_atomic', {
+    p_invoice_id: invoiceId,
+    p_invoice_patch: invoiceData,
+    p_items: plan.value.items,
+    p_delete_item_ids: plan.value.deleteItemIds,
+    p_brokers: plan.value.brokers,
+    p_delete_broker_ids: plan.value.deleteBrokerIds,
+    p_confirm_delete_all: false,
+    p_expected_updated_at: options.expectedUpdatedAt ?? null,
+    p_idempotency_key: options.idempotencyKey ?? null,
+    p_user_id: userId,
+    p_firma_id: firmaId,
+  })
 
-  for (const item of itemsToUpdate) {
-    const { error } = await supabase.from('invoice_items').update({
-      description: item.description,
-      quantity: item.quantity,
-      unit: item.unit,
-      unit_price: item.unit_price,
-      kdv_rate: item.kdv_rate,
-    }).eq('id', item.id)
-    if (error) return { success: false, error: error.message }
-  }
-
-  if (itemsToInsert.length > 0) {
-    const { error } = await supabase.from('invoice_items').insert(
-      itemsToInsert.map(item => ({ invoice_id: invoiceId, ...item }))
-    )
-    if (error) return { success: false, error: error.message }
-  }
-
-  for (const id of brokersToDelete) {
-    const { error } = await supabase.from('invoice_brokers').delete().eq('id', id)
-    if (error) return { success: false, error: error.message }
-  }
-
-  for (const b of brokersToUpdate) {
-    const { error } = await supabase.from('invoice_brokers').update({
-      commission_rate: b.commission_rate,
-      commission_amount: b.commission_amount,
-    }).eq('id', b.id)
-    if (error) return { success: false, error: error.message }
-  }
-
-  if (brokersToInsert.length > 0) {
-    const { error } = await supabase.from('invoice_brokers').insert(
-      brokersToInsert.map(b => ({
-        invoice_id: invoiceId,
-        broker_id: b.broker_id,
-        commission_rate: b.commission_rate,
-        commission_amount: b.commission_amount,
-        is_paid: false,
-      }))
-    )
-    if (error) return { success: false, error: error.message }
+  if (rpcError) {
+    // Sessizce eski güvensiz (kapsamsız `eq('id')`) akışa DÜŞÜLMEZ.
+    console.error('[updateInvoiceAction] rpc hatası:', { invoiceId, code: rpcError.code })
+    const mapped = mapInvoiceRpcError(rpcError)
+    return { success: false, error: mapped.message, code: mapped.code }
   }
 
   revalidatePath('/cari-hesap/gelen-faturalar')
