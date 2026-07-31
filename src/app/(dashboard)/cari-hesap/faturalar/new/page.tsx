@@ -6,6 +6,38 @@ import Link from 'next/link'
 import { calculateInvoiceTotals } from '@/lib/finance/calculations'
 import { formatCurrency } from '@/lib/finance/formatters'
 import { inferCityFromAddress, suggestBranchByCity } from '@/lib/branches/branch-inference'
+import { requestApi } from '@/lib/api/envelope'
+
+/** `/api/parse-fatura` çıktısının istemcide kullanılan şekli. */
+type ParseFaturaData = {
+  customer?: {
+    full_name?: string | null
+    tax_number?: string | null
+    phone?: string | null
+    email?: string | null
+    address?: string | null
+    city?: string | null
+  } | null
+  supplier?: {
+    name?: string | null
+    tax_no?: string | null
+    address?: string | null
+    city?: string | null
+  } | null
+  invoice?: {
+    invoice_date?: string | null
+    due_date?: string | null
+    kdv_rate?: number | null
+    stopaj_rate?: number | null
+  } | null
+  items?: Array<{
+    description?: string | null
+    quantity?: number | null
+    unit?: string | null
+    unit_price?: number | null
+    kdv_rate?: number | null
+  }> | null
+}
 
 type LineItem = { description: string; quantity: string; unit: string; unit_price: string; kdv_rate: string }
 const emptyLine = (): LineItem => ({ description: '', quantity: '1', unit: 'adet', unit_price: '', kdv_rate: '20' })
@@ -312,13 +344,21 @@ export default function NewFaturaPage() {
       const fd = new FormData()
       fd.append('file', uploadFile)
 
-      const res = await fetch('/api/parse-fatura', { method: 'POST', body: fd })
-      const data = await res.json()
+      // Yanıt ASLA koşulsuz res.json() ile okunmaz: eski build/kaldırılmış route
+      // durumunda gelen HTML 404 sayfası "Unexpected token '<' … is not valid JSON"
+      // hatasına yol açıyordu. readApiResponse önce status ve content-type bakar.
+      const envelope = await requestApi<ParseFaturaData>('/api/parse-fatura', {
+        method: 'POST',
+        body: fd,
+        timeoutMs: 120_000,
+      })
 
-      if (!res.ok) {
-        setParseError(data.error ?? 'Fatura okunamadı')
+      if (!envelope.ok) {
+        setParseError(envelope.error.message)
         return
       }
+
+      const data = envelope.data
 
       // Müşteri bilgilerini doldur
       setCustomerNotFound(false)
@@ -335,17 +375,18 @@ export default function NewFaturaPage() {
         if (found) {
           pickCustomer(found)
         } else {
-          setCustomerSearch(data.customer.full_name)
+          const parsedCustomer = data.customer
+          setCustomerSearch(parsedCustomer.full_name ?? '')
           setShowDropdown(true)
           setCustomerNotFound(true)
-          const pdfAddress = data.customer.address ?? ''
-          const pdfCity = data.customer.city ?? inferCityFromAddress(pdfAddress) ?? ''
+          const pdfAddress = parsedCustomer.address ?? ''
+          const pdfCity = parsedCustomer.city ?? inferCityFromAddress(pdfAddress) ?? ''
           setForm(p => ({
             ...p,
-            customer_name: data.customer.full_name ?? p.customer_name,
-            tax_number: data.customer.tax_number ?? p.tax_number,
-            customer_phone: data.customer.phone ?? p.customer_phone,
-            customer_email: data.customer.email ?? p.customer_email,
+            customer_name: parsedCustomer.full_name ?? p.customer_name,
+            tax_number: parsedCustomer.tax_number ?? p.tax_number,
+            customer_phone: parsedCustomer.phone ?? p.customer_phone,
+            customer_email: parsedCustomer.email ?? p.customer_email,
             customer_address: pdfAddress,
             customer_city: pdfCity,
           }))
@@ -354,27 +395,34 @@ export default function NewFaturaPage() {
       }
 
       // Fatura tarihleri
-      if (data.invoice?.invoice_date) {
-        setForm(p => ({ ...p, invoice_date: data.invoice.invoice_date }))
+      const parsedInvoice = data.invoice
+      if (parsedInvoice?.invoice_date) {
+        const invoiceDate = parsedInvoice.invoice_date
+        setForm(p => ({ ...p, invoice_date: invoiceDate }))
       }
-      if (data.invoice?.due_date) {
-        setForm(p => ({ ...p, due_date: data.invoice.due_date }))
+      if (parsedInvoice?.due_date) {
+        const dueDate = parsedInvoice.due_date
+        setForm(p => ({ ...p, due_date: dueDate }))
       }
-      if (data.invoice?.kdv_rate != null) {
-        setForm(p => ({ ...p, kdv_rate: String(data.invoice.kdv_rate) }))
+      if (parsedInvoice?.kdv_rate != null) {
+        const kdvRate = String(parsedInvoice.kdv_rate)
+        setForm(p => ({ ...p, kdv_rate: kdvRate }))
       }
-      if (data.invoice?.stopaj_rate) {
-        setForm(p => ({ ...p, stopaj_rate: String(data.invoice.stopaj_rate) }))
+      if (parsedInvoice?.stopaj_rate) {
+        const stopajRate = String(parsedInvoice.stopaj_rate)
+        setForm(p => ({ ...p, stopaj_rate: stopajRate }))
       }
 
       // Tedarikçi (alış faturası için)
-      if (data.supplier?.name) {
-        const supplierAddress = data.supplier.address ?? form.customer_address
-        const supplierCity = data.supplier.city ?? inferCityFromAddress(supplierAddress) ?? form.customer_city
+      const parsedSupplier = data.supplier
+      if (parsedSupplier?.name) {
+        const supplierName = parsedSupplier.name
+        const supplierAddress = parsedSupplier.address ?? form.customer_address
+        const supplierCity = parsedSupplier.city ?? inferCityFromAddress(supplierAddress) ?? form.customer_city
         setForm(p => ({
           ...p,
-          supplier_name: data.supplier.name,
-          supplier_tax_no: data.supplier.tax_no ?? '',
+          supplier_name: supplierName,
+          supplier_tax_no: parsedSupplier.tax_no ?? '',
           customer_address: supplierAddress,
           customer_city: supplierCity,
         }))
@@ -383,7 +431,7 @@ export default function NewFaturaPage() {
 
       // Kalemler
       if (data.items && data.items.length > 0) {
-        const parsedLines: LineItem[] = data.items.map((item: any) => ({
+        const parsedLines: LineItem[] = data.items.map(item => ({
           description: item.description ?? '',
           quantity: String(item.quantity ?? 1),
           unit: item.unit ?? 'adet',
@@ -397,8 +445,8 @@ export default function NewFaturaPage() {
       await checkDuplicateInvoice(data)
 
       setShowParseSection(false)
-    } catch (e: any) {
-      setParseError(e.message ?? 'Beklenmeyen hata')
+    } catch (e: unknown) {
+      setParseError(e instanceof Error ? e.message : 'Beklenmeyen hata')
     } finally {
       setParsing(false)
     }
