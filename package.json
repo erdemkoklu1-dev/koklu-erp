@@ -11,7 +11,11 @@
     "test": "node --experimental-strip-types --test \"tests/**/*.test.ts\"",
     "test:aggregate": "node --experimental-strip-types --test tests/aggregate-line-diff.test.ts",
     "test:api": "node --experimental-strip-types --test tests/api-envelope.test.ts",
-    "test:parser": "node --experimental-strip-types --test tests/invoice-normalization.test.ts"
+    "test:parser": "node --experimental-strip-types --test tests/invoice-normalization.test.ts",
+    "test:teslimat": "node --experimental-strip-types --test tests/teslimat-stock-delta.test.ts tests/teslimat-line-identity.test.ts",
+    "test:invoice": "node --experimental-strip-types --test tests/invoice-line-ownership.test.ts",
+    "db:types:generate": "node scripts/generate-db-types.mjs",
+    "db:types:check": "node scripts/generate-db-types.mjs --check"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
