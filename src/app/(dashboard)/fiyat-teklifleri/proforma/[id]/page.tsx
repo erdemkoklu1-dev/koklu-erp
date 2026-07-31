@@ -39,8 +39,11 @@ export default async function ProformaDuzenlePage({
     notlar:                proforma.notlar ?? '',
     ozel_sartlar:          proforma.ozel_sartlar ?? '',
     sube_id:               proforma.sube_id ?? null,
+    updated_at:            proforma.updated_at ?? null,
     kalemleri: (kalemler ?? []).map((k: any): ProformaKalem => ({
       id:             Math.random().toString(36).slice(2),
+      // Veritabanı kimliği React anahtarından ayrı taşınır; diff bunu kullanır.
+      dbId:           k.id,
       sira_no:        k.sira_no,
       urun_id:        k.urun_id ?? null,
       mal_hizmet:     k.mal_hizmet ?? '',

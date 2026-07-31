@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TURKEY_PROVINCES } from '@/lib/turkey-provinces'
 import SubeSelect from '@/components/SubeSelect'
+import { requestApi } from '@/lib/api/envelope'
+
+function yeniIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 
 // ─── Türkçe para yazıya çevirme ────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -36,7 +42,10 @@ function sayiyiYaziyaCevir(sayi: number): string {
 }
 
 // ─── Tipler ────────────────────────────────────────────────────
-type Kalem = { id: string; aciklama: string; miktar: number; birim_fiyat: number; iskonto: number; toplam: number }
+// `id`      → yalnızca React listesi için üretilen geçici anahtar
+// `dbId`    → veritabanındaki stabil primary key (yeni kalemlerde null)
+// Bu ikisi ASLA birbirinin yerine kullanılmaz; sıra numarası da kimlik değildir.
+type Kalem = { id: string; dbId: string | null; aciklama: string; miktar: number; birim_fiyat: number; iskonto: number; toplam: number }
 type Musteri = { id: string; full_name: string; phone?: string }
 type KdvDurumu = 'dahil' | 'haric' | 'yok'
 type ParaBirimi = 'TL' | 'USD' | 'EUR'
@@ -48,7 +57,7 @@ type Urun = {
 }
 
 function newKalem(): Kalem {
-  return { id: Math.random().toString(36).slice(2), aciklama: '', miktar: 1, birim_fiyat: 0, iskonto: 0, toplam: 0 }
+  return { id: Math.random().toString(36).slice(2), dbId: null, aciklama: '', miktar: 1, birim_fiyat: 0, iskonto: 0, toplam: 0 }
 }
 function buildSartname(kdvDurumu: KdvDurumu, gecerlilik: number) {
   const kdvText = kdvDurumu === 'dahil' ? 'Fiyatlarımıza KDV dahildir.' : kdvDurumu === 'haric' ? 'Fiyatlarımıza KDV dahil değildir.' : 'KDV uygulanmamaktadır.'
@@ -73,9 +82,16 @@ const SEHIR_SELECT = (
 export default function DuzenleTeklifClient({
   teklif,
   kalemlerData,
+  kalemlerYuklendi = true,
 }: {
   teklif: any
   kalemlerData: any[]
+  /**
+   * Kalem sorgusu gerçekten başarılı okundu mu?
+   * `false` ise ekrandaki liste eksik olabilir; bu durumda tam liste (replaceAll)
+   * niyeti gönderilmez ve mevcut kalemler asla silinmez.
+   */
+  kalemlerYuklendi?: boolean
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -112,14 +128,18 @@ export default function DuzenleTeklifClient({
     kalemlerData.length > 0
       ? kalemlerData.map(k => ({
           id: Math.random().toString(36).slice(2),
+          dbId: k.id ?? null,
           aciklama: k.aciklama || '',
-          miktar: k.miktar || 1,
-          birim_fiyat: k.birim_fiyat || 0,
-          iskonto: k.iskonto || 0,
-          toplam: k.toplam || 0,
+          miktar: Number(k.miktar ?? 1),
+          birim_fiyat: Number(k.birim_fiyat ?? 0),
+          iskonto: Number(k.iskonto ?? 0),
+          toplam: Number(k.toplam ?? 0),
         }))
       : [newKalem()]
   )
+  // Kullanıcının ekrandan çıkardığı mevcut kalemlerin gerçek kimlikleri.
+  // Silme niyeti payload'da ayrı ve açık bir alanla taşınır.
+  const [silinecekKalemIds, setSilinecekKalemIds] = useState<string[]>([])
   const [karOrani, setKarOrani]               = useState(teklif.kar_orani != null ? String(teklif.kar_orani) : '')
   const [genelIskonto, setGenelIskonto]       = useState(teklif.genel_iskonto > 0 ? String(teklif.genel_iskonto) : '')
   const [genelIskontoTip, setGenelIskontoTip] = useState<'yuzde' | 'tl'>((teklif.genel_iskonto_tip as 'yuzde' | 'tl') || 'yuzde')
@@ -133,6 +153,8 @@ export default function DuzenleTeklifClient({
   const [subeId, setSubeId] = useState<string | null>(teklif.sube_id ?? null)
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
+  // Aynı kaydet isteği iki kez gitse bile sunucu tarafında mükerrer işlem olmaz.
+  const idempotencyKey = useRef(yeniIdempotencyKey())
 
   // ─── Ürün kataloğu ───────────────────────────────────────────
   const [urunler, setUrunler]       = useState<Urun[]>([])
@@ -219,7 +241,11 @@ export default function DuzenleTeklifClient({
     setDolumPopup(null)
   }
 
-  const removeKalem = (id: string) => setKalemler(prev => prev.filter(k => k.id !== id))
+  const removeKalem = (id: string) => setKalemler(prev => {
+    const target = prev.find(k => k.id === id)
+    if (target?.dbId) setSilinecekKalemIds(ids => (ids.includes(target.dbId!) ? ids : [...ids, target.dbId!]))
+    return prev.filter(k => k.id !== id)
+  })
 
   const araToplam = kalemler.reduce((s, k) => s + k.toplam, 0)
   const genelIskontoTutari = (() => {
@@ -252,37 +278,63 @@ export default function DuzenleTeklifClient({
     if (!musteriAdi.trim()) { setError('Müşteri adı gereklidir.'); return }
     if (!kalemler.length) { setError('En az bir kalem ekleyiniz.'); return }
     setSaving(true)
-    try {
-      const { error: tErr } = await supabase.from('teklifler').update({
-        tarih, gecerlilik_suresi: gecerlilik, gecerlilik_bitis: gecerlilikBitis,
-        sehir: sehir || null, durum, sube_id: subeId || null,
-        musteri_id: musteriMod === 'kayitli' ? seciliMusteri?.id : null,
-        musteri_adi: musteriAdi,
-        musteri_sehir: musteriMod === 'kayitli' ? sehir || null : manuelSehir || null,
-        musteri_telefon: musteriMod === 'kayitli' ? (seciliMusteri as any)?.phone ?? null : manuelTel || null,
-        musteri_email: musteriMod === 'kayitli' ? null : manuelEmail || null,
-        para_birimi: paraBirimi,
-        doviz_kuru: paraBirimi === 'TL' ? 1 : (paraBirimi === 'USD' ? dovizKuru?.USD : dovizKuru?.EUR) ?? 1,
-        kdv_durumu: kdvDurumu, kdv_orani: kdvOrani,
-        ara_toplam: araToplam, kdv_tutari: kdvTutari, genel_toplam: genelToplam,
-        genel_iskonto: genelIskontoTutari, genel_iskonto_tip: genelIskontoTip,
-        kar_orani: karOrani ? parseFloat(karOrani) : null,
-        notlar: notlar || null,
-        ticari_sartname_ekli: sartname, ticari_sartname_metni: sartname ? sartnameMetin : null,
-      }).eq('id', teklif.id)
-      if (tErr) throw new Error(tErr.message)
 
-      const { error: delErr } = await supabase.from('teklif_kalemleri').delete().eq('teklif_id', teklif.id)
-      if (delErr) throw new Error(delErr.message)
+    // Kalem güncellemesi artık istemciden "önce sil sonra ekle" ile YAPILMAZ.
+    // Payload sunucudaki ortak sözleşmeye gönderilir; kimlik eşleşmesi dbId ile,
+    // silme niyeti ise ayrı `deleteLineIds` alanıyla taşınır.
+    const result = await requestApi<{ inserted: number; updated: number; deleted: number }>(
+      `/api/v1/aggregates/teklif/${teklif.id}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey.current },
+        body: JSON.stringify({
+          parentPatch: {
+            tarih, gecerlilik_suresi: gecerlilik, gecerlilik_bitis: gecerlilikBitis,
+            sehir: sehir || null, durum, sube_id: subeId || null,
+            musteri_id: musteriMod === 'kayitli' ? seciliMusteri?.id ?? null : null,
+            musteri_adi: musteriAdi,
+            musteri_sehir: musteriMod === 'kayitli' ? sehir || null : manuelSehir || null,
+            musteri_telefon: musteriMod === 'kayitli' ? (seciliMusteri as any)?.phone ?? null : manuelTel || null,
+            musteri_email: musteriMod === 'kayitli' ? null : manuelEmail || null,
+            para_birimi: paraBirimi,
+            doviz_kuru: paraBirimi === 'TL' ? 1 : (paraBirimi === 'USD' ? dovizKuru?.USD : dovizKuru?.EUR) ?? 1,
+            kdv_durumu: kdvDurumu, kdv_orani: kdvOrani,
+            ara_toplam: araToplam, kdv_tutari: kdvTutari, genel_toplam: genelToplam,
+            genel_iskonto: genelIskontoTutari, genel_iskonto_tip: genelIskontoTip,
+            kar_orani: karOrani ? parseFloat(karOrani) : null,
+            notlar: notlar || null,
+            ticari_sartname_ekli: sartname, ticari_sartname_metni: sartname ? sartnameMetin : null,
+          },
+          lines: kalemler.map(k => ({
+            id: k.dbId,
+            fields: {
+              aciklama: k.aciklama,
+              miktar: k.miktar,
+              birim_fiyat: k.birim_fiyat,
+              iskonto: k.iskonto || 0,
+              toplam: k.toplam,
+            },
+          })),
+          deleteLineIds: silinecekKalemIds,
+          // Ekrandaki liste güvenilir biçimde yüklendiyse tam liste niyeti gönderilir.
+          // Yüklenemediyse gönderilmez; böylece görünmeyen kalemler asla silinmez.
+          replaceAllLines: kalemlerYuklendi,
+          expectedUpdatedAt: teklif.updated_at ?? null,
+        }),
+      },
+    )
 
-      const { error: kErr } = await supabase.from('teklif_kalemleri').insert(
-        kalemler.map((k, i) => ({ teklif_id: teklif.id, sira_no: i + 1, aciklama: k.aciklama, miktar: k.miktar, birim_fiyat: k.birim_fiyat, iskonto: k.iskonto || 0, toplam: k.toplam }))
-      )
-      if (kErr) throw new Error(kErr.message)
-      router.push(`/fiyat-teklifleri/${teklif.id}`)
-    } catch (err: any) {
-      setError(err.message ?? 'Bilinmeyen hata'); setSaving(false)
+    idempotencyKey.current = yeniIdempotencyKey()
+
+    if (!result.ok) {
+      setError(result.error.message)
+      setSaving(false)
+      return
     }
+
+    setSilinecekKalemIds([])
+    router.push(`/fiyat-teklifleri/${teklif.id}`)
+    router.refresh()
   }
 
   const filteredMusteriler = musteriler.filter(m => m.full_name.toLowerCase().includes(musteriArama.toLowerCase())).slice(0, 10)

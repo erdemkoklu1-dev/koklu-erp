@@ -17,7 +17,7 @@ export default async function EditServiceFormPage({ params }: { params: Promise<
 
   if (!sf) notFound()
 
-  const { data: items } = await supabase
+  const { data: items, error: itemsError } = await supabase
     .from('service_form_items')
     .select('*')
     .eq('service_form_id', id)
@@ -33,8 +33,11 @@ export default async function EditServiceFormPage({ params }: { params: Promise<
         customer_note: sf.customer_note ?? '',
         next_service_date: sf.next_service_date ?? '',
       }}
+      itemsLoaded={!itemsError}
+      updatedAt={sf.updated_at ?? null}
       initialItems={(items ?? []).map((i: any) => ({
         id: i.id,
+        dbId: i.id,
         device_name: i.device_name ?? '',
         serial_number: i.serial_number ?? '',
         quantity: i.quantity ?? 1,

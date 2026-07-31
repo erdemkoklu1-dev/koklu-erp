@@ -12,12 +12,20 @@ export default async function TeklifDuzenlePage({
   const supabase = createServiceClient()
   const tenantAccess = await getCurrentTenantAccessFromSession()
 
-  const [{ data: teklif }, { data: kalemler }] = await Promise.all([
+  const [{ data: teklif }, { data: kalemler, error: kalemlerError }] = await Promise.all([
     applyTenantScope(supabase.from('teklifler').select('*').eq('id', id), tenantAccess).maybeSingle(),
     applyTenantScope(supabase.from('teklif_kalemleri').select('*').eq('teklif_id', id).order('sira_no'), tenantAccess),
   ])
 
   if (!teklif) notFound()
 
-  return <DuzenleTeklifClient teklif={teklif} kalemlerData={kalemler ?? []} />
+  // Kalem sorgusu hata verdiyse ekrandaki liste eksik olabilir; bu bilgi istemciye
+  // taşınır ki "tam liste" niyetiyle görünmeyen kalemler silinmesin.
+  return (
+    <DuzenleTeklifClient
+      teklif={teklif}
+      kalemlerData={kalemler ?? []}
+      kalemlerYuklendi={!kalemlerError}
+    />
+  )
 }

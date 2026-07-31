@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SubeSelect from '@/components/SubeSelect'
 import TedarikciTeklifModal, { type ParsedKalem, type ParsedTeklif } from '@/components/TedarikciTeklifModal'
+import { requestApi } from '@/lib/api/envelope'
+
+function yeniIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 
 // ─── Türkçe sayı yazıya çevirme ───────────────────────────────────
 const BIRLER = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz']
@@ -43,7 +49,10 @@ type ParaBirimi = 'TRY' | 'USD' | 'EUR'
 type Durum      = 'taslak' | 'gonderildi' | 'onaylandi' | 'iptal' | 'faturalandi'
 
 export type ProformaKalem = {
+  /** React listesi anahtarı — yeni kalemlerde rastgele üretilir. */
   id: string
+  /** Veritabanındaki stabil primary key; yeni kalemlerde null. */
+  dbId?: string | null
   sira_no: number
   urun_id: string | null
   mal_hizmet: string
@@ -79,6 +88,8 @@ export type ProformaInitialData = {
   ozel_sartlar: string
   kalemleri: ProformaKalem[]
   sube_id?: string | null
+  /** Optimistic concurrency için ekran açıldığı andaki sürüm. */
+  updated_at?: string | null
 }
 
 export type ProformaPrefillData = {
@@ -119,6 +130,7 @@ const BANKA_VARSAYILAN = 'TC ZİRAAT BANKASI / ERZİNCAN ŞUBESİ'
 function newKalem(sira: number): ProformaKalem {
   return {
     id: Math.random().toString(36).slice(2),
+    dbId: null,
     sira_no: sira, urun_id: null, mal_hizmet: '', aciklama: '',
     miktar: 1, birim: 'Adet', birim_fiyat: 0,
     iskonto_orani: 0, iskonto_tutari: 0,
@@ -183,8 +195,16 @@ export default function ProformaFormClient({
   const musteriRef = useRef<HTMLDivElement>(null)
 
   // ─── Kalemler
+  // Kullanıcının açıkça kaldırdığı mevcut kalemlerin gerçek kimlikleri.
+  const [silinecekKalemIds, setSilinecekKalemIds] = useState<string[]>([])
+  const idempotencyKey = useRef(yeniIdempotencyKey())
+
   const [kalemler, setKalemler] = useState<ProformaKalem[]>(() => {
-    if (initialData?.kalemleri?.length) return initialData.kalemleri
+    if (initialData?.kalemleri?.length) {
+      // Mevcut kalemlerde `id` veritabanı kimliğidir; onu ayrı bir alana taşıyoruz ki
+      // yeni satırların rastgele React anahtarıyla asla karışmasın.
+      return initialData.kalemleri.map(k => ({ ...k, dbId: k.dbId ?? null }))
+    }
     if (prefillData?.kalemleri?.length) {
       return prefillData.kalemleri.map((k, i) =>
         hesaplaKalem({ ...newKalem(i + 1), ...k })
@@ -349,9 +369,11 @@ export default function ProformaFormClient({
   }
 
   function removeKalem(kalemId: string) {
-    setKalemler(prev =>
-      prev.filter(k => k.id !== kalemId).map((k, i) => ({ ...k, sira_no: i + 1 }))
-    )
+    setKalemler(prev => {
+      const target = prev.find(k => k.id === kalemId)
+      if (target?.dbId) setSilinecekKalemIds(ids => (ids.includes(target.dbId!) ? ids : [...ids, target.dbId!]))
+      return prev.filter(k => k.id !== kalemId).map((k, i) => ({ ...k, sira_no: i + 1 }))
+    })
   }
 
   // ─── Toplamlar
@@ -422,33 +444,44 @@ export default function ProformaFormClient({
       proformaId = data.id
     } else {
       proformaId = initialData!.id
-      const { error: err } = await supabase
-        .from('proforma_faturalar')
-        .update(proformaPayload)
-        .eq('id', proformaId)
-      if (err) { setError(err.message); setSaving(false); return }
-      await supabase.from('proforma_fatura_kalemleri').delete().eq('proforma_id', proformaId)
-    }
 
-    if (mode !== 'yeni') {
-    const kalemPayload = kalemler.map((k, i) => ({
-      proforma_id:    proformaId,
-      sira_no:        i + 1,
-      urun_id:        k.urun_id,
-      mal_hizmet:     k.mal_hizmet,
-      aciklama:       k.aciklama || null,
-      miktar:         k.miktar,
-      birim:          k.birim,
-      birim_fiyat:    k.birim_fiyat,
-      iskonto_orani:  k.iskonto_orani,
-      iskonto_tutari: k.iskonto_tutari,
-      kdv_orani:      k.kdv_orani,
-      kdv_tutari:     k.kdv_tutari,
-      toplam_tutar:   k.toplam_tutar,
-    }))
+      // Eski akış üst kaydı güncelledikten sonra bütün kalemleri siliyor, hata
+      // kontrolü bile yapmadan yeniden ekliyordu. Yeni akış: kimlik bazlı diff,
+      // açık silme niyeti ve silmenin en sona alındığı ortak sunucu sözleşmesi.
+      const result = await requestApi<{ inserted: number; updated: number; deleted: number }>(
+        `/api/v1/aggregates/proforma/${proformaId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey.current },
+          body: JSON.stringify({
+            parentPatch: proformaPayload,
+            lines: kalemler.map(k => ({
+              id: k.dbId ?? null,
+              fields: {
+                urun_id:        k.urun_id,
+                mal_hizmet:     k.mal_hizmet,
+                aciklama:       k.aciklama || null,
+                miktar:         k.miktar,
+                birim:          k.birim,
+                birim_fiyat:    k.birim_fiyat,
+                iskonto_orani:  k.iskonto_orani,
+                iskonto_tutari: k.iskonto_tutari,
+                kdv_orani:      k.kdv_orani,
+                kdv_tutari:     k.kdv_tutari,
+                toplam_tutar:   k.toplam_tutar,
+              },
+            })),
+            deleteLineIds: silinecekKalemIds,
+            replaceAllLines: true,
+            expectedUpdatedAt: initialData?.updated_at ?? null,
+          }),
+        },
+      )
 
-    const { error: kalemErr } = await supabase.from('proforma_fatura_kalemleri').insert(kalemPayload)
-    if (kalemErr) { setError(kalemErr.message); setSaving(false); return }
+      idempotencyKey.current = yeniIdempotencyKey()
+
+      if (!result.ok) { setError(result.error.message); setSaving(false); return }
+      setSilinecekKalemIds([])
     }
 
     if (redirectToPdf) {
