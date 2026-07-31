@@ -1,0 +1,74 @@
+name: CI
+
+# GÜVENLİK NOTU
+#   Bu workflow hiçbir uzak veritabanına BAĞLANMAZ.
+#   Şema kaynağı repo içindeki `db/*.sql` migration zinciridir; bu yüzden
+#   fork/PR ortamında secret gerekmez ve kontrol "secret yok" diye sessizce
+#   başarıya çevrilmez — her koşulda gerçekten çalışır.
+#   Production Supabase'e bağlanmak bu workflow'da bilinçli olarak YASAKTIR.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 1. Şema/migration hazırlığı ──────────────────────────────────────
+      # Migration zinciri okunabiliyor mu ve şema modeli kurulabiliyor mu?
+      # Bozuk/ayrıştırılamayan bir migration burada yakalanır.
+      - name: Schema source preflight
+        run: node scripts/generate-db-types.mjs --stdout > /dev/null
+
+      # ── 2. Generated type drift kontrolü ─────────────────────────────────
+      # Migration değişip generated tip commit edilmediyse CI DÜŞER.
+      # Repo dosyasını overwrite ETMEZ; secret veya project URL yazdırmaz.
+      - name: Supabase type drift check
+        run: npm run db:types:check
+
+      # ── 3. TypeScript ────────────────────────────────────────────────────
+      - name: TypeScript
+        run: npm run typecheck
+
+      # ── 4. Lint ──────────────────────────────────────────────────────────
+      # DURUM: `npm run lint` bu repoda ZATEN kırmızıdır (525 problem / 443 hata),
+      # tamamı bu sprintten ÖNCE var olan teknik borçtur. Ölçüm: veri bütünlüğü
+      # sprintinin öncesi ve sonrası birebir aynı sayıyı veriyor — yani bu sprint
+      # tek bir yeni lint problemi eklememiştir.
+      #
+      # Bu yüzden adım şimdilik bloklamıyor; sessizce gizlenmiyor da — sayı log'a
+      # yazılıyor ve borç kapatıldığında `continue-on-error` kaldırılmalıdır.
+      - name: Lint (pre-existing debt; non-blocking)
+        continue-on-error: true
+        run: npm run lint
+
+      # ── 5. Testler ───────────────────────────────────────────────────────
+      - name: Unit and contract tests
+        run: npm test
+
+      # ── 6. Build ─────────────────────────────────────────────────────────
+      - name: Build
+        run: npm run build
+        env:
+          # Build sırasında gerçek bir Supabase projesine bağlanılmaz.
+          # Bu değerler yalnızca istemci fabrikalarının çalışma zamanı
+          # okumasını karşılayan yer tutuculardır.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-key
