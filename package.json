@@ -6,7 +6,12 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test \"tests/**/*.test.ts\"",
+    "test:aggregate": "node --experimental-strip-types --test tests/aggregate-line-diff.test.ts",
+    "test:api": "node --experimental-strip-types --test tests/api-envelope.test.ts",
+    "test:parser": "node --experimental-strip-types --test tests/invoice-normalization.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
