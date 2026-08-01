@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { acceptInvoiceFile } from '@/lib/invoice-parse/file-acceptance'
+import { newRequestId } from '@/lib/api/response'
 
-const PROMPT = `Bu bir yangın söndürme cihazları satış faturası veya belgesidir. Faturadan aşağıdaki bilgileri çıkar ve SADECE geçerli bir JSON döndür, başka hiçbir şey yazma:
+/**
+ * Fatura görselinden **cihaz kaydı** çıkarımı (AI vision).
+ *
+ * Kapsam notu: bu route fatura tutarı/kalemi değil, müşteri + cihaz listesi
+ * çıkarır; kanonik fatura parse hattının (`/api/v1/invoices/parse`) alternatifi
+ * DEĞİLDİR. Sonuç doğrudan kaydedilmez, kullanıcı ön izleyip onaylar.
+ *
+ * Bu sprintte kapatılan açıklar:
+ *   * Dosya türü istemcinin gönderdiği `file.type` MIME'ına güvenilerek
+ *     belirleniyordu; artık **magic bytes** okunuyor.
+ *   * Boyut sınırı yoktu.
+ *   * AI çağrısında timeout yoktu.
+ *   * Hata yolunda **ham exception mesajı** istemciye dönüyordu.
+ */
+
+/** Görsel parse için üst sınır. */
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+/** AI çağrısı için üst süre. */
+const AI_TIMEOUT_MS = 90_000
+
+const PROMPT =`Bu bir yangın söndürme cihazları satış faturası veya belgesidir. Faturadan aşağıdaki bilgileri çıkar ve SADECE geçerli bir JSON döndür, başka hiçbir şey yazma:
 
 {
   "customer": {
@@ -30,26 +52,35 @@ const PROMPT = `Bu bir yangın söndürme cihazları satış faturası veya belg
 - Cihazlar listesi boşsa boş dizi döndür.`
 
 export async function POST(req: NextRequest) {
+  const requestId = newRequestId()
+
   if (!process.env.GROQ_API_KEY) {
-    return NextResponse.json({ error: 'GROQ_API_KEY .env.local dosyasında tanımlı değil.' }, { status: 500 })
+    // Secret değeri değil, yalnızca yapılandırma eksikliği bildirilir.
+    return NextResponse.json({ error: 'Fatura okuma servisi yapılandırılmamış.' }, { status: 503 })
   }
 
   try {
     const formData = await req.formData()
-    const file = formData.get('file') as File | null
+    const file = formData.get('file')
 
-    if (!file) {
+    if (!(file instanceof File)) {
       return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 400 })
     }
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!validTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Desteklenmeyen dosya türü.' }, { status: 400 })
+    const bytes = new Uint8Array(await file.arrayBuffer())
+
+    // Tür istemcinin `file.type` değerinden DEĞİL, içerikten belirlenir.
+    const accepted = acceptInvoiceFile(bytes, {
+      maxBytes: MAX_IMAGE_BYTES,
+      allow: ['png', 'jpeg'],
+    })
+    if (!accepted.ok) {
+      console.error(`[parse-invoice] requestId=${requestId} code=${accepted.error.code}`)
+      return NextResponse.json({ error: accepted.error.message }, { status: 400 })
     }
 
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
-    const dataUrl = `data:${file.type};base64,${base64}`
+    const mimeType = accepted.value.kind === 'png' ? 'image/png' : 'image/jpeg'
+    const dataUrl = `data:${mimeType};base64,${Buffer.from(bytes).toString('base64')}`
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -70,19 +101,25 @@ export async function POST(req: NextRequest) {
         ],
         max_tokens: 1024,
       }),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     })
 
     if (!response.ok) {
-      const errText = await response.text()
-      console.error('[parse-invoice] Groq HTTP hatası:', response.status, errText.slice(0, 300))
-      return NextResponse.json({ error: `AI hatası: ${response.status}` }, { status: 500 })
+      // Yanıt gövdesi loglanmaz: fatura içeriği/PII taşıyabilir.
+      console.error(`[parse-invoice] requestId=${requestId} code=AI_HTTP_${response.status}`)
+      return NextResponse.json(
+        { error: 'Fatura okuma servisi geçici olarak yanıt vermiyor. Lütfen tekrar deneyin.' },
+        { status: 502 },
+      )
     }
 
     const contentType = response.headers.get('content-type') ?? ''
     if (!contentType.includes('application/json')) {
-      const rawText = await response.text()
-      console.error('[parse-invoice] JSON dışı yanıt:', rawText.slice(0, 200))
-      return NextResponse.json({ error: 'AI geçersiz yanıt döndü' }, { status: 500 })
+      console.error(`[parse-invoice] requestId=${requestId} code=AI_NON_JSON`)
+      return NextResponse.json(
+        { error: 'Fatura okuma servisi beklenmeyen bir yanıt döndü.' },
+        { status: 502 },
+      )
     }
 
     const data = await response.json()
@@ -93,10 +130,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faturadan veri okunamadı. Lütfen tekrar deneyin.' }, { status: 422 })
     }
 
-    const parsed = JSON.parse(jsonMatch[0])
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(jsonMatch[0])
+    } catch {
+      console.error(`[parse-invoice] requestId=${requestId} code=PARSE_MALFORMED_JSON`)
+      return NextResponse.json(
+        { error: 'Fatura verisi çözümlenemedi. Lütfen tekrar deneyin.' },
+        { status: 422 },
+      )
+    }
+
+    // Sonuç doğrudan kaydedilmez; kullanıcı ön izleyip onaylar.
     return NextResponse.json(parsed)
-  } catch (err: any) {
-    console.error('parse-invoice error:', err)
-    return NextResponse.json({ error: err.message ?? 'Beklenmeyen hata' }, { status: 500 })
+  } catch (err) {
+    // Ham exception mesajı ve stack trace istemciye DÖNMEZ.
+    const timedOut = (err as { name?: string } | null)?.name === 'TimeoutError'
+    console.error(
+      `[parse-invoice] requestId=${requestId} code=${timedOut ? 'AI_TIMEOUT' : 'UNEXPECTED'}`,
+      err instanceof Error ? err.message : 'bilinmeyen',
+    )
+    return NextResponse.json(
+      {
+        error: timedOut
+          ? 'Fatura okuma zaman aşımına uğradı. Lütfen tekrar deneyin.'
+          : 'Beklenmeyen bir hata oluştu.',
+      },
+      { status: timedOut ? 504 : 500 },
+    )
   }
 }

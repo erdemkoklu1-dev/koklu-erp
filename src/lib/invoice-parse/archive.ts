@@ -169,12 +169,40 @@ export function evaluateArchive(
  * `.xsl`/`.xslt` görüntüleme şablonlarıdır, fatura verisi taşımazlar; elenir.
  */
 export function pickInvoiceEntry(entries: ArchiveEntryInfo[]): ArchiveEntryInfo | null {
-  const files = entries.filter(entry => !entry.isDirectory && !isUnsafeEntryName(entry.name))
-  const isStylesheet = (name: string) => /\.xslt?$/i.test(name)
+  return listInvoiceEntries(entries)[0] ?? null
+}
 
-  const xml = files.find(entry => /\.xml$/i.test(entry.name) && !isStylesheet(entry.name))
-  if (xml) return xml
+/** İşletim sistemi/araç artıkları fatura değildir. */
+function isJunkEntry(name: string): boolean {
+  return (
+    name.startsWith('__MACOSX') ||
+    /(^|\/)\._/.test(name) ||
+    /(^|\/)\.DS_Store$/i.test(name) ||
+    /(^|\/)Thumbs\.db$/i.test(name)
+  )
+}
 
-  const pdf = files.find(entry => /\.pdf$/i.test(entry.name))
-  return pdf ?? null
+/**
+ * Arşivdeki **bütün** fatura adaylarını öncelik sırasında döndürür.
+ *
+ * Toplu içe aktarma (bir ZIP içinde çok fatura) için gereklidir.
+ * Sıralama sözleşmesi:
+ *   1. XML'ler (deterministik UBL yolu) — ad sırasına göre
+ *   2. PDF'ler — ad sırasına göre
+ *
+ * `.xsl` / `.xslt` görüntüleme şablonlarıdır, fatura verisi taşımazlar; elenir.
+ * Güvenli olmayan adlar ve OS artıkları da elenir.
+ */
+export function listInvoiceEntries(entries: ArchiveEntryInfo[]): ArchiveEntryInfo[] {
+  const files = entries.filter(
+    entry => !entry.isDirectory && !isUnsafeEntryName(entry.name) && !isJunkEntry(entry.name),
+  )
+  const byName = (a: ArchiveEntryInfo, b: ArchiveEntryInfo) => a.name.localeCompare(b.name, 'tr')
+
+  const xml = files
+    .filter(entry => /\.xml$/i.test(entry.name) && !/\.xslt?$/i.test(entry.name))
+    .sort(byName)
+  const pdf = files.filter(entry => /\.pdf$/i.test(entry.name)).sort(byName)
+
+  return [...xml, ...pdf]
 }

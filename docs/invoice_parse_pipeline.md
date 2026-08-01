@@ -148,37 +148,62 @@ kuruş yuvarlaması).
 
 ---
 
-## 6. KALAN İŞ — eski route'ların konsolidasyonu (BU SPRINTTE YAPILMADI)
+## 6. Eski route envanteri ve konsolidasyon durumu
 
-Repoda hâlâ birbirinden bağımsız parse mantığı taşıyan route'lar var:
+| Route | Ne yapıyor | Durum |
+|---|---|---|
+| `/api/pdf-fatura-parse` | Satış faturası toplu parse | ✅ **`parseInvoiceBatch`'e delege edildi** |
+| `/api/gelen-pdf-parse` | Gelen fatura toplu parse | ✅ **`parseInvoiceBatch`'e delege edildi** |
+| `/api/parse-fatura` | Görselden fatura alanı (AI vision) | ✅ zaten ortak zarf + magic bytes + timeout |
+| `/api/parse-invoice` | Görselden **cihaz kaydı** (AI vision) | ✅ magic bytes + timeout + hata sızıntısı kapatıldı |
+| `/api/efatura-import` | **Excel satır** içe aktarma (dosya parse etmez) | kapsam dışı — parser değil |
+| `/api/gelen-fatura-import` | **Excel satır** içe aktarma (dosya parse etmez) | kapsam dışı — parser değil |
+| `/api/teklif-pdf-parse` | Teklif PDF'i (fatura değil) | kapsam dışı |
+
+> Önceki taslakta `efatura-import` / `gelen-fatura-import` yanlışlıkla parser
+> olarak listelenmişti; ikisi de JSON satır alan Excel içe aktarma uçlarıdır.
+
+### Kapatılan somut açıklar
+
+`pdf-fatura-parse` ve `gelen-pdf-parse` şunları taşıyordu:
+
+1. **AI birincil kaynaktı.** `pdf-fatura-parse` önce `parseInvoiceWithAI`'ı
+   çağırıyor, deterministik `parsePdfBuffer` yalnızca AI patlarsa devreye
+   giriyordu; AI çıktısına sabit `parse_confidence: 95` ve
+   `parse_durumu: 'temiz_parse'` yazılıyordu. `gelen-pdf-parse` ise AI'ın dönen
+   her alanını deterministik sonucun üzerine yazıyor ve kalem bulduğunda
+   `parsed.hata = null` ile gerçek hatayı siliyordu.
+2. **ZIP içindeki XML tamamen yok sayılıyordu** — iki route da yalnızca `.pdf`
+   entry'lerini geziyordu, yani UBL-TR e-fatura paketleri sessizce
+   "geçerli fatura bulunamadı" veriyordu.
+3. Dosya türü yalnızca **uzantıdan** belirleniyordu.
+4. ZIP'te entry sayısı / açılmış boyut / sıkıştırma oranı / path traversal
+   kontrolü **yoktu**.
+5. Hata yolunda **ham exception mesajı** istemciye dönüyordu.
+
+### Yeni AI sözleşmesi — `mergeAiGaps`
 
 ```
-src/app/api/parse-fatura
-src/app/api/parse-invoice
-src/app/api/gelen-pdf-parse
-src/app/api/pdf-fatura-parse
-src/app/api/efatura-import
-src/app/api/gelen-fatura-import
+AI yalnızca BOŞ kalan alanı doldurabilir.
+  · dolu bir alanı ASLA ezmez
+  · `hata` alanını ASLA temizlemez
+  · güven skorunu ASLA yükseltmez
+  · dokunduğu sonucu `manuel_kontrol_gerekli` yapar
+  · hangi alanlara dokunduğunu `parse_uyarilari` içine yazar
+  · deterministik parse yeterliyse HİÇ çağrılmaz
 ```
 
-Bunlar bu sprintte **kanonik endpoint'e delege edilmemiştir** ve bazılarında AI
-hâlâ birincil kaynaktır.
+Kanıt: `tests/invoice-legacy-adapter.test.ts` (20 test).
 
-**Neden yapılmadı:** her route farklı bir yanıt şekli döndürüyor ve farklı UI
-akışları (fatura yükle, gelen fatura içe aktar, e-fatura import) bunlara bağlı.
-Hepsini tek zarfa taşımak, staging'de doğrulanamayacak bir davranış değişikliği
-olurdu — Gate 0 NO-GO iken bu, kullanıcıyı doğrulanmamış bir akışla baş başa
-bırakmak anlamına gelirdi.
+### Bilinçli olarak yapılmayan
 
-**Önerilen sıra (ayrı görev):**
+Yanıt şekli (`{ invoices: [...] }` / `{ error }`) **korundu**. `requestApi` +
+ortak zarfa taşımak `fatura-import/page.tsx`'te bir UI davranış değişikliği
+olurdu ve Gate 0 NO-GO iken staging'de doğrulanamazdı. İç mantık kanonik hatta,
+dış sözleşme yerinde.
 
-1. Her route için mevcut yanıt şekli ve çağıran UI bileşeni envanterlenir.
-2. Route'lar iç mantığı silinerek `parseInvoiceFile` hattına delege eder;
-   yanıt şekli geçiş süresince korunur (adapter).
-3. UI bileşenleri `requestApi` + ortak zarfa taşınır.
-4. Adapter'lar kaldırılır; route'lar ya `/api/v1/invoices/parse`'a 308
-   yönlendirir ya da belgelenerek silinir.
-5. AI yolu yalnızca §2'deki koşullarla yardımcı olarak bağlanır.
+Sonraki adım (ayrı görev): UI'yı `requestApi`'ye taşı, sonra bu route'ları
+`/api/v1/invoices/parse`'a 308 yönlendir.
 
 ---
 
@@ -186,7 +211,7 @@ bırakmak anlamına gelirdi.
 
 | Blokaj | Etki | Production engeli mi? |
 |---|---|---|
-| Gerçek anonimleştirilmiş fixture yok | Tedarikçi formatları doğrulanmamış | HAYIR (parser altyapısı hazır) — ama "doğrulandı" denemez |
-| OCR bağlanmadı | Taranmış PDF/görüntü işlenemez; kontrollü 501 döner | HAYIR (açık ve dürüst hata) |
-| Eski route'lar konsolide edilmedi | AI bazı yollarda hâlâ birincil kaynak | **EVET** — GOREV.md §12 gereği |
+| Gerçek anonimleştirilmiş fixture yok | Tedarikçi formatları doğrulanmamış | HAYIR (altyapı hazır) — ama "doğrulandı" denemez |
+| OCR bağlanmadı | Taranmış PDF/görüntü işlenemez; kontrollü 501 | HAYIR (açık ve dürüst hata) |
+| UI hâlâ eski yanıt şeklini okuyor | Ortak zarf tam yaygın değil | HAYIR (route'lar konsolide, hata mesajları kontrollü) |
 | UI smoke testleri | Gate 0 NO-GO | **EVET** |
