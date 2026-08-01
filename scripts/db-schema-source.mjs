@@ -95,6 +95,21 @@ function splitColumns(body) {
 const TABLE_CONSTRAINT_START =
   /^(primary\s+key|foreign\s+key|unique|check|constraint|exclude|like)\b/i
 
+/**
+ * Kolon üzerindeki `references public.X(y)` hedefini çıkarır.
+ *
+ * Bu bilgi generated tipteki `Relationships` alanını doldurur. Supabase istemcisi
+ * gömülü kaynak sorgularını (`select('a, subeler(ad)')`) yalnızca bu ilişki
+ * tanımlıysa tip düzeyinde çözebilir; boş `Relationships: []` ile her gömülü
+ * sorgu `SelectQueryError<"could not find the relation between X and Y">`
+ * üretir. İlişkiler UYDURULMAZ — doğrudan migration'daki FK'den okunur.
+ */
+function parseReference(rest) {
+  const match = rest.match(/\breferences\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?\s*\(\s*"?([a-z_][a-z0-9_]*)"?\s*\)/i)
+  if (!match) return null
+  return { table: match[1].toLowerCase(), column: match[2].toLowerCase() }
+}
+
 function parseColumnDefinition(raw) {
   const text = raw.replace(/\s+/g, ' ').trim()
   if (!text || TABLE_CONSTRAINT_START.test(text)) return null
@@ -119,8 +134,11 @@ function parseColumnDefinition(raw) {
   const notNull = /\bnot\s+null\b/i.test(rest)
   const hasDefault = /\bdefault\b/i.test(rest) || /\bgenerated\b/i.test(rest)
   const isPrimaryKey = /\bprimary\s+key\b/i.test(rest)
+  const references = parseReference(rest)
+  // `unique` taşıyan FK ⇒ 1:1 ilişki (ör. urun_stok.urun_id).
+  const isUnique = /\bunique\b/i.test(rest)
 
-  return { name, sqlType, isArray, notNull, hasDefault, isPrimaryKey }
+  return { name, sqlType, isArray, notNull, hasDefault, isPrimaryKey, references, isUnique }
 }
 
 function ensureTable(tables, name) {
@@ -129,9 +147,30 @@ function ensureTable(tables, name) {
     // `referenced` : FK hedefi veya açık `alter table` görüldü ⇒ gerçek tablo.
     // İkisi de yoksa yalnızca dinamik bir `array[...]` listesinde geçiyordur
     // ⇒ büyük olasılıkla var olmayan bir tablo adı (drift).
-    tables.set(name, { name, columns: new Map(), defined: false, referenced: false })
+    tables.set(name, {
+      name,
+      columns: new Map(),
+      defined: false,
+      referenced: false,
+      /** `column -> { table, column, isOneToOne }` — FK'den okunan gerçek ilişkiler. */
+      relationships: new Map(),
+    })
   }
   return tables.get(name)
+}
+
+/** Bir FK ilişkisini kaydeder. Aynı kolon için ilk tanım korunur. */
+function addRelationship(tables, tableName, columnName, reference, isOneToOne) {
+  if (!reference) return
+  const table = ensureTable(tables, tableName)
+  if (table.relationships.has(columnName)) return
+  table.relationships.set(columnName, {
+    column: columnName,
+    referencedRelation: reference.table,
+    referencedColumn: reference.column,
+    isOneToOne: Boolean(isOneToOne),
+  })
+  ensureTable(tables, reference.table).referenced = true
 }
 
 function addColumn(tables, tableName, column, { fromCreate }) {
@@ -170,7 +209,25 @@ function applyFile(model, sql) {
     table.defined = true
     for (const part of splitColumns(balanced.body)) {
       const column = parseColumnDefinition(part)
-      if (column) addColumn(tables, tableName, column, { fromCreate: true })
+      if (column) {
+        addColumn(tables, tableName, column, { fromCreate: true })
+        addRelationship(tables, tableName, column.name, column.references, column.isUnique || column.isPrimaryKey)
+        continue
+      }
+
+      // Tablo düzeyi kısıt: `foreign key (a) references public.X(b)`
+      const fk = part
+        .replace(/\s+/g, ' ')
+        .match(/foreign\s+key\s*\(\s*"?([a-z_][a-z0-9_]*)"?\s*\)\s*references\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?\s*\(\s*"?([a-z_][a-z0-9_]*)"?\s*\)/i)
+      if (fk) {
+        addRelationship(
+          tables,
+          tableName,
+          fk[1].toLowerCase(),
+          { table: fk[2].toLowerCase(), column: fk[3].toLowerCase() },
+          false,
+        )
+      }
     }
   }
 
@@ -188,7 +245,24 @@ function applyFile(model, sql) {
     const addRe = /add\s+column\s+(?:if\s+not\s+exists\s+)?([\s\S]*?)(?=,\s*add\s+column|$)/gi
     for (const addMatch of body.matchAll(addRe)) {
       const column = parseColumnDefinition(addMatch[1].replace(/;$/, ''))
-      if (column) addColumn(tables, tableName, column, { fromCreate: false })
+      if (column) {
+        addColumn(tables, tableName, column, { fromCreate: false })
+        addRelationship(tables, tableName, column.name, column.references, column.isUnique)
+      }
+    }
+
+    // `alter table X add constraint ... foreign key (a) references Y(b)`
+    const fk = body
+      .replace(/\s+/g, ' ')
+      .match(/foreign\s+key\s*\(\s*"?([a-z_][a-z0-9_]*)"?\s*\)\s*references\s+(?:public\.)?"?([a-z_][a-z0-9_]*)"?\s*\(\s*"?([a-z_][a-z0-9_]*)"?\s*\)/i)
+    if (fk) {
+      addRelationship(
+        tables,
+        tableName,
+        fk[1].toLowerCase(),
+        { table: fk[2].toLowerCase(), column: fk[3].toLowerCase() },
+        false,
+      )
     }
   }
 
@@ -286,6 +360,16 @@ export function readSchemaModel(dbDir) {
 
   // Var olmayan tablo adları tip yüzeyine ÇIKARILMAZ.
   for (const name of phantom) model.tables.delete(name)
+
+  // Düşürülen bir tabloyu hedefleyen ilişki bırakılmaz: var olmayan bir
+  // ilişkiyi tipe yazmak, uydurmanın başka bir biçimi olurdu.
+  for (const table of model.tables.values()) {
+    for (const [column, relation] of [...table.relationships]) {
+      if (!model.tables.has(relation.referencedRelation)) {
+        table.relationships.delete(column)
+      }
+    }
+  }
 
   return {
     files,

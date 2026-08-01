@@ -197,7 +197,36 @@ export type Database = {
           updated_by?: string | null
           vade_tarihi?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "araci_cari_hareketleri_araci_id_fkey"
+            columns: ["araci_id"]
+            isOneToOne: false
+            referencedRelation: "brokers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "araci_cari_hareketleri_bagli_fatura_id_fkey"
+            columns: ["bagli_fatura_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "araci_cari_hareketleri_bagli_musteri_id_fkey"
+            columns: ["bagli_musteri_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "araci_cari_hareketleri_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       backup_jobs: {
         Row: {
@@ -248,7 +277,22 @@ export type Database = {
           storage_saved?: boolean
           total_rows?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "backup_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "kullanici_profiller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backup_jobs_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       backup_logs: {
         Row: {
@@ -275,7 +319,15 @@ export type Database = {
           level?: string
           message?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "backup_logs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "backup_jobs"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       backup_restores: {
         Row: {
@@ -314,7 +366,22 @@ export type Database = {
           table_count?: number
           total_rows?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "backup_restores_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backup_restores_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "kullanici_profiller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       backup_settings: {
         Row: {
@@ -347,7 +414,22 @@ export type Database = {
           updated_by?: string | null
           weekday?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "backup_settings_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backup_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "kullanici_profiller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       brokers: {
         Row: {
@@ -416,7 +498,15 @@ export type Database = {
           opening_balance?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customer_accounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       customers: {
         Row: {
@@ -446,7 +536,15 @@ export type Database = {
           il?: string | null
           sube_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       depo_hareketleri: {
         Row: {
@@ -551,7 +649,29 @@ export type Database = {
           processed_at?: string | null
           uploaded_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       emanet_takipleri: {
         Row: {
@@ -602,7 +722,50 @@ export type Database = {
           teslimat_id?: string
           urun_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "emanet_takipleri_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emanet_takipleri_kalem_id_fkey"
+            columns: ["kalem_id"]
+            isOneToOne: false
+            referencedRelation: "teslimat_kalemleri"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emanet_takipleri_kapatan_kullanici_id_fkey"
+            columns: ["kapatan_kullanici_id"]
+            isOneToOne: false
+            referencedRelation: "kullanici_profiller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emanet_takipleri_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emanet_takipleri_teslimat_id_fkey"
+            columns: ["teslimat_id"]
+            isOneToOne: false
+            referencedRelation: "teslimatlar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emanet_takipleri_urun_id_fkey"
+            columns: ["urun_id"]
+            isOneToOne: false
+            referencedRelation: "urunler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       employees: {
         Row: {
@@ -656,7 +819,15 @@ export type Database = {
           title?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       expense_categories: {
         Row: {
@@ -689,7 +860,15 @@ export type Database = {
           name?: string
           sort_order?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       firmalar: {
         Row: {
@@ -785,7 +964,22 @@ export type Database = {
           start_date?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fixed_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_expenses_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       geri_teslim_takipleri: {
         Row: {
@@ -836,7 +1030,50 @@ export type Database = {
           teslimat_id?: string
           urun_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "geri_teslim_takipleri_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geri_teslim_takipleri_kalem_id_fkey"
+            columns: ["kalem_id"]
+            isOneToOne: false
+            referencedRelation: "teslimat_kalemleri"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geri_teslim_takipleri_kapatan_kullanici_id_fkey"
+            columns: ["kapatan_kullanici_id"]
+            isOneToOne: false
+            referencedRelation: "kullanici_profiller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geri_teslim_takipleri_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geri_teslim_takipleri_teslimat_id_fkey"
+            columns: ["teslimat_id"]
+            isOneToOne: false
+            referencedRelation: "teslimatlar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geri_teslim_takipleri_urun_id_fkey"
+            columns: ["urun_id"]
+            isOneToOne: false
+            referencedRelation: "urunler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       giris_kayitlari: {
         Row: {
@@ -872,7 +1109,15 @@ export type Database = {
           kullanici_id?: string | null
           tarayici?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "giris_kayitlari_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       hammaddeler: {
         Row: {
@@ -917,7 +1162,15 @@ export type Database = {
           notlar?: string | null
           tedarikci_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hammaddeler_tedarikci_id_fkey"
+            columns: ["tedarikci_id"]
+            isOneToOne: false
+            referencedRelation: "tedarikciler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       hatirlatma_kayitlari: {
         Row: {
@@ -965,7 +1218,29 @@ export type Database = {
           musteri_id?: string | null
           planli_gonderim_zamani?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hatirlatma_kayitlari_cihaz_id_fkey"
+            columns: ["cihaz_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hatirlatma_kayitlari_kural_id_fkey"
+            columns: ["kural_id"]
+            isOneToOne: false
+            referencedRelation: "hatirlatma_kurallari"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hatirlatma_kayitlari_musteri_id_fkey"
+            columns: ["musteri_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       hatirlatma_kurallari: {
         Row: {
@@ -995,7 +1270,22 @@ export type Database = {
           sablon_id?: string | null
           tetikleyici_tip?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hatirlatma_kurallari_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hatirlatma_kurallari_sablon_id_fkey"
+            columns: ["sablon_id"]
+            isOneToOne: false
+            referencedRelation: "hatirlatma_sablonlari"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       hatirlatma_sablonlari: {
         Row: {
@@ -1049,7 +1339,15 @@ export type Database = {
           id?: string
           musteri_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hatirlatma_susturmalar_musteri_id_fkey"
+            columns: ["musteri_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       invoice_brokers: {
         Row: {
@@ -1091,7 +1389,29 @@ export type Database = {
           paid_date?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoice_brokers_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "brokers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_brokers_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_brokers_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       invoice_items: {
         Row: {
@@ -1139,7 +1459,15 @@ export type Database = {
           unit?: string
           unit_price?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       invoice_series: {
         Row: {
@@ -1286,7 +1614,36 @@ export type Database = {
           total_amount?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_service_form_id_fkey"
+            columns: ["service_form_id"]
+            isOneToOne: false
+            referencedRelation: "service_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       is_planlari: {
         Row: {
@@ -1370,7 +1727,36 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "is_planlari_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "is_planlari_sorumlu_personel_id_fkey"
+            columns: ["sorumlu_personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "is_planlari_source_request_id_fkey"
+            columns: ["source_request_id"]
+            isOneToOne: false
+            referencedRelation: "musteri_talepleri"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "is_planlari_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       kullanici_profiller: {
         Row: {
@@ -1412,7 +1798,29 @@ export type Database = {
           telefon?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kullanici_profiller_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kullanici_profiller_rol_id_fkey"
+            columns: ["rol_id"]
+            isOneToOne: false
+            referencedRelation: "roller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kullanici_profiller_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       kullanici_rolleri: {
         Row: {
@@ -1433,7 +1841,15 @@ export type Database = {
           kullanici_id?: string
           rol_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kullanici_rolleri_rol_id_fkey"
+            columns: ["rol_id"]
+            isOneToOne: false
+            referencedRelation: "roller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       kullanici_sube_yetkileri: {
         Row: {
@@ -1454,7 +1870,15 @@ export type Database = {
           kullanici_id?: string
           sube_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kullanici_sube_yetkileri_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       maas_odemeleri: {
         Row: {
@@ -1517,7 +1941,15 @@ export type Database = {
           sgk_isveren_payi?: number
           toplam_odenen?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "maas_odemeleri_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       mesai_kayitlari: {
         Row: {
@@ -1556,7 +1988,15 @@ export type Database = {
           personel_id?: string
           tarih?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mesai_kayitlari_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       modul_izinleri: {
         Row: {
@@ -1583,7 +2023,15 @@ export type Database = {
           silme?: boolean | null
           yazma?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "modul_izinleri_rol_id_fkey"
+            columns: ["rol_id"]
+            isOneToOne: false
+            referencedRelation: "roller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       musteri_talepleri: {
         Row: {
@@ -1682,7 +2130,64 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "musteri_talepleri_cihaz_id_fkey"
+            columns: ["cihaz_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "musteri_talepleri_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "musteri_talepleri_ilgili_is_plani_id_fkey"
+            columns: ["ilgili_is_plani_id"]
+            isOneToOne: false
+            referencedRelation: "is_planlari"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "musteri_talepleri_ilgili_servis_form_id_fkey"
+            columns: ["ilgili_servis_form_id"]
+            isOneToOne: false
+            referencedRelation: "service_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "musteri_talepleri_ilgili_teslimat_id_fkey"
+            columns: ["ilgili_teslimat_id"]
+            isOneToOne: false
+            referencedRelation: "teslimatlar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "musteri_talepleri_sorumlu_personel_id_fkey"
+            columns: ["sorumlu_personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "musteri_talepleri_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "musteri_talepleri_talebi_alan_personel_id_fkey"
+            columns: ["talebi_alan_personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       mutabakat_formlari: {
         Row: {
@@ -1724,7 +2229,15 @@ export type Database = {
           notlar?: string | null
           olusturan_kullanici_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mutabakat_formlari_musteri_id_fkey"
+            columns: ["musteri_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       on_kayitlar: {
         Row: {
@@ -1778,7 +2291,22 @@ export type Database = {
           toplam_tutar?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "on_kayitlar_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "on_kayitlar_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       payments: {
         Row: {
@@ -1817,7 +2345,15 @@ export type Database = {
           payment_date?: string
           reference_no?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       performans_degerlendirmeleri: {
         Row: {
@@ -1853,7 +2389,22 @@ export type Database = {
           personel_id?: string
           puan?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "performans_degerlendirmeleri_degerlendiren_id_fkey"
+            columns: ["degerlendiren_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performans_degerlendirmeleri_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       personel_belgeler: {
         Row: {
@@ -1895,7 +2446,15 @@ export type Database = {
           veren_kurum?: string | null
           verilis_tarihi?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personel_belgeler_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       personel_izinler: {
         Row: {
@@ -1943,7 +2502,22 @@ export type Database = {
           personel_id?: string
           talep_tarihi?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personel_izinler_onaylayan_id_fkey"
+            columns: ["onaylayan_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personel_izinler_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       personeller: {
         Row: {
@@ -2069,7 +2643,22 @@ export type Database = {
           uyruk?: string
           vergi_no?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personeller_rol_id_fkey"
+            columns: ["rol_id"]
+            isOneToOne: false
+            referencedRelation: "roller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personeller_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       planli_isler: {
         Row: {
@@ -2147,7 +2736,64 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "planli_isler_atanan_personel_id_fkey"
+            columns: ["atanan_personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planli_isler_cihaz_id_fkey"
+            columns: ["cihaz_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planli_isler_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planli_isler_ilgili_servis_form_id_fkey"
+            columns: ["ilgili_servis_form_id"]
+            isOneToOne: false
+            referencedRelation: "service_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planli_isler_ilgili_talep_id_fkey"
+            columns: ["ilgili_talep_id"]
+            isOneToOne: false
+            referencedRelation: "musteri_talepleri"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planli_isler_ilgili_teslimat_id_fkey"
+            columns: ["ilgili_teslimat_id"]
+            isOneToOne: false
+            referencedRelation: "teslimatlar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planli_isler_is_plani_id_fkey"
+            columns: ["is_plani_id"]
+            isOneToOne: false
+            referencedRelation: "is_planlari"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planli_isler_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       proforma_fatura_kalemleri: {
         Row: {
@@ -2207,7 +2853,29 @@ export type Database = {
           updated_at?: string
           urun_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "proforma_fatura_kalemleri_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_fatura_kalemleri_proforma_id_fkey"
+            columns: ["proforma_id"]
+            isOneToOne: false
+            referencedRelation: "proforma_faturalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_fatura_kalemleri_urun_id_fkey"
+            columns: ["urun_id"]
+            isOneToOne: false
+            referencedRelation: "urunler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       proforma_faturalar: {
         Row: {
@@ -2300,7 +2968,29 @@ export type Database = {
           updated_at?: string | null
           vade_tarihi?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "proforma_faturalar_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_faturalar_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proforma_faturalar_teklif_id_fkey"
+            columns: ["teklif_id"]
+            isOneToOne: false
+            referencedRelation: "teklifler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       rol_yetkileri: {
         Row: {
@@ -2330,7 +3020,15 @@ export type Database = {
           silme?: boolean | null
           yazma?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rol_yetkileri_rol_id_fkey"
+            columns: ["rol_id"]
+            isOneToOne: false
+            referencedRelation: "roller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       roller: {
         Row: {
@@ -2414,7 +3112,29 @@ export type Database = {
           stamp_tax?: number
           transaction_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       service_form_items: {
         Row: {
@@ -2429,7 +3149,15 @@ export type Database = {
           firma_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "service_form_items_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       service_forms: {
         Row: {
@@ -2447,7 +3175,15 @@ export type Database = {
           sube_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "service_forms_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       sube_gider_gelir: {
         Row: {
@@ -2486,7 +3222,15 @@ export type Database = {
           tip?: string
           tutar?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sube_gider_gelir_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       subeler: {
         Row: {
@@ -2543,7 +3287,15 @@ export type Database = {
           yetkili_kisi?: string | null
           yetkili_telefon?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subeler_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       tax_declarations: {
         Row: {
@@ -2597,7 +3349,15 @@ export type Database = {
           tax_type?: Database["public"]["Enums"]["tax_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tax_declarations_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       tedarikciler: {
         Row: {
@@ -2702,7 +3462,15 @@ export type Database = {
           toplam?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teklif_kalemleri_teklif_id_fkey"
+            columns: ["teklif_id"]
+            isOneToOne: false
+            referencedRelation: "teklifler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       teklifler: {
         Row: {
@@ -2798,7 +3566,15 @@ export type Database = {
           ticari_sartname_metni?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teklifler_musteri_id_fkey"
+            columns: ["musteri_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       teknik_hesap_ayarlari: {
         Row: {
@@ -2939,7 +3715,29 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teknik_raporlar_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teknik_raporlar_hazirlayan_personel_id_fkey"
+            columns: ["hazirlayan_personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teknik_raporlar_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       tenant_remediation_findings: {
         Row: {
@@ -2999,7 +3797,15 @@ export type Database = {
           teslimat_id?: string
           yeni_durum?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teslimat_durum_gecmisi_teslimat_id_fkey"
+            columns: ["teslimat_id"]
+            isOneToOne: false
+            referencedRelation: "teslimatlar"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       teslimat_kalemleri: {
         Row: {
@@ -3068,7 +3874,29 @@ export type Database = {
           toplam_tutar?: number
           urun_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teslimat_kalemleri_onceki_kalem_id_fkey"
+            columns: ["onceki_kalem_id"]
+            isOneToOne: false
+            referencedRelation: "teslimat_kalemleri"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teslimat_kalemleri_teslimat_id_fkey"
+            columns: ["teslimat_id"]
+            isOneToOne: false
+            referencedRelation: "teslimatlar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teslimat_kalemleri_urun_id_fkey"
+            columns: ["urun_id"]
+            isOneToOne: false
+            referencedRelation: "urunler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       teslimat_takip_kapatma: {
         Row: {
@@ -3098,7 +3926,22 @@ export type Database = {
           takip_id?: string
           takip_tipi?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teslimat_takip_kapatma_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teslimat_takip_kapatma_kalem_id_fkey"
+            columns: ["kalem_id"]
+            isOneToOne: false
+            referencedRelation: "teslimat_kalemleri"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       teslimatlar: {
         Row: {
@@ -3179,7 +4022,29 @@ export type Database = {
           teslimat_tarihi?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teslimatlar_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teslimatlar_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teslimatlar_sube_id_fkey"
+            columns: ["sube_id"]
+            isOneToOne: false
+            referencedRelation: "subeler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       transactions: {
         Row: {
@@ -3242,7 +4107,36 @@ export type Database = {
           transaction_date?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_firma_id_fkey"
+            columns: ["firma_id"]
+            isOneToOne: false
+            referencedRelation: "firmalar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_expenses"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       uretim_emirleri: {
         Row: {
@@ -3290,7 +4184,15 @@ export type Database = {
           sorumlu?: string | null
           urun_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "uretim_emirleri_urun_id_fkey"
+            columns: ["urun_id"]
+            isOneToOne: false
+            referencedRelation: "urunler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       uretim_hareketleri: {
         Row: {
@@ -3317,7 +4219,22 @@ export type Database = {
           tarih?: string
           uretim_emri_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "uretim_hareketleri_hammadde_id_fkey"
+            columns: ["hammadde_id"]
+            isOneToOne: false
+            referencedRelation: "hammaddeler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uretim_hareketleri_uretim_emri_id_fkey"
+            columns: ["uretim_emri_id"]
+            isOneToOne: false
+            referencedRelation: "uretim_emirleri"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       urun_receteler: {
         Row: {
@@ -3347,7 +4264,22 @@ export type Database = {
           notlar?: string | null
           urun_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "urun_receteler_hammadde_id_fkey"
+            columns: ["hammadde_id"]
+            isOneToOne: false
+            referencedRelation: "hammaddeler"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "urun_receteler_urun_id_fkey"
+            columns: ["urun_id"]
+            isOneToOne: false
+            referencedRelation: "urunler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       urun_stok: {
         Row: {
@@ -3368,7 +4300,15 @@ export type Database = {
           updated_at?: string
           urun_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "urun_stok_urun_id_fkey"
+            columns: ["urun_id"]
+            isOneToOne: true
+            referencedRelation: "urunler"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       urunler: {
         Row: {
@@ -3452,7 +4392,15 @@ export type Database = {
           toplam_hak?: number
           yil?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "yillik_izin_hakki_personel_id_fkey"
+            columns: ["personel_id"]
+            isOneToOne: false
+            referencedRelation: "personeller"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: Record<string, never>

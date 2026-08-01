@@ -155,6 +155,32 @@ describe('generated tipin içeriği', () => {
     assert.equal(/as unknown as/.test(content), false)
   })
 
+  it('FK ilişkilerini migration zincirinden yazar (gömülü sorgular için)', () => {
+    // Boş `Relationships: []`, her gömülü kaynak sorgusunu
+    // `SelectQueryError<"could not find the relation…">` yapıyordu.
+    assert.match(content, /foreignKeyName: "teslimatlar_customer_id_fkey"/)
+    assert.match(content, /referencedRelation: "customers"/)
+    assert.match(content, /foreignKeyName: "teslimat_kalemleri_teslimat_id_fkey"/)
+    assert.match(content, /foreignKeyName: "invoice_items_invoice_id_fkey"/)
+  })
+
+  it('1:1 ilişkiler (unique FK) isOneToOne olarak işaretlenir', () => {
+    // `urun_stok.urun_id` UNIQUE ⇒ ürün başına tek bakiye satırı.
+    const block = content.slice(content.indexOf('urun_stok_urun_id_fkey'))
+    assert.match(block.slice(0, 200), /isOneToOne: true/)
+  })
+
+  it('var olmayan tabloya işaret eden ilişki YAZILMAZ', () => {
+    // Hayalet adlar tip yüzeyinden düşürülür; onlara giden FK de düşmelidir.
+    for (const phantom of ['proforma_kalemleri', 'hatirlatmalar', 'backup_history']) {
+      assert.equal(
+        new RegExp(`referencedRelation: "${phantom}"`).test(content),
+        false,
+        `${phantom} ilişki hedefi olarak yazılmamalı`,
+      )
+    }
+  })
+
   it('şema kaynağı doğrulanmamış tabloları açıkça listeler', () => {
     assert.match(content, /UNRESOLVED_SCHEMA_TABLES/)
     // Denetimde kanıtlanan dört tablo (db/staging_migration_inventory.md).

@@ -137,6 +137,28 @@ function renderTable(table, enums) {
     })
     .join('\n')
 
+  // ── İlişkiler ──
+  // Supabase istemcisi gömülü kaynak sorgularını (`select('a, subeler(ad)')`)
+  // yalnızca burada tanımlı ilişkiler üzerinden tip düzeyinde çözer. Boş bırakmak
+  // her gömülü sorguyu `SelectQueryError<"could not find the relation…">` yapar.
+  // İlişkiler migration'daki gerçek FK'lerden okunur; UYDURULMAZ.
+  const relations = [...table.relationships.values()].sort((a, b) => a.column.localeCompare(b.column))
+  const relationships = relations.length
+    ? relations
+        .map(relation =>
+          [
+            `          {`,
+            `            foreignKeyName: "${table.name}_${relation.column}_fkey"`,
+            `            columns: [${JSON.stringify(relation.column)}]`,
+            `            isOneToOne: ${relation.isOneToOne}`,
+            `            referencedRelation: ${JSON.stringify(relation.referencedRelation)}`,
+            `            referencedColumns: [${JSON.stringify(relation.referencedColumn)}]`,
+            `          }`,
+          ].join('\n'),
+        )
+        .join(',\n')
+    : null
+
   return [
     `      ${quoteKey(table.name)}: {`,
     `        Row: {`,
@@ -148,7 +170,7 @@ function renderTable(table, enums) {
     `        Update: {`,
     update || '          [key: string]: never',
     `        }`,
-    `        Relationships: []`,
+    relationships ? `        Relationships: [\n${relationships}\n        ]` : `        Relationships: []`,
     `      }`,
   ].join('\n')
 }

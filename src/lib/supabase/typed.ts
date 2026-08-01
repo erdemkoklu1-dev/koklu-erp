@@ -11,12 +11,28 @@ import type { Database } from '@/types/database.generated'
  *   şema boşluğu: `customers`, `devices`, `service_forms`, `service_form_items`
  *   tablolarının CREATE TABLE migration'ı repoda YOK
  *   (`db/staging_migration_inventory.md` → "Kritik Gözlem"), bu yüzden generated
- *   tipte kolonları eksik. Genel istemciler bağlandığında bu dört tablo yüzünden
- *   301 TypeScript hatası oluşuyor — hepsi eksik şemadan kaynaklanıyor.
+ *   tipte kolonları eksik.
  *
- *   GOREV.md §15 bu durumu açık bir durma koşulu sayıyor: "`service_forms` veya
- *   diğer gerekli tabloların kanonik schema kaynağı belirsiz". Bu yüzden eksik
- *   kolonlar UYDURULMADI ve tip `any` ile etkisizleştirilMEDİ.
+ *   ── GERÇEK ÖLÇÜM (2026-08-02, bu sprintte yeniden yapıldı) ────────────────
+ *   `createServiceClient`'a `Database` bağlanıp `tsc --noEmit` çalıştırıldığında:
+ *
+ *       toplam hata                              125  →  118
+ *       ├─ eksik dört tablo kaynaklı              76  →   76   (BLOKE)
+ *       ├─ eksik FK ilişkisi kaynaklı              7  →    0   (bu sprintte ÇÖZÜLDÜ)
+ *       └─ diğer uygulama tarafı daraltma hataları 42  →   42
+ *
+ *   Not: önceki oturumun raporundaki "301 hata" değeri hata SATIRLARINI değil
+ *   devam satırlarını da sayıyordu; gerçek hata sayısı yukarıdadır.
+ *
+ *   İkinci sütun, üretecin `Relationships` alanını gerçek FK'lerden doldurmasından
+ *   sonrasıdır: gömülü kaynak sorguları (`select('a, subeler(ad)')`) artık tip
+ *   düzeyinde çözülüyor.
+ *
+ *   Kalan 76 hata kolon uydurmadan kapatılamaz; kalan 42 hata ise ancak bu 76
+ *   kapandıktan sonra gerçekten doğrulanabilir (aksi hâlde derlenemeyen bir
+ *   ağaçta körlemesine düzeltme olur). GOREV.md §11 eksik şemayı tahmin ederek
+ *   tipe kolon eklemeyi ve hataları `any` ile bastırmayı YASAKLIYOR; ikisi de
+ *   yapılmadı.
  *
  * Bu factory, şeması kanıtlanmış tablolar ve atomik RPC'ler üzerinde çalışan
  * **yeni/etkilenen** kod yollarına (teslimat, fatura, aggregate) gerçek tip
