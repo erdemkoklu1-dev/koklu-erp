@@ -24,19 +24,22 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SCRIPT = join(ROOT, 'scripts', 'generate-db-types.mjs')
 const COMMITTED = join(ROOT, 'src', 'types', 'database.generated.ts')
 
-function runCheck(outFile?: string) {
-  return spawnSync(process.execPath, [SCRIPT, '--check'], {
+function run(flag: '--check' | '--drift-only', outFile?: string) {
+  return spawnSync(process.execPath, [SCRIPT, flag], {
     cwd: ROOT,
     encoding: 'utf8',
     env: outFile ? { ...process.env, KOKLU_DB_TYPES_OUT: outFile } : process.env,
   })
 }
 
-describe('db:types:check — drift kapısı', () => {
+const runCheck = (outFile?: string) => run('--check', outFile)
+const runDrift = (outFile?: string) => run('--drift-only', outFile)
+
+describe('db:types:drift — drift kapısı', () => {
   it('generated dosya güncelken exit 0 döner', () => {
-    const result = runCheck()
+    const result = runDrift()
     assert.equal(result.status, 0, `beklenmeyen çıkış:\n${result.stdout}\n${result.stderr}`)
-    assert.match(result.stdout, /OK: generated tipler güncel/)
+    assert.match(result.stdout, /OK: drift yok/)
   })
 
   it('bilinçli schema/type farkında non-zero döner ve anlaşılır mesaj verir', () => {
@@ -48,7 +51,7 @@ describe('db:types:check — drift kapısı', () => {
       const original = readFileSync(COMMITTED, 'utf8')
       writeFileSync(drifted, original.replace('export type Json', 'export type JsonDrifted'), 'utf8')
 
-      const result = runCheck(drifted)
+      const result = runDrift(drifted)
       assert.equal(result.status, 1, 'drift varsa non-zero dönmeli')
       assert.match(result.stderr, /DRIFT/)
       assert.match(result.stderr, /db:types:generate/, 'çözüm komutu gösterilmeli')
@@ -67,7 +70,7 @@ describe('db:types:check — drift kapısı', () => {
   it('generated dosya hiç yoksa non-zero döner', () => {
     const dir = mkdtempSync(join(tmpdir(), 'koklu-types-'))
     try {
-      const result = runCheck(join(dir, 'yok.ts'))
+      const result = runDrift(join(dir, 'yok.ts'))
       assert.equal(result.status, 1)
       assert.match(result.stderr, /bulunamadı/)
     } finally {
@@ -82,6 +85,38 @@ describe('db:types:check — drift kapısı', () => {
     assert.equal(/sb_(pub|sec)_/.test(output), false, 'Supabase anahtarı yazdırılmamalı')
     assert.equal(/SERVICE_ROLE/i.test(output), false)
     assert.equal(/postgres(ql)?:\/\//i.test(output), false, 'connection string yazdırılmamalı')
+  })
+})
+
+/**
+ * GOREV.md §11-8: eksik canonical şemayla "tam tip güncel" sonucu VERİLEMEZ.
+ *
+ * Bu paket, kapının gerçekten bloklayıcı olduğunu ve eksikliğin sessizce
+ * uyarıya indirgenmediğini kanıtlar. Boşluk kolon uydurularak kapatılmadığı
+ * sürece bu testler kırmızıya dönmemelidir.
+ */
+describe('db:types:check — canonical şema tamlık kapısı', () => {
+  const result = runCheck()
+
+  it('CREATE TABLE kaynağı olmayan tablo varken non-zero döner', () => {
+    assert.equal(result.status, 1, 'eksik canonical şemada exit 0 dönülmemeli')
+  })
+
+  it('blokajı ve eksik tabloları açıkça yazar', () => {
+    assert.match(result.stderr, /BLOKE: canonical şema eksik/)
+    for (const table of ['customers', 'devices', 'service_forms', 'service_form_items']) {
+      assert.ok(result.stderr.includes(table), `${table} blokaj çıktısında görünmeli`)
+    }
+  })
+
+  it('kapatma yolunu gösterir ve şema uydurmayı önerMEZ', () => {
+    assert.match(result.stderr, /schema-only/)
+    assert.match(result.stderr, /TAHMİN EDİLMEZ/)
+  })
+
+  it('drift kapısı ile canonical kapısı ayrı ayrı çalışabilir', () => {
+    assert.equal(runDrift().status, 0, 'drift kapısı bugün yeşil olmalı')
+    assert.notEqual(result.status, runDrift().status, 'iki kapı ayrı sonuç verebilmeli')
   })
 })
 

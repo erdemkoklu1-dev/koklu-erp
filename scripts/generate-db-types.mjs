@@ -3,9 +3,22 @@
  * Supabase `Database` TypeScript tipini kanonik şema kaynağından üretir.
  *
  * Kullanım:
- *   node scripts/generate-db-types.mjs              # dosyayı yazar
- *   node scripts/generate-db-types.mjs --check      # yazmaz, drift varsa exit 1
- *   node scripts/generate-db-types.mjs --stdout     # içeriği yazdırır
+ *   node scripts/generate-db-types.mjs               # dosyayı yazar
+ *   node scripts/generate-db-types.mjs --check       # drift VEYA eksik canonical
+ *                                                    # şema varsa exit 1
+ *   node scripts/generate-db-types.mjs --drift-only  # yalnızca drift kapısı
+ *   node scripts/generate-db-types.mjs --stdout      # içeriği yazdırır
+ *
+ * İKİ AYRI KAPI — bilinçli olarak ayrıştırılmıştır:
+ *   1. DRIFT   : migration zinciri ile commit edilmiş tip dosyası uyuşuyor mu?
+ *                Bu kapı bugün YEŞİLDİR ve yeşil kalmalıdır (`--drift-only`).
+ *   2. CANONICAL: şema kaynağı gerçekten tam mı? `customers`, `devices`,
+ *                `service_forms`, `service_form_items` için CREATE TABLE repoda
+ *                YOKTUR; bu tabloların tipleri EKSİKTİR.
+ *                Eskiden bu durum yalnızca "UYARI" satırıydı ve `--check` yine
+ *                exit 0 dönüyordu ⇒ eksik şemayla "tam tip güncel" izlenimi
+ *                veriliyordu. Artık AÇIK BLOKAJ olarak non-zero döner
+ *                (GOREV.md §11-8). Boşluk kolon uydurularak KAPATILMAZ.
  *
  * Güvenlik:
  *   - Ağ erişimi YOK. Supabase CLI, project ref, connection string kullanılmaz.
@@ -271,9 +284,38 @@ function reportGaps(model) {
   }
 }
 
+/**
+ * Canonical şema tamlık kapısı.
+ *
+ * `unresolved` = migration zincirinde FK/ALTER ile GÖRÜLEN ama CREATE TABLE
+ * tanımı repoda BULUNMAYAN tablolar. Bu tabloların generated tipi eksiktir;
+ * `createClient<Database>` ile bağlanan kod onlara güvenle dayanamaz.
+ *
+ * Kolonları uygulama sorgularından tahmin ederek CREATE TABLE yazmak GOREV.md
+ * §11 tarafından açıkça yasaklanmıştır. Bu yüzden kapı, boşluğu gizlemek yerine
+ * non-zero döndürür ve kapatma yolunu yazar.
+ *
+ * @returns {boolean} true ⇒ blokaj var
+ */
+function reportCanonicalGap(model) {
+  if (model.unresolved.length === 0) return false
+
+  console.error('BLOKE: canonical şema eksik — generated tipler TAM DEĞİL.')
+  console.error(`  CREATE TABLE migration'ı bulunmayan ${model.unresolved.length} tablo:`)
+  for (const name of model.unresolved) console.error(`    - ${name}`)
+  console.error('  Bu tabloların kolonları TAHMİN EDİLMEZ; tip yüzeyi eksik bırakılmıştır.')
+  console.error('  Kapatma yolu (yalnızca biri):')
+  console.error('    a) eksik CREATE TABLE migration’larını repoya ekleyin, veya')
+  console.error('    b) staging Gate 0 (node scripts/verify-staging-env.mjs → exit 0)')
+  console.error('       geçtikten sonra staging’den schema-only tanım alın.')
+  console.error('  Yalnızca drift kapısını çalıştırmak için: npm run db:types:drift')
+  return true
+}
+
 function main() {
   const args = process.argv.slice(2)
-  const isCheck = args.includes('--check')
+  const isDriftOnly = args.includes('--drift-only')
+  const isCheck = args.includes('--check') || isDriftOnly
   const isStdout = args.includes('--stdout')
 
   const { content, model } = generate()
@@ -303,8 +345,15 @@ function main() {
       process.exit(1)
     }
 
-    console.log(`OK: generated tipler güncel (${model.tables.size} tablo, ${model.enums.size} enum).`)
+    console.log(`OK: drift yok — generated tipler migration zinciriyle uyumlu (${model.tables.size} tablo, ${model.enums.size} enum).`)
     reportGaps(model)
+
+    if (isDriftOnly) return
+
+    // Drift yok demek "şema tam" demek DEĞİLDİR. Canonical kapı ayrıca çalışır.
+    if (reportCanonicalGap(model)) process.exit(1)
+
+    console.log('OK: canonical şema tam — CREATE TABLE kaynağı olmayan tablo yok.')
     return
   }
 

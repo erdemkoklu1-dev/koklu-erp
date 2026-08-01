@@ -15,7 +15,8 @@
     "test:teslimat": "node --experimental-strip-types --test tests/teslimat-stock-delta.test.ts tests/teslimat-line-identity.test.ts",
     "test:invoice": "node --experimental-strip-types --test tests/invoice-line-ownership.test.ts",
     "db:types:generate": "node scripts/generate-db-types.mjs",
-    "db:types:check": "node scripts/generate-db-types.mjs --check"
+    "db:types:check": "node scripts/generate-db-types.mjs --check",
+    "db:types:drift": "node scripts/generate-db-types.mjs --drift-only"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
