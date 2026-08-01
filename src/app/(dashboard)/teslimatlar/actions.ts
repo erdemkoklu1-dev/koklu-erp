@@ -6,7 +6,8 @@ import { redirect } from 'next/navigation'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
-import { createOnKayitFromTeslimatKalem, createTeslimat, deleteTeslimat, normalizeTeslimatInput, syncTeslimatSideEffects, updateTeslimat, TeslimatUpdateError } from '@/lib/teslimatlar'
+import { applyTeslimatDurumGecisi, createOnKayitFromTeslimatKalem, createTeslimat, deleteTeslimat, emanetGeriAl, geriTeslimYap, normalizeTeslimatInput, updateTeslimat, TeslimatUpdateError } from '@/lib/teslimatlar'
+import { TeslimatTakipError, isTeslimatDurum } from '@/lib/teslimat/status-transition'
 import { getSetting } from '@/lib/settings'
 import { getTeslimFormData, teslimFormFileName } from '@/lib/teslim-form-data'
 import { TeslimFormPdfDocument } from '@/lib/teslim-form-pdf'
@@ -158,15 +159,45 @@ export async function deleteTeslimatAction(id: string) {
       return { ok: false, message: 'Bu teslimatı silme yetkiniz yok.' }
     }
 
-    await deleteTeslimat(id, { userId: user.id })
+    // `auto`: stok/takip/ön kayıt etkisi yoksa fiziksel siler, varsa atomik
+    // iptale döner. Veri ve stok geçmişini yok eden eski hard-delete yolu artık
+    // sessizce çalışmaz (GOREV.md §10).
+    const result = await deleteTeslimat(id, { userId: user.id })
     revalidateTeslimatDeletePaths(id)
-    return { ok: true, message: 'Teslimat silindi.' }
+    return {
+      ok: true,
+      mode: result.mode,
+      message: result.mode === 'physical'
+        ? 'Teslimat silindi.'
+        : `Bu teslimat işlem görmüş (${result.analysis.reasons.join(', ')}). Geçmişi ve stok bütünlüğü korunacak şekilde iptal edildi.`,
+    }
   } catch (error) {
     console.error('[deleteTeslimatAction]', error)
     return { ok: false, message: errorMessage(error, 'Teslimat silinirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.') }
   }
 }
 
+/**
+ * Teslimat durumunu değiştirir — **tek atomik yazma noktasından**.
+ *
+ * ── KAPATILAN ÇİFT STOK DÜŞÜMÜ (denetim P0 / GOREV.md §8) ───────────────────
+ * Eski akış üç bağımsız yazma yapıyordu:
+ *   1. `teslimatlar.durum` güncellemesi,
+ *   2. `teslimat_durum_gecmisi` insert'i,
+ *   3. `tamamlandi` ise `syncTeslimatSideEffects(id)`.
+ * Üçüncü adım, kalemlerin TAMAMINI **mutlak** olarak stoktan yeniden düşüyordu;
+ * `sevkte → tamamlandi → sevkte → tamamlandi` stoku iki kez eksiltiyordu.
+ * Ayrıca 1 ile 3 arasında bir hata olursa durum değişmiş fakat stok/emanet
+ * yan etkileri hiç uygulanmamış oluyordu (ya da tersi).
+ *
+ * Artık her şey `applyTeslimatDurumGecisi` üzerinden `teslimat_update_atomic`
+ * transaction'ına gider: net stok deltası, emanet/geri teslim mutabakatı, durum
+ * geçmişi ve idempotency kaydı tek transaction'da yazılır.
+ *
+ * Tenant: kayıt önce oturumdan türetilen tenant kapsamıyla okunur; nihai
+ * sahiplik kararı yine RPC'nin `kullanici_profiller` üzerinden yaptığı
+ * doğrulamadır. İstemciden `firma_id` alınmaz.
+ */
 export async function updateTeslimatDurumAction(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -175,7 +206,7 @@ export async function updateTeslimatDurumAction(formData: FormData) {
   const id = String(formData.get('id') ?? '')
   const yeniDurum = String(formData.get('durum') ?? '')
   if (!id) throw new Error('Teslimat bulunamadı.')
-  if (!['taslak', 'sevkte', 'tamamlandi', 'iptal'].includes(yeniDurum)) {
+  if (!isTeslimatDurum(yeniDurum)) {
     throw new Error('Durum geçersiz.')
   }
 
@@ -188,88 +219,94 @@ export async function updateTeslimatDurumAction(formData: FormData) {
   if (mevcutError) throw mevcutError
   if (!mevcut) throw new Error('Teslimat bulunamadı veya bu kayda erişim yetkiniz yok.')
 
-  if (mevcut.durum !== yeniDurum) {
-    const { error: updateError } = await tenantScope(supabase
-      .from('teslimatlar')
-      .update({ durum: yeniDurum, updated_at: new Date().toISOString() })
-      .eq('id', id), tenantAccess)
-    if (updateError) throw updateError
-
-      await supabase.from('teslimat_durum_gecmisi').insert({
-        teslimat_id: id,
-        eski_durum: mevcut.durum,
-        yeni_durum: yeniDurum,
-        aciklama: 'Durum değiştirildi',
-        created_by: user.id,
-      })
-
-      if (yeniDurum === 'tamamlandi') {
-        await syncTeslimatSideEffects(id)
-      }
-    }
+  // Tek atomik çağrı. Aynı durum tekrar gönderilirse hiçbir yazma yapılmaz.
+  await applyTeslimatDurumGecisi(id, yeniDurum, { userId: user.id })
 
   revalidatePath('/teslimatlar')
   revalidatePath('/teslimatlar/liste')
+  revalidatePath('/teslimatlar/emanetler')
+  revalidatePath('/teslimatlar/geri-teslim')
   revalidatePath('/teslimatlar/on-kayda-aktar')
   revalidatePath(`/teslimatlar/${id}`)
 }
 
+/**
+ * Geri teslim takibini "teslim edildi" olarak kapatır.
+ *
+ * ── KAPATILAN TENANT AÇIĞI (denetim P0 / GOREV.md §9) ───────────────────────
+ * Eski akış takip satırını YALNIZCA `id` ile okuyup güncelliyordu ve bu çağrılar
+ * service-role istemcisiyle (RLS devre dışı) yapılıyordu. Yani geçerli oturumu
+ * olan herhangi bir kullanıcı, başka bir firmanın takip kimliğini göndererek o
+ * kaydı kapatabiliyordu. Okuma ile yazma arasında kilit de yoktu.
+ *
+ * Artık karar tamamen `teslimat_geri_teslim_yap_atomic` içindedir: kimlik
+ * oturumdan alınır, firma üyeliği `kullanici_profiller`den TÜRETİLİR, takip
+ * satırı ve üst teslimat ayrı ayrı doğrulanır, satır `for update` ile
+ * kilitlenir ve işlem idempotenttir (çift tıklama ikinci yan etki üretmez).
+ */
 export async function geriTeslimYapAction(takipId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, message: 'Oturum gerekli.' }
 
-  const { data: takip, error: fetchError } = await supabase
-    .from('geri_teslim_takipleri')
-    .select('id, miktar')
-    .eq('id', takipId)
-    .single()
-  if (fetchError || !takip) return { ok: false, message: 'Kayıt bulunamadı.' }
-
-  const { error } = await supabase
-    .from('geri_teslim_takipleri')
-    .update({
-      teslim_edilen_miktar: takip.miktar,
-      durum: 'teslim_edildi',
-      kapandi_at: new Date().toISOString(),
+  try {
+    // Tenant, oturumdan türetilir; istemciden `firma_id` KABUL EDİLMEZ.
+    const tenantAccess = await getCurrentTenantAccessFromSession()
+    const result = await geriTeslimYap(takipId, {
+      userId: user.id,
+      firmaId: tenantAccess?.isSuperAdmin ? null : tenantAccess?.companyId ?? null,
     })
-    .eq('id', takipId)
 
-  if (error) return { ok: false, message: error.message }
-
-  revalidatePath('/teslimatlar/bekleyenler')
-  revalidatePath('/teslimatlar/gecikenler')
-  revalidatePath('/teslimatlar')
-  return { ok: true, message: 'Teslim edildi olarak işaretlendi.' }
+    revalidatePath('/teslimatlar/bekleyenler')
+    revalidatePath('/teslimatlar/gecikenler')
+    revalidatePath('/teslimatlar')
+    return {
+      ok: true,
+      message: result.changed
+        ? 'Teslim edildi olarak işaretlendi.'
+        : 'Bu kayıt zaten teslim edilmiş olarak işaretlenmişti.',
+    }
+  } catch (error) {
+    if (error instanceof TeslimatTakipError) {
+      return { ok: false, code: error.code, message: error.message }
+    }
+    console.error('[geriTeslimYapAction]', error)
+    return { ok: false, message: 'İşlem tamamlanamadı. Lütfen tekrar deneyin.' }
+  }
 }
 
+/**
+ * Emanet takibini "geri alındı" olarak kapatır.
+ * Güvenlik sözleşmesi `geriTeslimYapAction` ile birebir aynıdır.
+ */
 export async function emanetGeriAlAction(takipId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, message: 'Oturum gerekli.' }
 
-  const { data: takip, error: fetchError } = await supabase
-    .from('emanet_takipleri')
-    .select('id, miktar')
-    .eq('id', takipId)
-    .single()
-  if (fetchError || !takip) return { ok: false, message: 'Kayıt bulunamadı.' }
-
-  const { error } = await supabase
-    .from('emanet_takipleri')
-    .update({
-      geri_alinan_miktar: takip.miktar,
-      durum: 'kapandi',
-      kapandi_at: new Date().toISOString(),
+  try {
+    const tenantAccess = await getCurrentTenantAccessFromSession()
+    const result = await emanetGeriAl(takipId, {
+      userId: user.id,
+      firmaId: tenantAccess?.isSuperAdmin ? null : tenantAccess?.companyId ?? null,
     })
-    .eq('id', takipId)
 
-  if (error) return { ok: false, message: error.message }
-
-  revalidatePath('/teslimatlar/emanetler')
-  revalidatePath('/teslimatlar/gecikenler')
-  revalidatePath('/teslimatlar')
-  return { ok: true, message: 'Emanet geri alındı olarak işaretlendi.' }
+    revalidatePath('/teslimatlar/emanetler')
+    revalidatePath('/teslimatlar/gecikenler')
+    revalidatePath('/teslimatlar')
+    return {
+      ok: true,
+      message: result.changed
+        ? 'Emanet geri alındı olarak işaretlendi.'
+        : 'Bu emanet zaten geri alınmış olarak işaretlenmişti.',
+    }
+  } catch (error) {
+    if (error instanceof TeslimatTakipError) {
+      return { ok: false, code: error.code, message: error.message }
+    }
+    console.error('[emanetGeriAlAction]', error)
+    return { ok: false, message: 'İşlem tamamlanamadı. Lütfen tekrar deneyin.' }
+  }
 }
 
 export async function saveTeslimImzaAction(teslimatId: string, payload: string) {

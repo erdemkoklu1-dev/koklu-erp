@@ -8,7 +8,16 @@ import {
   planTeslimatLines,
   type TeslimatError,
   type ExistingTeslimatKalem,
+  type TeslimatDurum,
 } from '@/lib/teslimat/teslimat-update'
+import {
+  TeslimatTakipError,
+  buildDurumGecisKey,
+  buildDurumPatch,
+  buildTakipKapatmaKey,
+  isTeslimatDurum,
+  mapTakipRpcError,
+} from '@/lib/teslimat/status-transition'
 export {
   TESLIMAT_CANCELLED_STATUS_ALIASES,
   isCancelledTeslimatStatus,
@@ -269,41 +278,6 @@ export async function adjustUrunStok(urunId: string, miktar: number, referansNo:
   if (hareketError) throw new Error(dbErrorMessage('Depo hareketi oluşturulamadı', hareketError))
 }
 
-export async function reverseUrunStok(urunId: string, miktar: number, referansNo: string, aciklama: string) {
-  const supabase = createServiceClient()
-  const { data: current } = await supabase
-    .from('urun_stok')
-    .select('id, stok_adedi')
-    .eq('urun_id', urunId)
-    .maybeSingle()
-
-  const mevcut = Number(current?.stok_adedi ?? 0)
-  const yeniStok = mevcut + miktar
-
-  if (current?.id) {
-    const { error } = await supabase
-      .from('urun_stok')
-      .update({ stok_adedi: yeniStok, updated_at: new Date().toISOString() })
-      .eq('id', current.id)
-    if (error) throw error
-  } else {
-    const { error } = await supabase
-      .from('urun_stok')
-      .insert({ urun_id: urunId, stok_adedi: yeniStok })
-    if (error) throw error
-  }
-
-  await supabase.from('depo_hareketleri').insert({
-    hareket_tipi: 'giris',
-    kaynak: 'urun',
-    kaynak_id: urunId,
-    miktar,
-    tarih: todayISO(),
-    referans_no: referansNo,
-    aciklama,
-  })
-}
-
 /**
  * Tek kalemin veritabanı alanları. `teslimat_id` ve `firma_id` bilinçli olarak
  * BURADA ÜRETİLMEZ — atomik RPC bunları doğrulanmış üst kayıttan yazar, böylece
@@ -524,41 +498,153 @@ async function applyKalemSideEffects(teslimat: { id: string; teslimat_no: string
   }
 }
 
-export async function syncTeslimatSideEffects(teslimatId: string) {
-  const supabase = createServiceClient()
-  const [{ data: teslimat, error: teslimatError }, { data: kalemler, error: kalemError }] = await Promise.all([
-    supabase
-      .from('teslimatlar')
-      .select('id, teslimat_no, customer_id, sube_id, personel_id, teslimat_tarihi, hedef_tarih, durum, on_kayit_secimi, aciklama, notlar')
-      .eq('id', teslimatId)
-      .single(),
-    supabase
-      .from('teslimat_kalemleri')
-      .select('id, urun_id, aciklama, hareket_tipi, miktar, stoktan_duser_mi, emanet_mi, geri_alinmasi_gerekir_mi, hedef_tarih, faturalanir_mi, birim, birim_fiyat, toplam_tutar, notlar')
-      .eq('teslimat_id', teslimatId)
-      .order('created_at'),
-  ])
-  if (teslimatError) throw new Error(dbErrorMessage('Teslimat üst kaydı oluşturulamadı', teslimatError))
-  if (kalemError) throw new Error(dbErrorMessage('Teslimat kalemleri oluşturulamadı', kalemError))
-
-  const input: TeslimatInput = {
-    customer_id: teslimat.customer_id,
-    sube_id: teslimat.sube_id,
-    personel_id: teslimat.personel_id,
-    teslimat_tarihi: teslimat.teslimat_tarihi,
-    hedef_tarih: teslimat.hedef_tarih,
-    durum: teslimat.durum,
-    on_kayit_secimi: teslimat.on_kayit_secimi,
-    aciklama: teslimat.aciklama,
-    notlar: teslimat.notlar,
-    kalemler: [],
+/**
+ * Teslimat durum geçişi — **tek kanonik atomik yazarla**.
+ *
+ * ── KALDIRILAN GÜVENSİZ YOL ─────────────────────────────────────────────────
+ * Bu fonksiyon, `syncTeslimatSideEffects`in yerini alır. Eski fonksiyon
+ * `updateTeslimatDurumAction` içinden çağrılıyor ve `applyKalemSideEffects`
+ * üzerinden `adjustUrunStok`u tetikliyordu: yani `tamamlandi` durumuna HER
+ * girişte kalemlerin tamamını **mutlak** olarak stoktan tekrar düşüyordu.
+ * `sevkte → tamamlandi → sevkte → tamamlandi` dizisi stoku iki kez eksiltiyordu
+ * ve bu yazma ne kilit, ne idempotency, ne de transaction taşıyordu.
+ *
+ * ── YENİ YOL ────────────────────────────────────────────────────────────────
+ * Geçiş, yalnızca `durum` içeren bir parent patch ve `p_lines = null`
+ * ("kalemlere dokunma") ile mevcut kanonik yazar `teslimat_update_atomic`'e
+ * devredilir. Stok net delta modeliyle (`f(yeni) − f(eski)`), `urun_stok` satır
+ * kilidiyle, emanet/geri teslim mutabakatıyla, durum geçmişiyle ve idempotency
+ * kaydıyla birlikte TEK transaction'da uygulanır.
+ *
+ * Eşzamanlılık: geçiş öncesi okunan `updated_at` optimistic concurrency damgası
+ * olarak geri gönderilir ⇒ iki eşzamanlı geçişten yalnızca biri kazanır,
+ * diğeri `TESLIMAT_STALE_WRITE` alır ve hiçbir yazma yapmaz.
+ *
+ * Idempotency: anahtar `(teslimat, hedef durum, kaynak sürüm)` üçlüsünden
+ * deterministik olarak türetilir ⇒ çift tıklama ikinci stok hareketi üretmez.
+ */
+export async function applyTeslimatDurumGecisi(
+  teslimatId: string,
+  yeniDurum: TeslimatDurum,
+  options: { userId?: string | null; firmaId?: string | null } = {},
+) {
+  if (!isTeslimatDurum(yeniDurum)) {
+    throw new TeslimatUpdateError(mapRpcError({ message: TESLIMAT_ERROR.INVALID_PAYLOAD }))
   }
 
-  await applyKalemSideEffects(
-    { id: teslimat.id, teslimat_no: teslimat.teslimat_no },
-    input,
-    (kalemler ?? []) as PersistedKalem[]
-  )
+  const supabase = createTypedServiceClient()
+
+  // Mevcut sürüm ve durum: hem stale-write damgası hem de idempotency anahtarı
+  // için gerekir. Bu okuma yazma yapmaz; yetki kararı RPC'nindir.
+  const { data: mevcut, error: mevcutError } = await supabase
+    .from('teslimatlar')
+    .select('id, durum, updated_at')
+    .eq('id', teslimatId)
+    .maybeSingle()
+
+  if (mevcutError) throw new TeslimatUpdateError(mapRpcError(mevcutError))
+  if (!mevcut) throw new TeslimatUpdateError(mapRpcError({ message: TESLIMAT_ERROR.NOT_FOUND }))
+
+  const mevcutDurum = String(mevcut.durum ?? '')
+  const version = (mevcut.updated_at as string | null) ?? null
+
+  // Aynı durum tekrar gönderildi ⇒ hiçbir yazma yapılmaz (bkz. planDurumGecisi).
+  if (mevcutDurum === yeniDurum) {
+    return { id: teslimatId, durum: mevcutDurum, changed: false, replayed: false, atomic: true as const }
+  }
+
+  const { data, error: rpcError } = await supabase.rpc('teslimat_update_atomic', {
+    p_teslimat_id: teslimatId,
+    p_parent_patch: buildDurumPatch(yeniDurum),
+    // null ⇒ kalemlere DOKUNMA. Durum geçişi kalem listesini değiştirmez.
+    p_lines: null,
+    p_delete_line_ids: [],
+    p_confirm_delete_all: false,
+    p_expected_updated_at: version,
+    p_idempotency_key: buildDurumGecisKey(teslimatId, yeniDurum, version),
+    p_user_id: options.userId ?? null,
+    p_firma_id: options.firmaId ?? null,
+  })
+
+  if (rpcError) {
+    // Sessizce eski güvensiz akışa DÜŞÜLMEZ: RPC apply edilmemişse
+    // `TESLIMAT_RPC_MISSING` ile açık ve teşhis edilebilir hata döner.
+    console.error('[teslimat-durum] rpc', { teslimatId, code: rpcError.code })
+    throw new TeslimatUpdateError(mapRpcError(rpcError))
+  }
+
+  const result = (data ?? {}) as { new_durum?: string; replayed?: boolean }
+  return {
+    id: teslimatId,
+    durum: result.new_durum ?? yeniDurum,
+    changed: result.replayed !== true,
+    replayed: result.replayed === true,
+    atomic: true as const,
+  }
+}
+
+/**
+ * Emanet kaydını geri alınmış olarak kapatır — tek atomik RPC.
+ *
+ * Tenant sahipliği, satır kilidi, idempotency ve audit izi
+ * `db/teslimat_takip_action_atomic.sql` içindedir. Uygulama tarafında
+ * `firma_id` YETKİ KANITI OLARAK GÖNDERİLMEZ; yalnızca çapraz kontrol için
+ * iletilir ve RPC kendi kararını `kullanici_profiller` üzerinden verir.
+ */
+export async function emanetGeriAl(
+  takipId: string,
+  options: { userId?: string | null; firmaId?: string | null; version?: string | null } = {},
+) {
+  const supabase = createTypedServiceClient()
+  const { data, error } = await supabase.rpc('teslimat_emanet_geri_al_atomic', {
+    p_takip_id: takipId,
+    p_idempotency_key: buildTakipKapatmaKey('emanet', takipId, options.version),
+    p_user_id: options.userId ?? null,
+    p_firma_id: options.firmaId ?? null,
+  })
+
+  if (error) {
+    console.error('[teslimat-emanet-geri-al] rpc', { takipId, code: error.code })
+    throw new TeslimatTakipError(mapTakipRpcError(error))
+  }
+
+  const result = (data ?? {}) as { changed?: boolean; replayed?: boolean; durum?: string }
+  return {
+    takipId,
+    durum: result.durum ?? 'kapandi',
+    changed: result.changed === true,
+    replayed: result.replayed === true,
+  }
+}
+
+/**
+ * Geri teslim kaydını teslim edildi olarak kapatır — tek atomik RPC.
+ * Sözleşme `emanetGeriAl` ile birebir aynıdır.
+ */
+export async function geriTeslimYap(
+  takipId: string,
+  options: { userId?: string | null; firmaId?: string | null; version?: string | null } = {},
+) {
+  const supabase = createTypedServiceClient()
+  const { data, error } = await supabase.rpc('teslimat_geri_teslim_yap_atomic', {
+    p_takip_id: takipId,
+    p_idempotency_key: buildTakipKapatmaKey('geri_teslim', takipId, options.version),
+    p_user_id: options.userId ?? null,
+    p_firma_id: options.firmaId ?? null,
+  })
+
+  if (error) {
+    console.error('[teslimat-geri-teslim-yap] rpc', { takipId, code: error.code })
+    throw new TeslimatTakipError(mapTakipRpcError(error))
+  }
+
+  const result = (data ?? {}) as { changed?: boolean; replayed?: boolean; durum?: string }
+  return {
+    takipId,
+    durum: result.durum ?? 'teslim_edildi',
+    changed: result.changed === true,
+    replayed: result.replayed === true,
+  }
 }
 
 async function createOnKayitlarForTeslimat(teslimat: { id: string; teslimat_no: string }, input: TeslimatInput, kalemler: PersistedKalem[]) {
@@ -695,7 +781,12 @@ export async function createOnKayitFromTeslimatKalem(kalemId: string, input: {
  * Yerine `db/teslimat_atomic_update_rpc.sql` içindeki **net delta** modeli geçti;
  * eşdeğerlik ispatı tasarım belgesi §4, testi `tests/teslimat-stock-delta.test.ts`.
  * Referans taraması yapıldı: fonksiyonun başka çağıranı yoktu.
- * (`reverseUrunStok` dışa açık API olduğu için korunmuştur.)
+ *
+ * NOT — `reverseUrunStok` DA KALDIRILDI (bu sprint).
+ * Hiçbir çağıranı kalmamıştı ve dışa açık kaldığı sürece "kilitsiz, idempotency'siz,
+ * transaction'sız" ikinci bir stok yazarı olarak durmaya devam ediyordu. Stok
+ * iadesi artık yalnızca `teslimat_update_atomic`in net delta yolundan yapılır
+ * (GOREV.md §8 "tek yazma noktası").
  */
 
 export async function createTeslimat(input: TeslimatInput, userId?: string | null) {
@@ -1011,57 +1102,70 @@ async function physicallyDeleteTeslimat(id: string, analysis: TeslimatDeleteAnal
   }
 }
 
-async function softDeleteTeslimat(id: string, analysis: TeslimatDeleteAnalysis, userId?: string | null) {
-  const supabase = createServiceClient()
-  const context = { id, teslimatNo: analysis.teslimat.teslimat_no, mode: 'soft' }
-  const now = new Date().toISOString()
-
-  const { error: teslimatError } = await supabase
-    .from('teslimatlar')
-    .update({ durum: 'iptal', updated_at: now })
-    .eq('id', id)
-
-  if (teslimatError) {
-    logTeslimatDeleteError('teslimat iptal durumuna alınamadı', teslimatError, context)
-    throw new TeslimatDeleteError('Teslimat iptal durumuna alınamadı.', 'DB_ERROR', { cause: teslimatError, analysis })
-  }
-
-  const { error: historyError } = await supabase.from('teslimat_durum_gecmisi').insert({
-    teslimat_id: id,
-    eski_durum: analysis.teslimat.durum,
-    yeni_durum: 'iptal',
-    aciklama: 'Silme isteğiyle iptal edildi',
-    created_by: userId ?? null,
-  })
-
-  if (historyError) {
-    logTeslimatDeleteError('iptal durum geçmişi yazılamadı', historyError, context)
-    throw new TeslimatDeleteError('Teslimat iptal edildi ancak durum geçmişi yazılamadı.', 'DB_ERROR', { cause: historyError, analysis })
-  }
-
-  const { error: emanetError } = await supabase
-    .from('emanet_takipleri')
-    .update({ durum: 'iptal', kapandi_at: now })
-    .eq('teslimat_id', id)
-    .in('durum', ['acik', 'kismi_kapandi'])
-
-  if (emanetError) {
-    logTeslimatDeleteError('emanet takipleri iptal edilemedi', emanetError, context)
-    throw new TeslimatDeleteError('Teslimata bağlı emanet takipleri iptal edilemedi.', 'DB_ERROR', { cause: emanetError, analysis })
-  }
-
-  const { error: geriError } = await supabase
-    .from('geri_teslim_takipleri')
-    .update({ durum: 'iptal', kapandi_at: now })
-    .eq('teslimat_id', id)
-    .in('durum', ['acik', 'kismi_kapandi'])
-
-  if (geriError) {
-    logTeslimatDeleteError('geri teslim takipleri iptal edilemedi', geriError, context)
-    throw new TeslimatDeleteError('Teslimata bağlı geri teslim takipleri iptal edilemedi.', 'DB_ERROR', { cause: geriError, analysis })
+/**
+ * Stok etkisi oluşmuş teslimatın **atomik iptali** — hard delete YERİNE.
+ *
+ * Eski `softDeleteTeslimat` dört bağımsız yazma yapıyordu (üst kayıt → durum
+ * geçmişi → emanet takipleri → geri teslim takipleri). Ortadaki bir hata kaydı
+ * yarı iptal edilmiş bırakıyordu ve **stok hiç geri alınmıyordu**: `tamamlandi`
+ * durumunda düşülmüş stok, iptal sonrası da düşük kalıyordu.
+ *
+ * Artık iptal, durum geçişinin ta kendisidir ve tek kanonik yazardan geçer:
+ * `teslimat_update_atomic` net delta modeliyle stoku **tam olarak bir kez**
+ * geri verir, durum geçmişini yazar ve takip mutabakatını aynı transaction
+ * içinde yapar. Aynı iptal ikinci kez istenirse `applyTeslimatDurumGecisi`
+ * durum zaten `iptal` olduğu için hiçbir yazma yapmaz (idempotent no-op).
+ *
+ * DAVRANIŞ FARKI (bilinçli, belgeli): RPC'nin mutabakat kuralı gereği ilerlemesi
+ * olmayan emanet/geri teslim satırları `iptal` olarak işaretlenmek yerine
+ * SİLİNİR; kısmen kapanmış bir takip varsa iptal `TESLIMAT_TRACKING_IN_PROGRESS`
+ * ile kontrollü biçimde reddedilir. Teslimatın kendi audit izi
+ * `teslimat_durum_gecmisi` içinde korunur.
+ */
+async function cancelTeslimatAtomically(
+  id: string,
+  analysis: TeslimatDeleteAnalysis,
+  userId?: string | null,
+) {
+  try {
+    await applyTeslimatDurumGecisi(id, 'iptal', { userId })
+  } catch (error) {
+    logTeslimatDeleteError('teslimat atomik olarak iptal edilemedi', error, {
+      id,
+      teslimatNo: analysis.teslimat.teslimat_no,
+      mode: 'cancel',
+    })
+    if (error instanceof TeslimatUpdateError) {
+      // Stabil kodlu hata; ham veritabanı mesajı kullanıcıya gösterilmez.
+      throw new TeslimatDeleteError(error.message, 'DB_ERROR', { cause: error, analysis })
+    }
+    throw new TeslimatDeleteError(
+      'Teslimat iptal edilemedi. Gerçek hata server loglarına yazıldı.',
+      'DB_ERROR',
+      { cause: error, analysis },
+    )
   }
 }
 
+/**
+ * Teslimat silme.
+ *
+ * ── KAPATILAN VERİ KAYBI (denetim P0 / GOREV.md §10) ────────────────────────
+ * Eski kodda `mode: 'auto'` — ki `deleteTeslimatAction`in kullandığı tek moddu —
+ * `analysis.physicalSafe` sonucuna **hiç bakmadan** doğrudan
+ * `physicallyDeleteTeslimat` çağırıyordu. Altındaki `if (!analysis.physicalSafe)`
+ * bloğu bu yüzden `auto` için ölü koddu. Sonuç: `tamamlandi` durumundaki, stoku
+ * düşülmüş bir teslimat tek tıkla fiziksel olarak siliniyor; kalemler, emanet ve
+ * geri teslim takipleri, durum geçmişi yok oluyor ve **düşülen stok asla geri
+ * verilmiyordu**.
+ *
+ * ── YENİ DAVRANIŞ ───────────────────────────────────────────────────────────
+ *   * `auto`     : stok/takip/ön kayıt etkisi YOKSA fiziksel siler; VARSA
+ *                  atomik iptale döner (stok tam bir kez geri verilir).
+ *   * `soft`     : her koşulda atomik iptal.
+ *   * `physical` : güvenli değilse `UNSAFE_PHYSICAL_DELETE` ile reddeder;
+ *                  veri bozan yol UI/API seviyesinde açık bırakılmaz.
+ */
 export async function deleteTeslimat(
   id: string,
   options: { mode?: TeslimatDeleteMode; userId?: string | null } = {},
@@ -1070,22 +1174,22 @@ export async function deleteTeslimat(
   const analysis = await analyzeTeslimatDelete(id)
 
   if (mode === 'soft') {
-    await softDeleteTeslimat(id, analysis, options.userId)
+    await cancelTeslimatAtomically(id, analysis, options.userId)
     return { mode: 'soft' as const, analysis }
   }
 
-  if (mode === 'auto') {
-    await physicallyDeleteTeslimat(id, analysis)
-    return { mode: 'physical' as const, analysis }
-  }
-
   if (!analysis.physicalSafe) {
-    const message = `Bu teslimat işlem görmüş görünüyor (${analysis.reasons.join(', ')}). Fiziksel silmek yerine iptal edildi olarak işaretleyebilirsiniz.`
-    throw new TeslimatDeleteError(
-      message,
-      mode === 'physical' ? 'UNSAFE_PHYSICAL_DELETE' : 'SOFT_DELETE_REQUIRED',
-      { analysis },
-    )
+    if (mode === 'physical') {
+      throw new TeslimatDeleteError(
+        `Bu teslimat işlem görmüş görünüyor (${analysis.reasons.join(', ')}). Fiziksel silme veri ve stok geçmişini yok edeceği için reddedildi.`,
+        'UNSAFE_PHYSICAL_DELETE',
+        { analysis },
+      )
+    }
+
+    // `auto`: sessizce veri yok etmek yerine güvenli karşılığa düşülür.
+    await cancelTeslimatAtomically(id, analysis, options.userId)
+    return { mode: 'soft' as const, analysis }
   }
 
   await physicallyDeleteTeslimat(id, analysis)

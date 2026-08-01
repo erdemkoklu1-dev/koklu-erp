@@ -308,23 +308,185 @@ kod içinde ve dönüş değerinde (`onKayitStatus`) açıkça raporlanır.
 
 ---
 
-## 9. Deployment sırası (zorunlu)
+## 10. Durum makinesi — geçiş matrisi ve tek yazma noktası
+
+> Bu bölüm bu sprintte eklendi (GOREV.md Faz C).
+
+### 10.1 Gerçek durum kümesi
+
+Durum adları **tahmin edilmemiştir**; üç bağımsız kaynakta doğrulanmıştır:
+
+| Kaynak | Kanıt |
+|---|---|
+| `src/app/(dashboard)/teslimatlar/actions.ts` | form doğrulama listesi |
+| `db/teslimat_atomic_update_rpc.sql` §6 | `v_new_durum not in ('taslak','sevkte','tamamlandi','iptal')` |
+| `src/lib/teslimatlar.ts` | `TeslimatInput['durum']` + iptal yolunun yazdığı `'iptal'` |
+
+Küme: `taslak` · `sevkte` · `tamamlandi` · `iptal`
+(kod karşılığı: `TESLIMAT_DURUMLAR`, `src/lib/teslimat/status-transition.ts`).
+
+### 10.2 Geçiş matrisi
+
+Stok etkisi **yalnızca** `durum = 'tamamlandi'` iken vardır (§2.5). Bu yüzden:
 
 ```
-1. Gate 0: node scripts/verify-staging-env.mjs → exit 0            [şu an: NO-GO]
-2. Read-only preflight: db/staging_schema_required_objects_check.sql
-3. Staging şema snapshot / yedek
-4. db/aggregate_atomic_update_rpc.sql   (aggregate_idempotency tablosunu kurar)
-5. db/teslimat_atomic_update_rpc.sql    (4'e BAĞIMLI — idempotency tablosunu kullanır)
-6. db/invoice_atomic_update_rpc.sql     (bağımsız)
-7. npm run db:types:generate            (kanonik şemadan)
-8. Uygulama kodunu deploy et
-9. Staging transaction / ownership / concurrency / idempotency testleri
-10. Production: ayrı görev + açık kullanıcı onayı
+f(durum) = (durum === 'tamamlandi') ? Σ(stoktan düşen kalem miktarı) : 0
+delta    = f(yeni) − f(eski)
 ```
 
-**Sıra ihlali riski:** 8. adım 5. adımdan önce yapılırsa `updateTeslimat`
-`TESLIMAT_RPC_MISSING` hatası döndürür ve teslimat düzenleme **çalışmaz**.
+| Eski | Yeni | İzinli mi? | Stok etkisi | Emanet etkisi | Geri teslim etkisi | Tekrar çağrıda sonuç |
+|---|---|---|---|---|---|---|
+| `taslak` | `sevkte` | evet | yok | yok | yok | no-op |
+| `taslak` | `tamamlandi` | evet | **−Σ** (bir kez) | takip açılır | takip açılır | no-op |
+| `taslak` | `iptal` | evet | yok | yok | yok | no-op |
+| `sevkte` | `taslak` | evet | yok | yok | yok | no-op |
+| `sevkte` | `tamamlandi` | evet | **−Σ** (bir kez) | takip açılır | takip açılır | no-op |
+| `sevkte` | `iptal` | evet | yok | yok | yok | no-op |
+| `tamamlandi` | `taslak` | evet | **+Σ** (iade) | ilerlemesiz takip silinir | ilerlemesiz takip silinir | no-op |
+| `tamamlandi` | `sevkte` | evet | **+Σ** (iade) | ilerlemesiz takip silinir | ilerlemesiz takip silinir | no-op |
+| `tamamlandi` | `iptal` | evet | **+Σ** (iade) | ilerlemesiz takip silinir | ilerlemesiz takip silinir | no-op |
+| `iptal` | `taslak` / `sevkte` | evet | yok | yok | yok | no-op |
+| `iptal` | `tamamlandi` | evet | **−Σ** (bir kez) | takip açılır | takip açılır | no-op |
+| *herhangi* | *aynısı* | evet | **yok** | yok | yok | hiçbir yazma yapılmaz |
+
+**Kısmen kapanmış takip istisnası:** `tamamlandi` durumundan çıkışta, ilerlemesi
+olan (`geri_alinan_miktar > 0` veya `teslim_edilen_miktar > 0`) bir takip varsa
+geçiş `TESLIMAT_TRACKING_IN_PROGRESS` ile **kontrollü olarak reddedilir** ve
+hiçbir yazma yapılmaz. Sessizce veri silmek yerine operatör kararı beklenir.
+
+**Neden hiçbir geçiş yasaklanmadı:** mevcut UI
+(`src/app/(dashboard)/teslimatlar/[id]/page.tsx:159-169`) dört durum arasında
+serbest geçiş ve `iptal`den geri dönüş sunar. Bu sprintte yeni bir business
+kuralı uydurulmaz (GOREV.md §3, §8). Güvenlik geçişi yasaklayarak değil, etkiyi
+**net delta** olarak tam bir kez uygulayarak sağlanır.
+
+### 10.3 Tek yazma noktası — neden AYRI bir RPC yazılmadı
+
+Durum geçişi için ikinci bir RPC yazmak, aynı stok mantığının iki yerde
+yaşaması demekti — düzeltilmeye çalışılan hatanın ta kendisi. Bunun yerine geçiş,
+mevcut kanonik yazara devredilir:
+
+```
+teslimat_update_atomic(
+  p_teslimat_id         = <id>,
+  p_parent_patch        = {"durum": "<yeni>"},   -- YALNIZCA durum
+  p_lines               = null,                  -- kalemlere DOKUNMA
+  p_expected_updated_at = <okunan updated_at>,   -- optimistic concurrency
+  p_idempotency_key     = teslimat-durum:<id>:<durum>:<updated_at>
+)
+```
+
+RPC'nin (9a) bloğu gönderilmeyen alanlar için `coalesce` / `? 'alan'` kullandığı
+için müşteri, şube, tarih ve açıklama alanları **olduğu gibi kalır**.
+
+| Yazar | Önce | Sonra |
+|---|---|---|
+| `updateTeslimat` | `teslimat_update_atomic` | değişmedi |
+| `updateTeslimatDurumAction` | 3 bağımsız yazma + `syncTeslimatSideEffects` → `adjustUrunStok` (**mutlak düşüm**) | `applyTeslimatDurumGecisi` → `teslimat_update_atomic` |
+| `deleteTeslimat` (soft/iptal) | 4 bağımsız yazma, **stok hiç geri alınmıyordu** | `applyTeslimatDurumGecisi(id, 'iptal')` |
+| `emanetGeriAlAction` / `geriTeslimYapAction` | tenant kontrolsüz doğrudan `update` | `teslimat_*_atomic` RPC'leri |
+| `reverseUrunStok` | dışa açık, çağıranı yok | **kaldırıldı** |
+| `syncTeslimatSideEffects` | çift stok yazarı | **kaldırıldı** |
+
+Kalan tek istisna: `createTeslimat` yeni bir kayıt oluştururken
+`applyKalemSideEffects` üzerinden ilk stok etkisini uygular. Bu bir *çoğaltma*
+değildir (yeni aggregate'in ilk yazması) ama hâlâ atomik değildir — açık risk
+olarak §11.4'te izlenir.
+
+### 10.4 Çift stok düşme regresyonları — durum
+
+GOREV.md §8'deki 10 maddelik liste:
+
+| # | Senaryo | Nerede kanıtlandı | Durum |
+|---|---|---|---|
+| 1 | Stok etkisiz durumda kaydetme → stok değişmez | `tests/teslimat-status-transition.test.ts` | ✅ geçti (local) |
+| 2 | İlk `tamamlandi` geçişi → stok bir kez değişir | aynı | ✅ geçti (local) |
+| 3 | Aynı isteğin replay'i → stok yeniden değişmez | aynı + idempotency anahtarı | ✅ sözleşme (local) |
+| 4 | Aynı durumun farklı istekle tekrarı → no-op | aynı | ✅ geçti (local) |
+| 5 | Kalem miktarı değişir → yalnızca net delta | `tests/teslimat-stock-delta.test.ts` | ✅ geçti (local) |
+| 6 | Aynı ürün iki kalemde → toplam delta doğru | `tests/teslimat-status-transition.test.ts` | ✅ geçti (local) |
+| 7 | Şube değişimi → atomik ve dengeli | RPC §9a + §10 | ⏳ staging gerekir |
+| 8 | Hata enjeksiyonu → tam rollback | `db/teslimat_atomic_update_tests.sql` | ❌ ÇALIŞTIRILMADI — STAGING NO-GO |
+| 9 | İki eşzamanlı geçiş → çift hareket yok | `for update` + `expected_updated_at` | ❌ ÇALIŞTIRILMADI — STAGING NO-GO |
+| 10 | Tenant A, Tenant B teslimatının durumunu değiştiremez | RPC §3/§5 | ❌ ÇALIŞTIRILMADI — STAGING NO-GO |
+
+---
+
+## 11. `deleteTeslimat` — kapatılan veri kaybı ve seçilen model
+
+> Bu bölüm bu sprintte eklendi (GOREV.md Faz E).
+
+### 11.1 Bulunan hata
+
+`deleteTeslimat` üç mod tanımlıyordu (`auto` | `physical` | `soft`) ama `auto`
+dalı `analysis.physicalSafe` sonucuna **hiç bakmadan** doğrudan
+`physicallyDeleteTeslimat` çağırıyordu. Altındaki güvenlik kontrolü `auto` için
+erişilemez (ölü) koddu. `deleteTeslimatAction` ise yalnızca `auto` kullanıyordu.
+
+Sonuç: `tamamlandi` durumundaki, stoku düşülmüş bir teslimat tek tıkla fiziksel
+olarak siliniyor; kalemler, emanet/geri teslim takipleri ve durum geçmişi yok
+oluyor, **düşülen stok asla geri verilmiyordu**. Kayıt yok olduğu için hata
+sonradan tespit de edilemiyordu.
+
+### 11.2 Seçilen model
+
+| Kaydın durumu | Davranış |
+|---|---|
+| Stok/takip/ön kayıt etkisi **yok** (`physicalSafe`) | tenant doğrulamasıyla fiziksel silme |
+| Etki **var** | **atomik iptal**: `applyTeslimatDurumGecisi(id, 'iptal')` — stok tam bir kez iade edilir, durum geçmişi korunur |
+| Zaten `iptal` | idempotent no-op (hiçbir yazma yok) |
+| `mode: 'physical'` + güvenli değil | `UNSAFE_PHYSICAL_DELETE` ile reddedilir |
+| Yabancı tenant | RPC reddi (`TESLIMAT_TENANT_MISMATCH`) |
+
+Kullanıcıya dönen mesaj artık "Teslimat silindi." yerine, iptale düşüldüğünde
+gerekçesini de içerir; sessiz davranış değişikliği bırakılmaz.
+
+### 11.3 Bilinçli davranış farkı
+
+Eski `softDeleteTeslimat` ilerlemesiz takipleri `'iptal'` olarak işaretliyordu;
+kanonik RPC ise onları **siler** (takip satırları yalnızca `tamamlandi` iken
+var olur — §5 mutabakat kuralı). Kısmen kapanmış bir takip varsa iptal
+`TESLIMAT_TRACKING_IN_PROGRESS` ile reddedilir. İki yol arasında seçim yapmak
+yerine ikinci yazarı korumak, düzeltilen hatanın aynısını geri getirirdi.
+
+Teslimatın audit izi `teslimat_durum_gecmisi` içinde korunur.
+
+### 11.4 Açık kullanıcı kararları
+
+**Emanet geri alındığında stok artmalı mı?** Mevcut kod artırmıyor
+(`applyKalemSideEffects` yalnızca teslimde düşer; kapatma yolunda stok yazması
+yok). Bu sprint mevcut davranışı **korudu** ve yeni kural türetmedi.
+`db/teslimat_takip_action_atomic.sql` başlığında da aynı sınır yazılıdır.
+Karar verilirse tek yazma noktası yine `teslimat_update_atomic` olmalıdır.
+
+**`createTeslimat` atomik değil.** Üst kayıt → kalemler → durum geçmişi → stok
+yan etkileri hâlâ ayrı yazmalardır. Çoğaltma değildir (yeni aggregate'in ilk
+yazması) ama ortada bir hata oluşursa yarım kayıt bırakır. Ayrı bir görevde
+`teslimat_create_atomic` olarak ele alınmalıdır.
+
+---
+
+## 12. Deployment sırası (zorunlu)
+
+```
+ 1. Gate 0: node scripts/verify-staging-env.mjs → exit 0            [şu an: NO-GO]
+ 2. Read-only preflight: db/staging_schema_required_objects_check.sql
+ 3. Read-only tenant denetimi: db/read_only_tenant_ownership_audit.sql
+ 4. Staging şema snapshot / yedek
+ 5. db/aggregate_atomic_update_rpc.sql   (aggregate_idempotency tablosunu kurar)
+ 6. db/teslimat_atomic_update_rpc.sql    (5'e BAĞIMLI — idempotency + payload_fingerprint)
+ 7. db/invoice_atomic_update_rpc.sql     (bağımsız)
+ 8. db/teslimat_takip_action_atomic.sql  (6'ya BAĞIMLI — takip firma_id + fingerprint)
+ 9. db/tenant_ownership_rls_remediation.sql
+10. npm run db:types:generate            (kanonik şemadan)
+11. Uygulama kodunu deploy et
+12. Staging transaction / ownership / concurrency / idempotency testleri
+13. Production: ayrı görev + açık kullanıcı onayı
+```
+
+**Sıra ihlali riski:** 11. adım 6. adımdan önce yapılırsa `updateTeslimat` ve
+durum geçişi `TESLIMAT_RPC_MISSING`, emanet/geri teslim kapatma ise
+`TESLIMAT_TAKIP_RPC_MISSING` hatası döndürür ve bu akışlar **çalışmaz**.
 Bu bilinçli bir tercihtir: sessizce eski güvensiz akışa düşmek (GOREV.md §8) yerine
 açık ve teşhis edilebilir hata verilir. Rollback için önce kod eski sürüme alınır,
 sonra RPC düşürülür.

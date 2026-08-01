@@ -2,7 +2,7 @@
  * OTOMATİK ÜRETİLMİŞTİR — ELLE DÜZENLEMEYİN.
  *
  * Üretici : scripts/generate-db-types.mjs
- * Kaynak  : db/*.sql migration zinciri (49 dosya)
+ * Kaynak  : db/*.sql migration zinciri (51 dosya)
  * Komut   : npm run db:types:generate
  * Kontrol : npm run db:types:check   (drift varsa CI düşer)
  *
@@ -206,6 +206,7 @@ export type Database = {
           created_by: string | null
           error_message: string | null
           file_size: number | null
+          firma_id: string | null
           id: string
           included_tables: string[]
           row_counts: Json
@@ -221,6 +222,7 @@ export type Database = {
           created_by?: string | null
           error_message?: string | null
           file_size?: number | null
+          firma_id?: string | null
           id?: string
           included_tables?: string[]
           row_counts?: Json
@@ -236,6 +238,7 @@ export type Database = {
           created_by?: string | null
           error_message?: string | null
           file_size?: number | null
+          firma_id?: string | null
           id?: string
           included_tables?: string[]
           row_counts?: Json
@@ -280,6 +283,7 @@ export type Database = {
           dry_run_result: Json
           file_name: string
           file_size: number | null
+          firma_id: string | null
           id: string
           requested_by: string | null
           status: string
@@ -291,6 +295,7 @@ export type Database = {
           dry_run_result?: Json
           file_name: string
           file_size?: number | null
+          firma_id?: string | null
           id?: string
           requested_by?: string | null
           status?: string
@@ -302,6 +307,7 @@ export type Database = {
           dry_run_result?: Json
           file_name?: string
           file_size?: number | null
+          firma_id?: string | null
           id?: string
           requested_by?: string | null
           status?: string
@@ -313,6 +319,7 @@ export type Database = {
       backup_settings: {
         Row: {
           enabled: boolean
+          firma_id: string | null
           id: string
           run_at: string
           storage_enabled: boolean
@@ -322,6 +329,7 @@ export type Database = {
         }
         Insert: {
           enabled?: boolean
+          firma_id?: string | null
           id?: string
           run_at?: string
           storage_enabled?: boolean
@@ -331,6 +339,7 @@ export type Database = {
         }
         Update: {
           enabled?: boolean
+          firma_id?: string | null
           id?: string
           run_at?: string
           storage_enabled?: boolean
@@ -555,6 +564,7 @@ export type Database = {
           id: string
           kalem_id: string
           kapandi_at: string | null
+          kapatan_kullanici_id: string | null
           miktar: number
           sube_id: string | null
           teslimat_id: string
@@ -570,6 +580,7 @@ export type Database = {
           id?: string
           kalem_id: string
           kapandi_at?: string | null
+          kapatan_kullanici_id?: string | null
           miktar?: number
           sube_id?: string | null
           teslimat_id: string
@@ -585,6 +596,7 @@ export type Database = {
           id?: string
           kalem_id?: string
           kapandi_at?: string | null
+          kapatan_kullanici_id?: string | null
           miktar?: number
           sube_id?: string | null
           teslimat_id?: string
@@ -596,6 +608,7 @@ export type Database = {
         Row: {
           created_at: string
           end_date: string | null
+          firma_id: string | null
           full_name: string
           gross_salary: number
           iban: string | null
@@ -612,6 +625,7 @@ export type Database = {
         Insert: {
           created_at?: string
           end_date?: string | null
+          firma_id?: string | null
           full_name: string
           gross_salary?: number
           iban?: string | null
@@ -628,6 +642,7 @@ export type Database = {
         Update: {
           created_at?: string
           end_date?: string | null
+          firma_id?: string | null
           full_name?: string
           gross_salary?: number
           iban?: string | null
@@ -647,6 +662,7 @@ export type Database = {
         Row: {
           created_at: string
           direction: Database["public"]["Enums"]["transaction_direction"]
+          firma_id: string | null
           id: string
           is_active: boolean
           is_system: boolean
@@ -656,6 +672,7 @@ export type Database = {
         Insert: {
           created_at?: string
           direction: Database["public"]["Enums"]["transaction_direction"]
+          firma_id?: string | null
           id?: string
           is_active?: boolean
           is_system?: boolean
@@ -665,6 +682,7 @@ export type Database = {
         Update: {
           created_at?: string
           direction?: Database["public"]["Enums"]["transaction_direction"]
+          firma_id?: string | null
           id?: string
           is_active?: boolean
           is_system?: boolean
@@ -723,6 +741,7 @@ export type Database = {
           created_at: string
           day_of_month: number
           end_date: string | null
+          firma_id: string | null
           id: string
           is_active: boolean
           kdv_rate: number
@@ -739,6 +758,7 @@ export type Database = {
           created_at?: string
           day_of_month?: number
           end_date?: string | null
+          firma_id?: string | null
           id?: string
           is_active?: boolean
           kdv_rate?: number
@@ -755,6 +775,7 @@ export type Database = {
           created_at?: string
           day_of_month?: number
           end_date?: string | null
+          firma_id?: string | null
           id?: string
           is_active?: boolean
           kdv_rate?: number
@@ -776,6 +797,7 @@ export type Database = {
           id: string
           kalem_id: string
           kapandi_at: string | null
+          kapatan_kullanici_id: string | null
           miktar: number
           sube_id: string | null
           teslim_edilen_miktar: number
@@ -791,6 +813,7 @@ export type Database = {
           id?: string
           kalem_id: string
           kapandi_at?: string | null
+          kapatan_kullanici_id?: string | null
           miktar?: number
           sube_id?: string | null
           teslim_edilen_miktar?: number
@@ -806,6 +829,7 @@ export type Database = {
           id?: string
           kalem_id?: string
           kapandi_at?: string | null
+          kapatan_kullanici_id?: string | null
           miktar?: number
           sube_id?: string | null
           teslim_edilen_miktar?: number
@@ -819,6 +843,7 @@ export type Database = {
           ad_soyad: string | null
           created_at: string | null
           email: string | null
+          firma_id: string | null
           id: string
           ip_adresi: string | null
           islem_tipi: string
@@ -829,6 +854,7 @@ export type Database = {
           ad_soyad?: string | null
           created_at?: string | null
           email?: string | null
+          firma_id?: string | null
           id?: string
           ip_adresi?: string | null
           islem_tipi: string
@@ -839,6 +865,7 @@ export type Database = {
           ad_soyad?: string | null
           created_at?: string | null
           email?: string | null
+          firma_id?: string | null
           id?: string
           ip_adresi?: string | null
           islem_tipi?: string
@@ -944,6 +971,7 @@ export type Database = {
         Row: {
           aktif: boolean
           created_at: string
+          firma_id: string | null
           gun_oncesi: number
           id: string
           sablon_id: string | null
@@ -952,6 +980,7 @@ export type Database = {
         Insert: {
           aktif?: boolean
           created_at?: string
+          firma_id?: string | null
           gun_oncesi?: number
           id?: string
           sablon_id?: string | null
@@ -960,6 +989,7 @@ export type Database = {
         Update: {
           aktif?: boolean
           created_at?: string
+          firma_id?: string | null
           gun_oncesi?: number
           id?: string
           sablon_id?: string | null
@@ -2333,6 +2363,7 @@ export type Database = {
         Row: {
           created_at: string
           employee_id: string
+          firma_id: string | null
           gross_amount: number
           id: string
           income_tax: number
@@ -2350,6 +2381,7 @@ export type Database = {
         Insert: {
           created_at?: string
           employee_id: string
+          firma_id?: string | null
           gross_amount: number
           id?: string
           income_tax?: number
@@ -2367,6 +2399,7 @@ export type Database = {
         Update: {
           created_at?: string
           employee_id?: string
+          firma_id?: string | null
           gross_amount?: number
           id?: string
           income_tax?: number
@@ -2518,6 +2551,7 @@ export type Database = {
           created_at: string
           declaration_date: string | null
           due_date: string
+          firma_id: string | null
           id: string
           notes: string | null
           paid_amount: number
@@ -2534,6 +2568,7 @@ export type Database = {
           created_at?: string
           declaration_date?: string | null
           due_date: string
+          firma_id?: string | null
           id?: string
           notes?: string | null
           paid_amount?: number
@@ -2550,6 +2585,7 @@ export type Database = {
           created_at?: string
           declaration_date?: string | null
           due_date?: string
+          firma_id?: string | null
           id?: string
           notes?: string | null
           paid_amount?: number
@@ -2905,6 +2941,33 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_remediation_findings: {
+        Row: {
+          aciklama: string | null
+          bulgu_tipi: string
+          created_at: string
+          id: string
+          satir_sayisi: number
+          tablo_adi: string
+        }
+        Insert: {
+          aciklama?: string | null
+          bulgu_tipi: string
+          created_at?: string
+          id?: string
+          satir_sayisi?: number
+          tablo_adi: string
+        }
+        Update: {
+          aciklama?: string | null
+          bulgu_tipi?: string
+          created_at?: string
+          id?: string
+          satir_sayisi?: number
+          tablo_adi?: string
+        }
+        Relationships: []
+      }
       teslimat_durum_gecmisi: {
         Row: {
           aciklama: string | null
@@ -3125,6 +3188,7 @@ export type Database = {
           created_at: string
           description: string
           direction: Database["public"]["Enums"]["transaction_direction"]
+          firma_id: string | null
           id: string
           invoice_id: string | null
           kdv_amount: number
@@ -3144,6 +3208,7 @@ export type Database = {
           created_at?: string
           description: string
           direction: Database["public"]["Enums"]["transaction_direction"]
+          firma_id?: string | null
           id?: string
           invoice_id?: string | null
           kdv_amount?: number
@@ -3163,6 +3228,7 @@ export type Database = {
           created_at?: string
           description?: string
           direction?: Database["public"]["Enums"]["transaction_direction"]
+          firma_id?: string | null
           id?: string
           invoice_id?: string | null
           kdv_amount?: number
@@ -3498,11 +3564,36 @@ export type Database = {
         }
         Returns: unknown
       }
+      teslimat_emanet_geri_al_atomic: {
+        Args: {
+          p_takip_id: string
+          p_idempotency_key?: string | null
+          p_user_id?: string | null
+          p_firma_id?: string | null
+        }
+        Returns: Json
+      }
+      teslimat_geri_teslim_yap_atomic: {
+        Args: {
+          p_takip_id: string
+          p_idempotency_key?: string | null
+          p_user_id?: string | null
+          p_firma_id?: string | null
+        }
+        Returns: Json
+      }
       teslimat_takip_kapatma_geri_al: {
         Args: {
           p_kalem_ids: string[]
         }
         Returns: undefined
+      }
+      teslimat_takip_resolve_actor: {
+        Args: {
+          p_user_id?: string | null
+          p_firma_id?: string | null
+        }
+        Returns: Json
       }
       teslimat_update_atomic: {
         Args: {
