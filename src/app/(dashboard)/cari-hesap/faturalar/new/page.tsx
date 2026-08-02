@@ -7,36 +7,18 @@ import { calculateInvoiceTotals } from '@/lib/finance/calculations'
 import { formatCurrency } from '@/lib/finance/formatters'
 import { inferCityFromAddress, suggestBranchByCity } from '@/lib/branches/branch-inference'
 import { requestApi } from '@/lib/api/envelope'
+import type { InvoicePreview } from '@/lib/invoice-parse/pipeline'
+import { previewToFormFill, type InvoiceFormFill } from '@/lib/invoice-parse/preview-to-form'
 
-/** `/api/parse-fatura` çıktısının istemcide kullanılan şekli. */
-type ParseFaturaData = {
-  customer?: {
-    full_name?: string | null
-    tax_number?: string | null
-    phone?: string | null
-    email?: string | null
-    address?: string | null
-    city?: string | null
-  } | null
-  supplier?: {
-    name?: string | null
-    tax_no?: string | null
-    address?: string | null
-    city?: string | null
-  } | null
-  invoice?: {
-    invoice_date?: string | null
-    due_date?: string | null
-    kdv_rate?: number | null
-    stopaj_rate?: number | null
-  } | null
-  items?: Array<{
-    description?: string | null
-    quantity?: number | null
-    unit?: string | null
-    unit_price?: number | null
-    kdv_rate?: number | null
-  }> | null
+/** Kanonik parse hattının döndürdüğü ön izleme; ekran bunu forma yazar. */
+type ParsePreview = InvoicePreview
+
+/** Ön izleme kaynağının kullanıcıya gösterilen adı. */
+const SOURCE_LABEL: Record<InvoiceFormFill['source'], string> = {
+  'ubl-xml': 'e-Fatura XML (UBL-TR)',
+  'ubl-xml-in-zip': 'ZIP içindeki e-Fatura XML',
+  'pdf-text': 'PDF metin katmanı',
+  ocr: 'OCR',
 }
 
 type LineItem = { description: string; quantity: string; unit: string; unit_price: string; kdv_rate: string }
@@ -64,10 +46,16 @@ export default function NewFaturaPage() {
   const [branchLocked, setBranchLocked] = useState(false)
   const [branchInfo, setBranchInfo] = useState('')
 
-  // PDF parse state
+  // Fatura okuma (kanonik parse hattı) state
   const [parseLoading, setParsing] = useState(false)
   const [parseError, setParseError] = useState('')
+  /** Teknik referans: destek kaydında istenen `requestId` ve hata kodu. */
+  const [parseErrorRef, setParseErrorRef] = useState('')
+  /** Başarılı okumada kaynak/uyarı özeti. */
+  const [parseInfo, setParseInfo] = useState<{ source: string; warnings: string[] } | null>(null)
   const [showParseSection, setShowParseSection] = useState(false)
+  /** Çalışan parse isteğini iptal etmek için; çift tıklamada da tekilleştirir. */
+  const parseAbortRef = useRef<AbortController | null>(null)
   const [customerNotFound, setCustomerNotFound] = useState(false)
   // Yüklenen faturanın sistemde zaten kayıtlı olup olmadığı (dosyadan yükleme dedup)
   const [duplicateInvoice, setDuplicateInvoice] = useState<{ invoice_number: string; total_amount: number } | null>(null)
@@ -290,33 +278,15 @@ export default function NewFaturaPage() {
   }))
   const totals = calculateInvoiceTotals(parsedItems, parseFloat(form.stopaj_rate) || 0)
 
-  // PDF'den fatura oku
-  async function pdfToImageFile(f: File): Promise<File> {
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
-    const bytes = await f.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise
-    const page = await pdf.getPage(1)
-    const viewport = page.getViewport({ scale: 2 })
-    const canvas = document.createElement('canvas')
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise
-    const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), 'image/png'))
-    return new File([blob], f.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' })
-  }
-
   // Yüklenen faturanın aynısı sistemde var mı? Sunucuda (firma-scope) tutar + VKN ile eşleştir.
   // Satışta müşteri VKN, alışta tedarikçi VKN kullanılır.
-  async function checkDuplicateInvoice(data: any) {
+  async function checkDuplicateInvoice(fill: InvoiceFormFill) {
     const isAlis = form.invoice_type === 'alis'
-    const taxNo = String((isAlis ? data.supplier?.tax_no : data.customer?.tax_number) ?? '').replace(/\D/g, '')
-    const parsedTotal = (data.items ?? []).reduce((sum: number, it: any) => {
-      const q = Number(it.quantity) || 0
-      const up = Number(it.unit_price) || 0
-      const kdv = Number(it.kdv_rate) || 0
-      return sum + q * up * (1 + kdv / 100)
-    }, 0)
+    const taxNo = String((isAlis ? fill.supplier.taxNumber : fill.customer.taxNumber) ?? '').replace(/\D/g, '')
+    // Belgede yazan ödenecek tutar varsa o kullanılır; yoksa kalemlerden hesaplanır.
+    const parsedTotal =
+      fill.payableAmount ??
+      fill.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice * (1 + line.kdvRate / 100), 0)
     if (parsedTotal <= 0) return
 
     try {
@@ -335,36 +305,64 @@ export default function NewFaturaPage() {
     }
   }
 
+  /** Çalışan parse isteğini iptal eder (İptal butonu / yeni dosya seçimi). */
+  function cancelParse() {
+    parseAbortRef.current?.abort()
+    parseAbortRef.current = null
+  }
+
+  /**
+   * Faturayı **kanonik parse hattına** gönderir: `/api/v1/invoices/parse`.
+   *
+   * Hat deterministik önceliklidir — UBL-TR XML → ZIP içindeki XML → PDF metin
+   * katmanı. Daha önce bu ekran dosyayı istemcide PNG'ye çevirip yalnızca AI
+   * vision route'una gönderiyordu; sağlayıcı modeli kaldırıldığında (Groq
+   * `model_not_found`) fatura okuma tamamen durdu. Artık AI bu yolda hiç
+   * gerekli değil.
+   */
   async function handleParseFatura(f: File) {
+    // Çift tıklama / hızlı ikinci seçim paralel istek üretmez.
+    if (parseAbortRef.current) return
+
+    const controller = new AbortController()
+    parseAbortRef.current = controller
+
     setParsing(true)
     setParseError('')
+    setParseErrorRef('')
+    setParseInfo(null)
     setDuplicateInvoice(null)
     try {
-      const uploadFile = f.type === 'application/pdf' ? await pdfToImageFile(f) : f
       const fd = new FormData()
-      fd.append('file', uploadFile)
+      fd.append('file', f)
+      // Satışta karşı taraf alıcı, alışta düzenleyendir; hat bunu ayırır.
+      fd.append('mode', form.invoice_type === 'alis' || form.invoice_type === 'iade_alis' ? 'gelen' : 'satis')
 
       // Yanıt ASLA koşulsuz res.json() ile okunmaz: eski build/kaldırılmış route
       // durumunda gelen HTML 404 sayfası "Unexpected token '<' … is not valid JSON"
       // hatasına yol açıyordu. readApiResponse önce status ve content-type bakar.
-      const envelope = await requestApi<ParseFaturaData>('/api/parse-fatura', {
+      const envelope = await requestApi<ParsePreview>('/api/v1/invoices/parse', {
         method: 'POST',
         body: fd,
+        signal: controller.signal,
         timeoutMs: 120_000,
       })
 
       if (!envelope.ok) {
+        // Kod gizlenmez: "servis yanıt vermiyor" gibi genel bir cümle gerçek
+        // nedeni (route yok / OCR yok / desteklenmeyen dosya) örtmemeli.
         setParseError(envelope.error.message)
+        setParseErrorRef(`${envelope.error.code} · ${envelope.requestId}`)
         return
       }
 
-      const data = envelope.data
+      const fill = previewToFormFill(envelope.data)
 
-      // Müşteri bilgilerini doldur
+      // ── Müşteri ────────────────────────────────────────────────────────────
       setCustomerNotFound(false)
-      if (data.customer?.full_name) {
-        const parsedName = data.customer.full_name.toLowerCase().trim()
-        const parsedTax  = (data.customer.tax_number ?? '').trim()
+      if (fill.customer.name) {
+        const parsedName = fill.customer.name.toLowerCase().trim()
+        const parsedTax = fill.customer.taxNumber ?? ''
         // Önce vergi no ile, sonra tam ad, sonra kısmi içerme ile eşleştir
         const found = customers.find(c =>
           (parsedTax && c.tax_number === parsedTax) ||
@@ -375,79 +373,72 @@ export default function NewFaturaPage() {
         if (found) {
           pickCustomer(found)
         } else {
-          const parsedCustomer = data.customer
-          setCustomerSearch(parsedCustomer.full_name ?? '')
+          setCustomerSearch(fill.customer.name)
           setShowDropdown(true)
           setCustomerNotFound(true)
-          const pdfAddress = parsedCustomer.address ?? ''
-          const pdfCity = parsedCustomer.city ?? inferCityFromAddress(pdfAddress) ?? ''
+          const parsedAddress = fill.customer.address ?? ''
+          const parsedCity = inferCityFromAddress(parsedAddress) ?? ''
           setForm(p => ({
             ...p,
-            customer_name: parsedCustomer.full_name ?? p.customer_name,
-            tax_number: parsedCustomer.tax_number ?? p.tax_number,
-            customer_phone: parsedCustomer.phone ?? p.customer_phone,
-            customer_email: parsedCustomer.email ?? p.customer_email,
-            customer_address: pdfAddress,
-            customer_city: pdfCity,
+            customer_name: fill.customer.name ?? p.customer_name,
+            tax_number: fill.customer.taxNumber ?? p.tax_number,
+            customer_address: parsedAddress,
+            customer_city: parsedCity,
           }))
-          applyBranchSuggestion('pdf', pdfAddress, pdfCity)
+          applyBranchSuggestion('pdf', parsedAddress, parsedCity)
         }
       }
 
-      // Fatura tarihleri
-      const parsedInvoice = data.invoice
-      if (parsedInvoice?.invoice_date) {
-        const invoiceDate = parsedInvoice.invoice_date
+      // ── Tarihler ve oran ───────────────────────────────────────────────────
+      if (fill.invoiceDate) {
+        const invoiceDate = fill.invoiceDate
         setForm(p => ({ ...p, invoice_date: invoiceDate }))
       }
-      if (parsedInvoice?.due_date) {
-        const dueDate = parsedInvoice.due_date
+      if (fill.dueDate) {
+        const dueDate = fill.dueDate
         setForm(p => ({ ...p, due_date: dueDate }))
       }
-      if (parsedInvoice?.kdv_rate != null) {
-        const kdvRate = String(parsedInvoice.kdv_rate)
+      if (fill.kdvRate !== null) {
+        const kdvRate = String(fill.kdvRate)
         setForm(p => ({ ...p, kdv_rate: kdvRate }))
       }
-      if (parsedInvoice?.stopaj_rate) {
-        const stopajRate = String(parsedInvoice.stopaj_rate)
-        setForm(p => ({ ...p, stopaj_rate: stopajRate }))
-      }
 
-      // Tedarikçi (alış faturası için)
-      const parsedSupplier = data.supplier
-      if (parsedSupplier?.name) {
-        const supplierName = parsedSupplier.name
-        const supplierAddress = parsedSupplier.address ?? form.customer_address
-        const supplierCity = parsedSupplier.city ?? inferCityFromAddress(supplierAddress) ?? form.customer_city
+      // ── Tedarikçi (alış faturası için) ─────────────────────────────────────
+      if (fill.supplier.name) {
+        const supplierName = fill.supplier.name
+        const supplierAddress = fill.supplier.address ?? form.customer_address
+        const supplierCity = inferCityFromAddress(supplierAddress) ?? form.customer_city
         setForm(p => ({
           ...p,
           supplier_name: supplierName,
-          supplier_tax_no: parsedSupplier.tax_no ?? '',
+          supplier_tax_no: fill.supplier.taxNumber ?? '',
           customer_address: supplierAddress,
           customer_city: supplierCity,
         }))
         applyBranchSuggestion('pdf', supplierAddress, supplierCity)
       }
 
-      // Kalemler
-      if (data.items && data.items.length > 0) {
-        const parsedLines: LineItem[] = data.items.map(item => ({
-          description: item.description ?? '',
-          quantity: String(item.quantity ?? 1),
-          unit: item.unit ?? 'adet',
-          unit_price: String(item.unit_price ?? ''),
-          kdv_rate: String(item.kdv_rate ?? 20),
-        }))
-        setItems(parsedLines)
+      // ── Kalemler ───────────────────────────────────────────────────────────
+      if (fill.lines.length > 0) {
+        setItems(fill.lines.map((line): LineItem => ({
+          description: line.description,
+          quantity: String(line.quantity),
+          unit: line.unit,
+          unit_price: String(line.unitPrice),
+          kdv_rate: String(line.kdvRate),
+        })))
       }
 
-      // ── Aynı fatura sistemde zaten kayıtlı mı? (tarih + tutar + VKN ile) ──
-      await checkDuplicateInvoice(data)
+      setParseInfo({ source: SOURCE_LABEL[fill.source], warnings: fill.warnings })
+
+      // ── Aynı fatura sistemde zaten kayıtlı mı? (tutar + VKN ile) ──
+      await checkDuplicateInvoice(fill)
 
       setShowParseSection(false)
     } catch (e: unknown) {
       setParseError(e instanceof Error ? e.message : 'Beklenmeyen hata')
     } finally {
+      parseAbortRef.current = null
       setParsing(false)
     }
   }
@@ -572,17 +563,18 @@ export default function NewFaturaPage() {
           }`}
         >
           <span>📄</span>
-          PDF'den Oku
+          Faturadan Oku
         </button>
       </div>
 
-      {/* PDF Parse Bölümü */}
+      {/* Fatura Okuma Bölümü */}
       {showParseSection && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-3">
           <div>
-            <h3 className="text-sm font-semibold text-blue-800 mb-1">Fatura PDF / Görselden Otomatik Doldur</h3>
+            <h3 className="text-sm font-semibold text-blue-800 mb-1">{'e-Fatura / PDF\'den Otomatik Doldur'}</h3>
             <p className="text-xs text-blue-600">
-              Fatura görselini yükleyin — AI müşteri, kalemler ve tutarları otomatik dolduracak. Elle düzenleyebilirsiniz.
+              {'e-Fatura XML\'i, e-Fatura ZIP paketini veya metin katmanlı PDF\'i yükleyin — müşteri, kalemler ve '}
+              {'tutarlar doğrudan belgeden okunur. Bütün alanları elle düzenleyebilirsiniz.'}
             </p>
           </div>
 
@@ -590,6 +582,13 @@ export default function NewFaturaPage() {
             <div className="flex items-center gap-3 py-4">
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
               <span className="text-sm text-blue-700">Fatura analiz ediliyor...</span>
+              <button
+                type="button"
+                onClick={cancelParse}
+                className="px-3 py-1.5 border border-blue-300 text-blue-700 rounded-lg text-sm hover:bg-blue-100"
+              >
+                İptal
+              </button>
             </div>
           ) : (
             <div className="flex gap-3">
@@ -597,7 +596,7 @@ export default function NewFaturaPage() {
                 ref={fileRef}
                 type="file"
                 className="hidden"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
+                accept=".xml,.zip,.pdf,text/xml,application/xml,application/zip,application/pdf,image/jpeg,image/png"
                 onChange={e => {
                   const f = e.target.files?.[0]
                   if (f) handleParseFatura(f)
@@ -606,14 +605,15 @@ export default function NewFaturaPage() {
               />
               <button
                 type="button"
+                disabled={parseLoading}
                 onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
               >
                 Dosya Seç ve Analiz Et
               </button>
               <button
                 type="button"
-                onClick={() => setShowParseSection(false)}
+                onClick={() => { cancelParse(); setShowParseSection(false) }}
                 className="px-4 py-2 border border-blue-200 text-blue-600 rounded-lg text-sm hover:bg-blue-100"
               >
                 İptal
@@ -623,8 +623,33 @@ export default function NewFaturaPage() {
 
           {parseError && (
             <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
-              {parseError}
+              <div>{parseError}</div>
+              {parseErrorRef && (
+                <div className="mt-1 text-xs text-red-500 font-mono select-all">{parseErrorRef}</div>
+              )}
             </div>
+          )}
+
+          {parseInfo && (
+            <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-800">
+              <div>Fatura okundu. Kaynak: <strong>{parseInfo.source}</strong></div>
+              {parseInfo.warnings.length > 0 && (
+                <ul className="mt-1 list-disc list-inside text-xs text-green-700">
+                  {parseInfo.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {parseInfo && !showParseSection && (
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-800">
+          <div>Fatura okundu. Kaynak: <strong>{parseInfo.source}</strong> — alanları kontrol edip düzenleyebilirsiniz.</div>
+          {parseInfo.warnings.length > 0 && (
+            <ul className="mt-1 list-disc list-inside text-xs text-green-700">
+              {parseInfo.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
           )}
         </div>
       )}

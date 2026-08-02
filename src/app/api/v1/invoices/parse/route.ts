@@ -2,17 +2,16 @@ import { NextRequest } from 'next/server'
 import AdmZip from 'adm-zip'
 import { createClient } from '@/lib/supabase/server'
 import { apiFailure, apiSuccess, logApiError, newRequestId } from '@/lib/api/response'
-import { parsePdfBuffer } from '@/lib/parsePdfBuffer'
 import {
   DEFAULT_AUTOSAVE_THRESHOLD,
   PARSE_ERROR,
   parseInvoiceFile,
   type ArchiveReader,
-  type ParseErrorCode,
-  type PdfParseOutcome,
   type PipelineDeps,
 } from '@/lib/invoice-parse/pipeline'
 import { DEFAULT_MAX_BYTES } from '@/lib/invoice-parse/file-acceptance'
+import { parsePdfForPipeline } from '@/lib/invoice-parse/pdf-adapter'
+import { retryableForParseError, statusForParseError } from '@/lib/invoice-parse/error-mapping'
 
 /**
  * Fatura yükleme/ayrıştırma için **tek kanonik, versiyonlu** endpoint.
@@ -28,6 +27,9 @@ import { DEFAULT_MAX_BYTES } from '@/lib/invoice-parse/file-acceptance'
  *   POST /api/v1/invoices/parse
  *   Content-Type: multipart/form-data
  *   Alan: `file` (PDF | XML | ZIP | PNG | JPEG)
+ *   Alan: `mode` (opsiyonel) — `satis` | `gelen` (varsayılan `gelen`)
+ *         PDF metin katmanında karşı tarafın alıcı mı düzenleyen mi olduğunu
+ *         belirler. UBL yolunda etkisizdir: XML tarafları zaten açıkça ayırır.
  *
  *   200 → { ok: true,  data: InvoicePreview, requestId }
  *   4xx → { ok: false, error: { code, message, retryable }, requestId }
@@ -51,29 +53,6 @@ export const runtime = 'nodejs'
 
 /** Ayrıştırma için üst sınır; aşılırsa istek iptal edilir. */
 const PARSE_TIMEOUT_MS = 30_000
-
-const STATUS_BY_CODE: Partial<Record<ParseErrorCode, number>> = {
-  [PARSE_ERROR.EMPTY_FILE]: 400,
-  [PARSE_ERROR.TOO_LARGE]: 413,
-  [PARSE_ERROR.UNSUPPORTED_TYPE]: 415,
-  [PARSE_ERROR.EXTENSION_MISMATCH]: 415,
-  [PARSE_ERROR.CORRUPT_PDF]: 422,
-  [PARSE_ERROR.ENCRYPTED_PDF]: 422,
-  [PARSE_ERROR.TOO_MANY_ENTRIES]: 413,
-  [PARSE_ERROR.TOTAL_TOO_LARGE]: 413,
-  [PARSE_ERROR.ENTRY_TOO_LARGE]: 413,
-  [PARSE_ERROR.RATIO_SUSPICIOUS]: 422,
-  [PARSE_ERROR.PATH_TRAVERSAL]: 422,
-  [PARSE_ERROR.NESTED_ARCHIVE]: 422,
-  [PARSE_ERROR.UNREADABLE]: 422,
-  [PARSE_ERROR.NO_INVOICE_ENTRY]: 422,
-  [PARSE_ERROR.UNSUPPORTED_XML]: 422,
-  [PARSE_ERROR.PDF_NO_TEXT_LAYER]: 422,
-  [PARSE_ERROR.PDF_FIELDS_MISSING]: 422,
-  [PARSE_ERROR.OCR_UNAVAILABLE]: 501,
-  [PARSE_ERROR.TIMEOUT]: 504,
-  [PARSE_ERROR.UNEXPECTED]: 500,
-}
 
 /** `adm-zip` yalnızca burada kullanılır; hat katmanı bağımlılıksız kalır. */
 function openArchive(bytes: Uint8Array): ArchiveReader | null {
@@ -111,26 +90,16 @@ function openArchive(bytes: Uint8Array): ArchiveReader | null {
   }
 }
 
-async function parsePdf(bytes: Uint8Array, filename: string): Promise<PdfParseOutcome> {
-  const result = await parsePdfBuffer(Buffer.from(bytes), filename, 'gelen')
+export type ParseMode = 'satis' | 'gelen'
 
-  const hasTextLayer = result.hata !== 'PDF_METIN_KATMANI_YOK' && result.parse_durumu !== 'parse_hatasi'
-  const hasRequiredFields = Boolean(result.fatura_no) && Boolean(result.fatura_tarihi)
-
+function makeDeps(mode: ParseMode): PipelineDeps {
   return {
-    hasTextLayer,
-    hasRequiredFields,
-    data: result,
-    warnings: result.parse_uyarilari ?? [],
+    openArchive,
+    parsePdf: (bytes, filename) => parsePdfForPipeline(bytes, filename, mode),
+    // OCR bilinçli olarak BAĞLANMADI: yapılandırılmamış bir OCR'ı "çalışıyor" gibi
+    // göstermektense taranmış belgeler açık `PARSE_OCR_UNAVAILABLE` hatası alır.
+    // Bağlandığında yalnızca burası değişir; hat sözleşmesi aynı kalır.
   }
-}
-
-const deps: PipelineDeps = {
-  openArchive,
-  parsePdf,
-  // OCR bilinçli olarak BAĞLANMADI: yapılandırılmamış bir OCR'ı "çalışıyor" gibi
-  // göstermektense taranmış belgeler açık `PARSE_OCR_UNAVAILABLE` hatası alır.
-  // Bağlandığında yalnızca burası değişir; hat sözleşmesi aynı kalır.
 }
 
 export async function POST(req: NextRequest) {
@@ -162,10 +131,13 @@ export async function POST(req: NextRequest) {
   }
 
   let file: File | null = null
+  let mode: ParseMode = 'gelen'
   try {
     const form = await req.formData()
     const candidate = form.get('file')
     file = candidate instanceof File ? candidate : null
+    // Bilinmeyen değer sessizce kabul edilmez; varsayılana düşer.
+    mode = form.get('mode') === 'satis' ? 'satis' : 'gelen'
   } catch (error) {
     logApiError('invoices/parse', requestId, 'FORM_READ_FAILED', error)
     return apiFailure('INVALID_PAYLOAD', 'Yüklenen dosya okunamadı.', requestId, 400)
@@ -196,7 +168,7 @@ export async function POST(req: NextRequest) {
     })
 
     const outcome = await Promise.race([
-      parseInvoiceFile(bytes, deps, {
+      parseInvoiceFile(bytes, makeDeps(mode), {
         filename: file.name,
         maxBytes: DEFAULT_MAX_BYTES,
         autoSaveThreshold: DEFAULT_AUTOSAVE_THRESHOLD,
@@ -211,7 +183,8 @@ export async function POST(req: NextRequest) {
         outcome.error.code,
         outcome.error.message,
         requestId,
-        STATUS_BY_CODE[outcome.error.code] ?? 422,
+        statusForParseError(outcome.error.code),
+        { retryable: retryableForParseError(outcome.error.code) },
       )
     }
 

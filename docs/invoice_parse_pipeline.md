@@ -154,8 +154,8 @@ kuruş yuvarlaması).
 |---|---|---|
 | `/api/pdf-fatura-parse` | Satış faturası toplu parse | ✅ **`parseInvoiceBatch`'e delege edildi** |
 | `/api/gelen-pdf-parse` | Gelen fatura toplu parse | ✅ **`parseInvoiceBatch`'e delege edildi** |
-| `/api/parse-fatura` | Görselden fatura alanı (AI vision) | ✅ zaten ortak zarf + magic bytes + timeout |
-| `/api/parse-invoice` | Görselden **cihaz kaydı** (AI vision) | ✅ magic bytes + timeout + hata sızıntısı kapatıldı |
+| `/api/parse-fatura` | Fatura alanı çıkarımı | ✅ **`parseInvoiceFile`'a delege edildi — AI çağırmaz** |
+| `/api/parse-invoice` | Görselden **cihaz kaydı** (AI vision) | ✅ magic bytes + timeout + hata sızıntısı kapatıldı + model/hata sınıflandırması |
 | `/api/efatura-import` | **Excel satır** içe aktarma (dosya parse etmez) | kapsam dışı — parser değil |
 | `/api/gelen-fatura-import` | **Excel satır** içe aktarma (dosya parse etmez) | kapsam dışı — parser değil |
 | `/api/teklif-pdf-parse` | Teklif PDF'i (fatura değil) | kapsam dışı |
@@ -204,6 +204,29 @@ dış sözleşme yerinde.
 
 Sonraki adım (ayrı görev): UI'yı `requestApi`'ye taşı, sonra bu route'ları
 `/api/v1/invoices/parse`'a 308 yönlendir.
+
+### P0 hotfix — `/cari-hesap/faturalar/new` kanonik hatta taşındı
+
+Yeni fatura ekranı kanonik hattı **hiç kullanmıyordu**: dosyayı istemcide PNG'ye
+çevirip yalnızca `/api/parse-fatura`'nın AI vision yoluna gönderiyordu. Sağlayıcı
+o modeli emekliye ayırınca (`404 model_not_found`) route her istekte 502
+`AI_HTTP_ERROR` döndürdü ve **bütün** fatura okuma akışı bloke oldu — deterministik
+UBL-TR XML ve metin katmanlı PDF hiç denenmiyordu.
+
+Bu hotfix'te:
+
+* Ekran `/api/v1/invoices/parse`'a taşındı; XML/ZIP/PDF ham hâliyle gönderiliyor,
+  istemci tarafı PDF→PNG dönüşümü kaldırıldı. AI bu yolda hiç çağrılmıyor.
+* `/api/parse-fatura` aynı hatta ince delegate oldu (dış sözleşme korundu).
+* `src/proxy.ts` oturumsuz `/api/*` isteğini artık `/login` HTML'ine
+  yönlendirmiyor; ortak JSON zarfıyla `401` döndürüyor.
+* Metin katmanı tespiti düzeltildi: kalemleri çözülemeyen ama metni okunabilen
+  PDF artık "taranmış görüntü" hatası almıyor (bkz. `invoice-parse/pdf-adapter.ts`).
+* AI sağlayıcı hataları sınıflandırıldı (`invoice-parse/ai-vision.ts`); vision
+  modeli `GROQ_VISION_MODEL` ile yapılandırılıyor.
+
+Kanıt: `tests/invoice-parse-route.test.ts` (gerçek multipart route sınırı),
+`tests/invoice-preview-to-form.test.ts`, `tests/ai-vision-errors.test.ts`.
 
 ---
 

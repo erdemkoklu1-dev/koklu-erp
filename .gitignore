@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+# scripts/generate-smoke-fixtures.mjs ile üretilen sentetik binary fixture'lar
+/tests/fixtures/generated/
 
 # next.js
 /.next/
