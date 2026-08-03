@@ -7,7 +7,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 
 // ── Koordinatlı satır tipi ───────────────────────────────────────
 
-interface TextLine {
+export interface TextLine {
   y: number
   text: string
   items: Array<{ str: string; x: number }>
@@ -36,7 +36,7 @@ export async function extractRawTextFromPdf(buffer: Buffer): Promise<string> {
   return pages.join('\n')
 }
 
-async function extractLinesFromPdf(buffer: Buffer): Promise<TextLine[]> {
+export async function extractLinesFromPdf(buffer: Buffer): Promise<TextLine[]> {
   const uint8Array = new Uint8Array(buffer)
   const loadingTask = pdfjsLib.getDocument({ data: uint8Array, useWorkerFetch: false, isEvalSupported: false })
   const pdf = await loadingTask.promise
@@ -225,7 +225,7 @@ function normalizeDashes(s: string): string {
 }
 
 function normalizePdfText(s: string): string {
-  return normalizeDashes(s)
+  return normalizeDashes(s.normalize('NFKC'))
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
     .replace(/\u00A0/g, ' ')
 }
@@ -274,10 +274,19 @@ export function parseDate(s: unknown): string | null {
   // pdfjs bazen tarih parçalarını ayrı item olarak döndürür: "24 - 12 - 2024"
   const m = str.match(/(\d{1,2})\s*[\-./]\s*(\d{1,2})\s*[\-./]\s*(\d{4})/)
   if (m) {
-    return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+    return validIsoDate(Number(m[3]), Number(m[2]), Number(m[1]))
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10)
+  const compact = str.match(/\b(\d{2})(\d{2})(\d{4})\b/)
+  if (compact) return validIsoDate(Number(compact[3]), Number(compact[2]), Number(compact[1]))
+  const iso = str.match(/\b(\d{4})-(\d{2})-(\d{2})\b/)
+  if (iso) return validIsoDate(Number(iso[1]), Number(iso[2]), Number(iso[3]))
   return null
+}
+
+function validIsoDate(year: number, month: number, day: number): string | null {
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null
+  return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 }
 
 function findField(text: string, ...patterns: string[]): string | null {
@@ -465,10 +474,12 @@ interface CustomerInfoSatis {
   musteriAdres: string
   vkn: string
   tckn: string
+  city: string
+  district: string
 }
 
 function parseCustomerInfoSatis(lines: TextLine[], text: string): CustomerInfoSatis {
-  const result: CustomerInfoSatis = { musteriAdi: '', musteriAdres: '', vkn: '', tckn: '' }
+  const result: CustomerInfoSatis = { musteriAdi: '', musteriAdres: '', vkn: '', tckn: '', city: '', district: '' }
 
   const ADDR_KW  = /MAH\.|SOK\.|CAD\.|BULVAR|MEVK/i
   const META_KW  = /ZAMAN|DÜZENLEME|TARİH|FATURA|KÖKLÜ/i
@@ -525,14 +536,24 @@ function parseCustomerInfoSatis(lines: TextLine[], text: string): CustomerInfoSa
     const adresLines: string[] = []
 
     for (let i = adresStart; i < Math.min(adresStart + 6, lines.length); i++) {
-      const lt = lines[i].text
-      if (/Vergi Dairesi|TCKN|VKN|Özelleştirme|Fatura No|KÖKLÜ|ETTN/i.test(lt)) break
       const leftItems = lines[i].items.filter(it => it.x < 400)
       if (leftItems.length === 0) continue
-      const leftText = leftItems.map(it => it.str).join(' ').trim()
+      const leftText = cleanAdresLine(leftItems.map(it => it.str).join(' ').trim())
+      if (/^(Vergi Dairesi|TCKN|VKN|Özelleştirme|Fatura No|KÖKLÜ|ETTN)/iu.test(leftText)) break
       if (leftText.length > 1) adresLines.push(leftText)
     }
     result.musteriAdres = adresLines.join(', ')
+  }
+
+  const location = result.musteriAdres.match(/(ERZ[İI]NCAN\s+MERKEZ|ÜZÜMLÜ|UZUMLU|İLİÇ|ILIC)\s*\/\s*Erzincan/iu)
+  if (location) {
+    result.city = 'Erzincan'
+    const district = location[1].toLocaleUpperCase('tr-TR')
+    result.district = district.includes('MERKEZ')
+      ? 'Merkez'
+      : district.includes('ÜZÜMLÜ') || district === 'UZUMLU'
+        ? 'Üzümlü'
+        : 'İliç'
   }
 
   // TCKN / VKN
@@ -634,6 +655,75 @@ function parseLineItemsSatis(text: string): KalemItem[] {
 
   console.log(`=== parseLineItemsSatis: ${items.length} kalem bulundu ===`)
   return items
+}
+
+/**
+ * HiQPdf e-Arşiv tablolarını text-item koordinatlarından çözer. Açıklama ve KDV
+ * hücreleri farklı görsel satırlara taşsa da en yakın sıra-no ankrajına atanır.
+ */
+function parseLayoutLineItemsSatis(lines: TextLine[]): KalemItem[] {
+  const start = lines.findIndex(line => line.items.some(item => item.x < 60 && /^S[ıi]ra$/iu.test(item.str.trim())))
+  if (start < 0) return []
+  const endOffset = lines.slice(start + 1).findIndex(line => /Mal\s+Hizmet\s+Toplam/iu.test(line.text))
+  if (endOffset < 0) return []
+  const table = lines.slice(start + 1, start + 1 + endOffset)
+  const anchors = table
+    .map((line, index) => ({ line, index, no: line.items.find(item => item.x < 45 && /^\d{1,3}$/.test(item.str.trim())) }))
+    .filter((row): row is { line: TextLine; index: number; no: { str: string; x: number } } => Boolean(row.no))
+  if (anchors.length === 0) return []
+
+  const nearestAnchor = (y: number) => anchors.reduce((best, current) =>
+    Math.abs(current.line.y - y) < Math.abs(best.line.y - y) ? current : best,
+  )
+  const descriptions = new Map<number, Array<{ y: number; text: string }>>()
+  for (const line of table) {
+    for (const item of line.items) {
+      if (item.x < 40 || item.x >= 200 || /^\d{1,3}$/.test(item.str.trim())) continue
+      if (/^(Mal Hizmet|Açıklama|No|Oranı|Tutarı)$/iu.test(item.str.trim())) continue
+      const anchor = nearestAnchor(line.y)
+      const current = descriptions.get(anchor.index) ?? []
+      current.push({ y: line.y, text: item.str.trim() })
+      descriptions.set(anchor.index, current)
+    }
+  }
+
+  const valueNear = (anchor: typeof anchors[number], minX: number, maxX: number): string | null => {
+    const candidates = table.flatMap(line => line.items
+      .filter(item => item.x >= minX && item.x < maxX)
+      .map(item => ({ y: line.y, text: item.str.trim() })))
+      .filter(value => nearestAnchor(value.y).index === anchor.index)
+      .sort((a, b) => Math.abs(a.y - anchor.line.y) - Math.abs(b.y - anchor.line.y))
+    return candidates[0]?.text ?? null
+  }
+
+  return anchors.map(anchor => {
+    const quantityCell = valueNear(anchor, 200, 240) ?? ''
+    const quantityMatch = quantityCell.match(/([\d.,]+)\s*([\p{L}\d²³]+)/u)
+    const quantity = parseAmount(quantityMatch?.[1]) ?? 0
+    const unit = quantityMatch?.[2] ?? 'Adet'
+    const unitPrice = parseAmount(valueNear(anchor, 240, 286)) ?? 0
+    const discountRate = parseAmount(valueNear(anchor, 286, 350)) ?? 0
+    const taxRate = parseAmount(valueNear(anchor, 350, 396)) ?? 0
+    const taxAmount = parseAmount(valueNear(anchor, 396, 500)) ?? Math.round(quantity * unitPrice * taxRate) / 100
+    const lineTotal = parseAmount(valueNear(anchor, 500, Number.POSITIVE_INFINITY)) ?? Math.round(quantity * unitPrice * 100) / 100
+    const description = (descriptions.get(anchor.index) ?? [])
+      .sort((a, b) => b.y - a.y)
+      .map(part => part.text)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    return {
+      urun_adi: description,
+      miktar: quantity,
+      birim: unit,
+      birim_fiyat: unitPrice,
+      iskonto_orani: discountRate,
+      iskonto_tutari: Math.round(quantity * unitPrice * discountRate) / 100,
+      kdv_orani: taxRate,
+      kdv_tutari: taxAmount,
+      satir_toplam: lineTotal,
+    }
+  }).filter(item => item.urun_adi && item.miktar > 0 && item.birim_fiyat > 0)
 }
 
 function fixKok408Items(items: KalemItem[]): KalemItem[] {
@@ -874,7 +964,6 @@ function extractMusteriAdres(text: string): [string | null, string | null] {
   }
 
   musteriAdi = cleanPartyName(musteriAdi)
-  console.log('=== extractMusteriAdres ===', { musteriAdi, adres: adresLines.join(' ') })
   return [musteriAdi, adresLines.join(' ').trim() || null]
 }
 
@@ -1174,7 +1263,6 @@ function extractItemsKoklu(text: string): KalemItem[] {
   }
 
   const region = text.slice(baslaM.index, bitisM.index)
-  console.log('=== KALEM BÖLGESİ (ilk 600) ===\n' + region.substring(0, 600))
   const lines  = region.split('\n').map(l => l.trim()).filter(Boolean)
 
   const items: KalemItem[] = []
@@ -1466,6 +1554,7 @@ export interface ParseResult {
   musteri_vkn: string | null
   musteri_adresi: string | null
   musteri_il?: string | null
+  musteri_ilce?: string | null
   mal_hizmet_toplami: number | null
   kdv_matrahi: number | null
   kdv_tutari: number | null
@@ -1502,6 +1591,8 @@ export async function parsePdfBuffer(
     musteri_adi: null,
     musteri_vkn: null,
     musteri_adresi: null,
+    musteri_il: null,
+    musteri_ilce: null,
     mal_hizmet_toplami: null,
     kdv_matrahi: null,
     kdv_tutari: null,
@@ -1530,10 +1621,6 @@ export async function parsePdfBuffer(
     text = text.replace(/\b(\d{1,2})\s+-\s+(\d{1,2})\s+-\s+(\d{4})\b/g, '$1-$2-$3')
     text = text.replace(/\b(\d{1,2})\s+\.\s+(\d{1,2})\s+\.\s+(\d{4})\b/g, '$1.$2.$3')
 
-    console.log('=== FATURA PDF TEXT (ilk 2000 karakter) ===')
-    console.log(text.substring(0, 2000))
-    console.log('=== END ===')
-
     // ── Fatura No ────────────────────────────────────────────────
     result.fatura_no = findField(
       text,
@@ -1550,9 +1637,7 @@ export async function parsePdfBuffer(
       const m = text.match(label)
       if (!m || m.index === undefined) return null
       const near = text.slice(m.index + m[0].length, m.index + m[0].length + 160)
-      const dm = near.match(/(\d{1,2})\s*[\-./]\s*(\d{1,2})\s*[\-./]\s*(\d{4})/)
-      if (!dm) return null
-      return `${dm[3]}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`
+      return parseDate(near)
     }
 
     const duzenlemeTarihi = text.match(/D[üu]zenleme\s+Tarihi:?[\s\S]{0,80}?(\d{1,2})\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{4})/i)
@@ -1574,12 +1659,6 @@ export async function parsePdfBuffer(
       findDate(/VADESİ\s*[:\s]/i) ??
       parseDate(findField(text, 'Son\\s+[ÖO]deme\\s+Tarihi[:\\s]+([\\d.\\-/\\s]{6,20})'))
 
-    console.log('[tarih]', {
-      fatura_tarihi: result.fatura_tarihi,
-      vade_tarihi: result.vade_tarihi,
-      kaynak: faturaT ? 'Fatura Tarihi' : duzenlemeT ? 'Düzenleme Tarihi' : 'bilinmiyor',
-    })
-
     // ── Senaryo ──────────────────────────────────────────────────
     if (/TEMELFATURA/i.test(text)) result.senaryo = 'TEMELFATURA'
     else if (/T[İI]CAR[İI]FATURA/i.test(text)) result.senaryo = 'TICARIFATURA'
@@ -1595,17 +1674,21 @@ export async function parsePdfBuffer(
     } else {
       // 1. Dosya adından parse — en güvenilir (KOK..._VKN_AD.pdf formatı)
       const fromFilename = parseEArsivFromFilename(filename)
+      const custInfo = parseCustomerInfoSatis(lines, text)
       if (fromFilename) {
         result.musteri_adi    = fromFilename.musteri_unvan
         result.musteri_vkn    = fromFilename.musteri_vkn
-        result.musteri_adresi = null
+        result.musteri_adresi = custInfo.musteriAdres || null
+        result.musteri_il = custInfo.city || null
+        result.musteri_ilce = custInfo.district || null
         if (!result.fatura_no) result.fatura_no = fromFilename.fatura_no
       } else {
         // 2. X-koordinat tabanlı parse — sol kolon (x < 300) = müşteri bilgisi
-        const custInfo = parseCustomerInfoSatis(lines, text)
         result.musteri_adi    = custInfo.musteriAdi   || null
         result.musteri_adresi = custInfo.musteriAdres || null
         result.musteri_vkn    = custInfo.tckn || custInfo.vkn || null
+        result.musteri_il = custInfo.city || null
+        result.musteri_ilce = custInfo.district || null
 
         // Fallback: eski metin tabanlı yöntem
         if (!result.musteri_adi) {
@@ -1663,17 +1746,11 @@ export async function parsePdfBuffer(
     if (result.odenecek_tutar === null) {
       result.odenecek_tutar = extractMigrosTotal(text)
     }
-    console.log('[tutarlar]', {
-      mal_hizmet_toplami: result.mal_hizmet_toplami,
-      kdv_tutari: result.kdv_tutari,
-      vergiler_dahil_toplam: result.vergiler_dahil_toplam,
-      odenecek_tutar: result.odenecek_tutar,
-    })
-
     // ── Kalemler ─────────────────────────────────────────────────
     // Satis modu: önce yeni Adet-tabanlı parse dene, sonra mevcut extractors
     if (!isGelen) {
-      const satisItems = parseLineItemsSatis(text)
+      const layoutItems = parseLayoutLineItemsSatis(lines)
+      const satisItems = layoutItems.length > 0 ? layoutItems : parseLineItemsSatis(text)
       result.kalemler = satisItems.length > 0 ? satisItems : extractItemsFromText(text)
     } else {
       result.kalemler = extractItemsFromText(text)
@@ -1735,16 +1812,6 @@ export async function parsePdfBuffer(
         result.hata = `KOK2024000000408 manuel kontrol gerekli: ${[...new Set(kok408Hatalari)].join(', ')}`
       }
     }
-    console.log('[pdf parse]', {
-      mode,
-      dosya: filename,
-      musteri: result.musteri_adi,
-      satici: result.satici_adi,
-      vkn: result.musteri_vkn ?? result.satici_vkn ?? null,
-      fatura_no: result.fatura_no,
-      kalem_sayisi: result.kalemler.length,
-    })
-
     // ── IBAN ─────────────────────────────────────────────────────
     const ibans = [...new Set(
       [...text.matchAll(/TR\s*\d{2}\s*(?:\d{4}\s*){5}\d{2}/g)]

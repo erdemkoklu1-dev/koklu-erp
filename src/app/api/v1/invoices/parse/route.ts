@@ -12,6 +12,7 @@ import {
 import { DEFAULT_MAX_BYTES } from '@/lib/invoice-parse/file-acceptance'
 import { parsePdfForPipeline } from '@/lib/invoice-parse/pdf-adapter'
 import { retryableForParseError, statusForParseError } from '@/lib/invoice-parse/error-mapping'
+import { parseInvoiceBatch } from '@/lib/invoice-parse/server-batch'
 
 /**
  * Fatura yükleme/ayrıştırma için **tek kanonik, versiyonlu** endpoint.
@@ -132,12 +133,14 @@ export async function POST(req: NextRequest) {
 
   let file: File | null = null
   let mode: ParseMode = 'gelen'
+  let batch = false
   try {
     const form = await req.formData()
     const candidate = form.get('file')
     file = candidate instanceof File ? candidate : null
     // Bilinmeyen değer sessizce kabul edilmez; varsayılana düşer.
     mode = form.get('mode') === 'satis' ? 'satis' : 'gelen'
+    batch = form.get('batch') === 'true'
   } catch (error) {
     logApiError('invoices/parse', requestId, 'FORM_READ_FAILED', error)
     return apiFailure('INVALID_PAYLOAD', 'Yüklenen dosya okunamadı.', requestId, 400)
@@ -162,6 +165,14 @@ export async function POST(req: NextRequest) {
   // ── Ayrıştırma (zaman aşımı korumalı) ────────────────────────────────────
   try {
     const bytes = new Uint8Array(await file.arrayBuffer())
+
+    if (batch) {
+      const outcome = await parseInvoiceBatch(bytes, { mode, filename: file.name })
+      if (!outcome.ok) {
+        return apiFailure(outcome.error.code, outcome.error.message, requestId, outcome.error.status)
+      }
+      return apiSuccess({ invoices: outcome.invoices }, requestId)
+    }
 
     const timeout = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error(PARSE_ERROR.TIMEOUT)), PARSE_TIMEOUT_MS).unref?.()

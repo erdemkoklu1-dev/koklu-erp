@@ -2,7 +2,7 @@
  * OTOMATİK ÜRETİLMİŞTİR — ELLE DÜZENLEMEYİN.
  *
  * Üretici : scripts/generate-db-types.mjs
- * Kaynak  : db/*.sql migration zinciri (51 dosya)
+ * Kaynak  : db/*.sql migration zinciri (52 dosya)
  * Komut   : npm run db:types:generate
  * Kontrol : npm run db:types:check   (drift varsa CI düşer)
  *
@@ -4451,6 +4451,16 @@ export type Database = {
           p_patch: Json
         }
         Returns: undefined
+      }
+      invoice_import_atomic: {
+        Args: {
+          p_firma_id: string
+          p_customer: Json
+          p_invoice: Json
+          p_items?: Json | null
+          p_devices?: Json | null
+        }
+        Returns: Json
       }
       invoice_update_atomic: {
         Args: {
