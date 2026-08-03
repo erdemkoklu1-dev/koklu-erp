@@ -105,6 +105,7 @@ type ParsedInvoice = {
   musteri_vkn: string | null
   musteri_adresi: string | null
   musteri_il?: string | null
+  musteri_ilce?: string | null
   mal_hizmet_toplami: number | null
   kdv_matrahi: number | null
   kdv_tutari: number | null
@@ -313,6 +314,8 @@ function PdfEditModal({
   const [tutar, setTutar]     = useState(row.editedTutar)
   const [subeId, setSubeId]   = useState<string | null>(row.sube_id)
   const [adres, setAdres]     = useState(row.musteri_adresi ?? '')
+  const [sehir, setSehir]     = useState(row.musteri_il ?? '')
+  const [ilce, setIlce]       = useState(row.musteri_ilce ?? '')
   const [items, setItems]     = useState<PdfInvoiceItem[]>(row.kalemler?.length ? row.kalemler : [makeEmptyItem(1)])
   const [custDrop, setCustDrop] = useState(false)
   const custRef = useRef<HTMLDivElement>(null)
@@ -363,6 +366,8 @@ function PdfEditModal({
       kalemler: cleanItems,
       sube_id: subeId,
       musteri_adresi: adres || null,
+      musteri_il: sehir || null,
+      musteri_ilce: ilce || null,
     })
     onClose()
   }
@@ -420,6 +425,11 @@ function PdfEditModal({
               rows={2}
               className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
             />
+          </div>
+
+          <div className={'grid grid-cols-2 gap-3'}>
+            <label className={'text-xs'}>Şehir<input value={sehir} onChange={e => setSehir(e.target.value)} className={'mt-1 w-full border rounded-lg px-3 py-2 text-sm'} /></label>
+            <label className={'text-xs'}>İlçe<input value={ilce} onChange={e => setIlce(e.target.value)} className={'mt-1 w-full border rounded-lg px-3 py-2 text-sm'} /></label>
           </div>
 
           {/* Tarihler */}
@@ -589,7 +599,9 @@ function PdfFaturaImport() {
       // ── Dosyayı API'ye gönder, parse et ────────────────────────
       const fd = new FormData()
       fd.append('file', file)
-      const res = await fetch('/api/pdf-fatura-parse', { method: 'POST', body: fd })
+      fd.append('mode', 'satis')
+      fd.append('batch', 'true')
+      const res = await fetch('/api/v1/invoices/parse', { method: 'POST', body: fd })
       if (!res.ok) {
         let errorMessage = 'Fatura parse edilemedi'
         try {
@@ -598,7 +610,8 @@ function PdfFaturaImport() {
         } catch { errorMessage = `Sunucu hatası: ${res.status}` }
         throw new Error(errorMessage)
       }
-      const data = await res.json()
+      const envelope = await res.json()
+      const data = envelope.data
 
       const invoices: ParsedInvoice[] = data.invoices ?? []
       if (invoices.length === 0) {
@@ -647,12 +660,6 @@ function PdfFaturaImport() {
                 address: inv.musteri_adresi,
               })
           customerMatchCandidates = customerMatch.candidates
-          const matchMethod = customerMatch.status === 'matched'
-            ? 'güçlü'
-            : customerMatch.status === 'suspicious'
-              ? 'şüpheli'
-              : 'bulunamadı'
-          console.log('[giden eşleştirme] VKN:', vkn, 'match:', customerMatch.status, 'name:', name)
           if (customerMatch.status === 'matched') {
             rowStatus = 'eklenecek'
             selectedCustomerId = customerMatch.customer.id
@@ -663,25 +670,6 @@ function PdfFaturaImport() {
             forceNewCustomer = true
           }
           message = isManualWarning ? inv.hata! : customerMatch.message
-          console.log('[giden import]', {
-            musteri: name || null,
-            vkn: vkn || null,
-            fatura_no: inv.fatura_no,
-            kalem_sayisi: itemCount,
-            duplicate: false,
-            eslesme: matchMethod,
-          })
-        }
-        if (rowStatus === 'duplicate' || rowStatus === 'hata') {
-          console.log('[giden import]', {
-            musteri: inv.musteri_adi || null,
-            vkn: normVkn(inv.musteri_vkn) || null,
-            fatura_no: inv.fatura_no,
-            kalem_sayisi: itemCount,
-            duplicate: rowStatus === 'duplicate',
-            eslesme: 'bulunamadı',
-            mesaj: message,
-          })
         }
         // İl bilgisine göre şube otomatik ata — globalSubeId yoksa veya il biliniyorsa
         const detectedCity = inv.musteri_il ?? inferCityFromAddress(inv.musteri_adresi) ?? null
@@ -744,13 +732,14 @@ function PdfFaturaImport() {
         .map(r => ({
           filename:       r.filename,
           fatura_no:      r.editedFaturaNo.trim() || (r.fatura_no ?? ''),
-          fatura_tarihi:  r.editedTarih || (r.fatura_tarihi ?? new Date().toISOString().split('T')[0]),
+          fatura_tarihi:  r.editedTarih || r.fatura_tarihi,
           vade_tarihi:    r.editedVade || r.vade_tarihi || null,
           senaryo:        r.senaryo ?? null,
           musteri_adi:    r.editedName.trim() || (r.musteri_adi ?? 'Bilinmiyor'),
           musteri_vkn:    r.editedVkn.trim() || r.musteri_vkn || null,
           musteri_adresi: r.musteri_adresi ?? null,
           musteri_il:     r.musteri_il ?? null,
+          musteri_ilce:   r.musteri_ilce ?? null,
           kdv_matrahi:    r.kdv_matrahi ?? null,
           kdv_tutari:     r.kdv_tutari ?? null,
           odenecek_tutar: r.editedTutar ? parseFloat(r.editedTutar) : (r.odenecek_tutar ?? null),
@@ -775,6 +764,12 @@ function PdfFaturaImport() {
         throw new Error(errorMessage)
       }
       const data = await res.json()
+      const failedKeys = new Set<string>((data.results ?? [])
+        .filter((result: PdfImportResult['results'][number]) => result.status === 'hata')
+        .map((result: PdfImportResult['results'][number]) => `${result.filename}\u0000${result.fatura_no}`))
+      setPreviewRows(previous => previous.filter(row =>
+        failedKeys.has(`${row.filename}\u0000${row.editedFaturaNo.trim() || (row.fatura_no ?? '')}`)
+      ))
 
       const dupCount = previewRows.filter(r => r.rowStatus === 'duplicate' || r.rowStatus === 'hata').length
       setImportResult({ ...data, atilandi: (data.atilandi ?? 0) + dupCount })
@@ -1332,6 +1327,12 @@ function PdfFaturaImport() {
         )}
 
         <div className="flex gap-3">
+          {hatalılar.length > 0 && (
+            <button onClick={() => { setImportResult(null); setStep('preview') }}
+              className="px-8 py-3 border border-red-300 rounded-lg text-sm font-medium text-red-700 hover:bg-red-50">
+              Yalnızca Hatalıları Yeniden Dene
+            </button>
+          )}
           <Link href="/cari-hesap/faturalar"
             className="flex-1 bg-[#C8102E] text-white py-3 rounded-lg font-semibold hover:bg-[#a50d26] text-center">
             Faturalara Git

@@ -30,9 +30,31 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   const isLoginPage = pathname === '/login'
+  const isApiRequest = pathname.startsWith('/api/')
 
-  // Giriş yapmamış kullanıcıyı /login'e yönlendir
+  // Giriş yapmamış kullanıcı
   if (!user && !isLoginPage) {
+    // API isteği HTML login sayfasına YÖNLENDİRİLMEZ. Yönlendirme, fetch
+    // tarafından şeffafça izlendiği için istemciye 200 + `text/html` olarak
+    // ulaşıyordu; `response.json()` çağıran her çağrı bunu
+    // "Unexpected token '<' … is not valid JSON" olarak görüyordu. Oturum
+    // süresi dolan bir fatura yüklemesi böylece anlamsız bir hataya dönüşüyordu.
+    // Artık her API yolu ortak JSON zarfını korur.
+    if (isApiRequest) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: 'UNAUTHENTICATED',
+            message: 'Oturumunuz sona ermiş. Lütfen tekrar giriş yapın.',
+            retryable: false,
+          },
+          requestId: 'proxy',
+        },
+        { status: 401, headers: { 'cache-control': 'no-store' } },
+      )
+    }
+
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

@@ -1,13 +1,21 @@
 'use client'
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { requestApi } from '@/lib/api/envelope'
+
+function yeniIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 
 const STATUS_OPTIONS = ['SAĞLAM', 'HASARLI', 'DEĞİŞTİRİLDİ', 'YOK']
 
 type FormItem = {
+  /** React listesi için anahtar (yeni satırlarda `new-…`) */
   id: string
+  /** Veritabanındaki stabil primary key; yeni satırlarda null */
+  dbId: string | null
   device_name: string
   serial_number: string
   quantity: number
@@ -30,6 +38,7 @@ type FormData = {
 function newItem(): FormItem {
   return {
     id: 'new-' + Math.random().toString(36).slice(2),
+    dbId: null,
     device_name: '',
     serial_number: '',
     quantity: 1,
@@ -46,15 +55,27 @@ interface Props {
   initialForm: FormData
   initialItems: FormItem[]
   customerName: string
+  /** Satır sorgusu başarıyla okundu mu (bkz. `page.tsx`). */
+  itemsLoaded?: boolean
+  updatedAt?: string | null
 }
 
-export default function EditServiceFormClient({ id, initialForm, initialItems, customerName }: Props) {
+export default function EditServiceFormClient({
+  id,
+  initialForm,
+  initialItems,
+  customerName,
+  itemsLoaded = true,
+  updatedAt = null,
+}: Props) {
   const router = useRouter()
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState<FormData>(initialForm)
   const [items, setItems] = useState<FormItem[]>(initialItems)
+  // Kullanıcının açıkça kaldırdığı mevcut satırların gerçek kimlikleri.
+  const [deletedItemIds, setDeletedItemIds] = useState<string[]>([])
+  const idempotencyKey = useRef(yeniIdempotencyKey())
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -65,7 +86,11 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
   }
 
   function removeItem(itemId: string) {
-    setItems(prev => prev.filter(i => i.id !== itemId))
+    setItems(prev => {
+      const target = prev.find(i => i.id === itemId)
+      if (target?.dbId) setDeletedItemIds(ids => (ids.includes(target.dbId!) ? ids : [...ids, target.dbId!]))
+      return prev.filter(i => i.id !== itemId)
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -73,60 +98,52 @@ export default function EditServiceFormClient({ id, initialForm, initialItems, c
     setLoading(true)
     setError('')
 
-    // 1. Form başlığını güncelle
-    const { error: formErr } = await supabase
-      .from('service_forms')
-      .update({
-        technician_name: form.technician_name || null,
-        service_date: form.service_date,
-        control_number: form.control_number || null,
-        general_notes: form.general_notes || null,
-        customer_note: form.customer_note || null,
-        next_service_date: form.next_service_date || null,
-      })
-      .eq('id', id)
+    // Eski akış: "önce bütün satırları sil, sonra yeniden yaz". Delete başarılı olup
+    // insert hata verdiğinde bütün cihaz satırları kalıcı olarak kayboluyordu.
+    // Yeni akış: kimlik bazlı diff + açık silme niyeti, silme en son uygulanır.
+    const result = await requestApi<{ inserted: number; updated: number; deleted: number }>(
+      `/api/v1/aggregates/serviceForm/${id}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey.current },
+        body: JSON.stringify({
+          parentPatch: {
+            technician_name: form.technician_name || null,
+            service_date: form.service_date,
+            control_number: form.control_number || null,
+            general_notes: form.general_notes || null,
+            customer_note: form.customer_note || null,
+            next_service_date: form.next_service_date || null,
+          },
+          lines: items.map(i => ({
+            id: i.dbId,
+            fields: {
+              device_name: i.device_name,
+              serial_number: i.serial_number || null,
+              quantity: Number(i.quantity),
+              body_status: i.body_status,
+              valve_status: i.valve_status,
+              hose_status: i.hose_status,
+              gauge_status: i.gauge_status,
+              notes: i.notes || null,
+            },
+          })),
+          deleteLineIds: deletedItemIds,
+          replaceAllLines: itemsLoaded,
+          expectedUpdatedAt: updatedAt,
+        }),
+      },
+    )
 
-    if (formErr) {
-      setError('Form güncellenemedi: ' + formErr.message)
+    idempotencyKey.current = yeniIdempotencyKey()
+
+    if (!result.ok) {
+      setError(result.error.message)
       setLoading(false)
       return
     }
 
-    // 2. Mevcut tüm satırları sil, yeniden yaz
-    const { error: delErr } = await supabase
-      .from('service_form_items')
-      .delete()
-      .eq('service_form_id', id)
-
-    if (delErr) {
-      setError('Satırlar temizlenemedi: ' + delErr.message)
-      setLoading(false)
-      return
-    }
-
-    if (items.length > 0) {
-      const { error: insErr } = await supabase
-        .from('service_form_items')
-        .insert(
-          items.map(i => ({
-            service_form_id: id,
-            device_name: i.device_name,
-            serial_number: i.serial_number || null,
-            quantity: i.quantity,
-            body_status: i.body_status,
-            valve_status: i.valve_status,
-            hose_status: i.hose_status,
-            gauge_status: i.gauge_status,
-            notes: i.notes || null,
-          }))
-        )
-      if (insErr) {
-        setError('Satırlar kaydedilemedi: ' + insErr.message)
-        setLoading(false)
-        return
-      }
-    }
-
+    setDeletedItemIds([])
     router.push(`/service-forms/${id}`)
     router.refresh()
   }

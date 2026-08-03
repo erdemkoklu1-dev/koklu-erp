@@ -1,117 +1,129 @@
 import { NextRequest, NextResponse } from 'next/server'
-import AdmZip from 'adm-zip'
-import { parsePdfBuffer, extractRawTextFromPdf } from '@/lib/parsePdfBuffer'
+import { extractRawTextFromPdf } from '@/lib/parsePdfBuffer'
 import { parseInvoiceWithAI } from '@/lib/invoice-ai-parser'
-import type { ParseResult, KalemItem } from '@/lib/parsePdfBuffer'
+import { newRequestId } from '@/lib/api/response'
+import { parseInvoiceBatch } from '@/lib/invoice-parse/server-batch'
+import type { AiGapFields, LegacyParseResult } from '@/lib/invoice-parse/legacy-adapter'
+import type { KalemItem } from '@/lib/parsePdfBuffer'
 
-// AI parse sonucunu ParseResult formatına dönüştür
-function aiToParseResult(ai: Awaited<ReturnType<typeof parseInvoiceWithAI>>, filename: string): ParseResult {
-  const kalemler: KalemItem[] = ai.kalemler.map(k => ({
-    urun_adi:         k.aciklama,
-    raw_description:  k.aciklama,
-    normalized_description: k.aciklama,
-    miktar:           k.miktar,
-    birim:            k.birim || 'Adet',
-    birim_fiyat:      k.birim_fiyat,
-    iskonto_orani:    k.iskonto_orani ?? 0,
-    iskonto_tutari:   0,
-    kdv_orani:        k.kdv_orani,
-    kdv_tutari:       k.kdv_tutari,
-    satir_toplam:     k.tutar,
-    parse_confidence: 95,
-    parse_warnings:   [],
-  }))
+/**
+ * Satış faturası toplu ayrıştırma — **kanonik hatta delege eder**.
+ *
+ * ── ÖNCE (kapatılan açıklar) ────────────────────────────────────────────────
+ *  1. **AI BİRİNCİL KAYNAKTI.** Rota önce `parseInvoiceWithAI`'ı çağırıyor,
+ *     deterministik `parsePdfBuffer` yalnızca AI patlarsa devreye giriyordu.
+ *     Üstelik AI çıktısına sabit `parse_confidence: 95` ve
+ *     `parse_durumu: 'temiz_parse'` yazılıyordu — hiçbir şema/toplam
+ *     doğrulamasından geçmemiş bir sonuç "temiz" ilan ediliyordu.
+ *  2. **ZIP içindeki XML tamamen yok sayılıyordu** (`.pdf` filtresi). UBL-TR
+ *     e-fatura paketleri sessizce "geçerli fatura bulunamadı" veriyordu.
+ *  3. Dosya türü yalnızca **uzantıdan** belirleniyordu.
+ *  4. ZIP'te entry sayısı, açılmış boyut, sıkıştırma oranı ve path traversal
+ *     kontrolü YOKTU.
+ *  5. Hata yolunda **ham exception mesajı** istemciye dönüyordu.
+ *
+ * ── SONRA ───────────────────────────────────────────────────────────────────
+ * Bütün ayrıştırma `parseInvoiceBatch` içinde; öncelik sırası
+ * XML → PDF, AI yalnızca boş alan doldurucu (`mergeAiGaps`).
+ *
+ * Yanıt şekli (`{ invoices: [...] }` / `{ error }`) bilinçli olarak KORUNDU:
+ * `src/app/(dashboard)/cari-hesap/fatura-import/page.tsx` buna bağlı ve Gate 0
+ * NO-GO iken UI davranışı değiştirmek doğrulanamaz.
+ */
 
-  const vkn = ai.musteri_vkn || ai.musteri_tckn || null
+export const runtime = 'nodejs'
 
-  return {
-    filename,
-    fatura_no:              ai.fatura_no || null,
-    fatura_tarihi:          ai.fatura_tarihi || null,
-    vade_tarihi:            ai.vade_tarihi || null,
-    senaryo:                null,
-    musteri_adi:            ai.musteri_adi || null,
-    musteri_vkn:            vkn,
-    musteri_adresi:         ai.musteri_adres || null,
-    musteri_il:             ai.musteri_il || null,
-    mal_hizmet_toplami:     null,
-    kdv_matrahi:            null,
-    kdv_tutari:             ai.kdv_toplam || null,
-    vergiler_dahil_toplam:  ai.toplam_tutar || null,
-    odenecek_tutar:         ai.toplam_tutar || null,
-    kalemler,
-    banka_bilgileri:        [],
-    hata:                   null,
-    parse_durumu:           'temiz_parse',
-    parse_uyarilari:        [],
-  }
-}
+/** AI çağrısı için üst süre; aşılırsa deterministik sonuç korunur. */
+const AI_TIMEOUT_MS = 45_000
 
-// Dosya adından (KOK..._VKN_AD.pdf) bilgi çıkar ve parse sonucunu zenginleştir
-function enrichFromFilename(result: ParseResult, filename: string): ParseResult {
+/** Dosya adından (KOK..._VKN_AD.pdf) yalnızca BOŞ alanları tamamlar. */
+function enrichFromFilename(result: LegacyParseResult, filename: string): LegacyParseResult {
   const baseName = (filename.split('/').pop() ?? filename).replace(/\.pdf$/i, '')
   const match = baseName.match(/^([A-Z]{2,4}\d{13})_(\d{10,11})_(.+)$/)
   if (!match) return result
-  if (!result.fatura_no)   result.fatura_no   = match[1]
-  if (!result.musteri_vkn) result.musteri_vkn  = match[2]
-  if (!result.musteri_adi) result.musteri_adi  = match[3].trim()
+  if (!result.fatura_no) result.fatura_no = match[1]
+  if (!result.musteri_vkn) result.musteri_vkn = match[2]
+  if (!result.musteri_adi) result.musteri_adi = match[3].trim()
   return result
 }
 
+/**
+ * AI **boşluk doldurucu**. Hiçbir alanı ezmez; `mergeAiGaps` yalnızca boş
+ * alanlara uygular ve sonucu `manuel_kontrol_gerekli` olarak işaretler.
+ */
+async function aiFill(pdfBuffer: Buffer, base: LegacyParseResult): Promise<AiGapFields | null> {
+  if (!process.env.GROQ_API_KEY) return null
+
+  // Deterministik parse zaten yeterliyse AI'a hiç gidilmez (maliyet + gürültü).
+  const eksik = !base.fatura_no || !base.fatura_tarihi || !base.odenecek_tutar || base.kalemler.length === 0
+  if (!eksik) return null
+
+  const rawText = await extractRawTextFromPdf(pdfBuffer)
+  const ai = await Promise.race([
+    parseInvoiceWithAI(rawText),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('AI_TIMEOUT')), AI_TIMEOUT_MS).unref?.()
+    }),
+  ])
+
+  const kalemler: KalemItem[] = (ai.kalemler ?? []).map(k => ({
+    urun_adi: k.aciklama,
+    miktar: k.miktar,
+    birim: k.birim || 'Adet',
+    birim_fiyat: k.birim_fiyat,
+    iskonto_orani: k.iskonto_orani ?? 0,
+    iskonto_tutari: 0,
+    kdv_orani: k.kdv_orani,
+    kdv_tutari: k.kdv_tutari,
+    satir_toplam: k.tutar,
+  } as KalemItem))
+
+  return {
+    fatura_no: ai.fatura_no || undefined,
+    fatura_tarihi: ai.fatura_tarihi || undefined,
+    vade_tarihi: ai.vade_tarihi || undefined,
+    musteri_adi: ai.musteri_adi || undefined,
+    musteri_vkn: ai.musteri_vkn || ai.musteri_tckn || undefined,
+    musteri_adresi: ai.musteri_adres || undefined,
+    kdv_tutari: ai.kdv_toplam ?? undefined,
+    odenecek_tutar: ai.toplam_tutar ?? undefined,
+    kalemler: kalemler.length > 0 ? kalemler : undefined,
+  }
+}
+
 export async function POST(req: NextRequest) {
+  const requestId = newRequestId()
+
   try {
     const formData = await req.formData()
-    const file = formData.get('file') as File | null
-    if (!file) {
+    const file = formData.get('file')
+    if (!(file instanceof File)) {
       return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 400 })
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase()
-    if (ext !== 'zip' && ext !== 'pdf') {
-      return NextResponse.json({ error: 'Yalnızca PDF veya ZIP dosyası yükleyebilirsiniz' }, { status: 400 })
+    const outcome = await parseInvoiceBatch(new Uint8Array(await file.arrayBuffer()), {
+      mode: 'satis',
+      filename: file.name,
+      aiFill,
+      aiDelayMs: 200,
+    })
+
+    if (!outcome.ok) {
+      console.error(`[pdf-fatura-parse] requestId=${requestId} code=${outcome.error.code}`)
+      return NextResponse.json({ error: outcome.error.message }, { status: outcome.error.status })
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const invoices: ParseResult[] = []
-
-    const useAI = !!process.env.GROQ_API_KEY
-
-    async function parseSinglePdf(pdfBuffer: Buffer, entryName: string): Promise<ParseResult> {
-      // AI parse dene
-      if (useAI) {
-        try {
-          const rawText = await extractRawTextFromPdf(pdfBuffer)
-          const aiResult = await parseInvoiceWithAI(rawText)
-          const result = aiToParseResult(aiResult, entryName)
-          return enrichFromFilename(result, entryName)
-        } catch (aiErr) {
-          console.warn('[pdf-parse] AI parse başarısız, regex fallback:', (aiErr as Error).message)
-        }
-      }
-
-      // Regex fallback
-      return parsePdfBuffer(pdfBuffer, entryName, 'satis')
-    }
-
-    if (ext === 'zip') {
-      const zip = new AdmZip(buffer)
-      const entries = zip.getEntries()
-        .filter(e => e.entryName.toLowerCase().endsWith('.pdf') && !e.entryName.startsWith('__MACOSX'))
-        .sort((a, b) => a.entryName.localeCompare(b.entryName))
-
-      for (const entry of entries) {
-        const pdfBuffer = entry.getData()
-        const parsed = await parseSinglePdf(pdfBuffer, entry.entryName)
-        invoices.push(parsed)
-      }
-    } else {
-      const parsed = await parseSinglePdf(buffer, file.name)
-      invoices.push(parsed)
-    }
-
+    const invoices = outcome.invoices.map(invoice => enrichFromFilename(invoice, invoice.filename))
     return NextResponse.json({ invoices })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: msg }, { status: 500 })
+  } catch (err) {
+    // Ham exception mesajı ve stack trace istemciye DÖNMEZ.
+    console.error(
+      `[pdf-fatura-parse] requestId=${requestId} code=UNEXPECTED`,
+      err instanceof Error ? err.message : 'bilinmeyen',
+    )
+    return NextResponse.json(
+      { error: 'Fatura ayrıştırılamadı. Lütfen tekrar deneyin.' },
+      { status: 500 },
+    )
   }
 }

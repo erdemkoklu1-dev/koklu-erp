@@ -68,6 +68,11 @@ export function filterVisibleTenantRows<T extends { firma_id?: string | null }>(
 }
 
 export async function requireCurrentFirmaId() {
+  const actor = await requireCurrentTenantActor()
+  return actor.firmaId
+}
+
+export async function requireCurrentTenantActor() {
   const supabase = await createClient()
 
   const {
@@ -98,7 +103,7 @@ export async function requireCurrentFirmaId() {
     throw new Error('Kullanıcıya bağlı firma bulunamadı.')
   }
 
-  return profile.firma_id as string
+  return { userId: user.id, firmaId: profile.firma_id as string }
 }
 
 export function withFirmaId<T extends Record<string, unknown>>(payload: T, firmaId: string) {
