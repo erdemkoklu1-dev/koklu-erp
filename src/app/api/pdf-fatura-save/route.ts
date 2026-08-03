@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, requireCurrentFirmaId } from '@/lib/auth/tenant-scope'
+import { assertBranchBelongsToFirma, assertCustomerBelongsToFirma, requireCurrentTenantActor } from '@/lib/auth/tenant-scope'
 import { matchCustomerForImport, normalizeCustomerTaxNo } from '@/lib/customer-matching'
 import { importInvoiceAtomically } from '@/lib/invoice-import/atomic-service'
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceClient()
-    const firmaId = await requireCurrentFirmaId()
+    const { firmaId, userId } = await requireCurrentTenantActor()
 
     // ── Mevcut fatura numaraları ───────────────────────────────────
     const { data: existingInvoices } = await supabase
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
         }
 
           await assertBranchBelongsToFirma(row.sube_id ?? null, firmaId)
-          const atomic = await importInvoiceAtomically(supabase, firmaId, row, customerId)
+          const atomic = await importInvoiceAtomically(supabase, firmaId, userId, row, customerId)
           results.push({
             filename: row.filename,
             fatura_no: row.fatura_no,

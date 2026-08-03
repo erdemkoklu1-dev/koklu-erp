@@ -7,7 +7,7 @@ const sql = readFileSync(new URL('../db/invoice_import_atomic_rpc.sql', import.m
 describe('invoice import atomic SQL contract', () => {
   it('tenant + tür + normalize fatura numarası için kalıcı unique index taşır', () => {
     assert.match(sql, /unique index if not exists invoices_firma_type_number_uidx/i)
-    assert.match(sql, /firma_id, invoice_type, upper\(regexp_replace\(invoice_number/i)
+    assert.match(sql, /firma_id,\s+invoice_type,\s+upper\(regexp_replace\(invoice_number/i)
   })
 
   it('eşzamanlı duplicate istekleri transaction advisory lock ile serileştirir', () => {
@@ -29,5 +29,22 @@ describe('invoice import atomic SQL contract', () => {
 
   it('aynı VKN\/TCKN varsa yeni müşteri oluşturmadan mevcut kaydı seçer', () => {
     assert.match(sql, /from public\.customers[\s\S]*?tax_number[\s\S]*?limit 1;/i)
+  })
+
+  it('çağıranı doğrular ve tenant bilgisini kullanıcı profilinden türetir', () => {
+    assert.match(sql, /auth\.uid\(\)/i)
+    assert.match(sql, /from public\.kullanici_profiller/i)
+    assert.match(sql, /INVOICE_IMPORT_TENANT_MISMATCH/i)
+  })
+
+  it('SECURITY DEFINER için sabit search_path ve şube sahiplik kontrolleri taşır', () => {
+    assert.match(sql, /security definer\s+set search_path = pg_catalog, public/i)
+    assert.match(sql, /from public\.subeler where id = v_customer_branch_id and firma_id = v_effective_firma/i)
+    assert.match(sql, /from public\.subeler where id = v_invoice_branch_id and firma_id = v_effective_firma/i)
+  })
+
+  it('yalnız fatura numarası index ihlalini idempotent duplicate kabul eder', () => {
+    assert.match(sql, /get stacked diagnostics v_constraint_name = constraint_name/i)
+    assert.match(sql, /v_constraint_name <> 'invoices_firma_type_number_uidx'/i)
   })
 })

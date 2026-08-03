@@ -19,6 +19,7 @@ describe('atomic invoice import service', () => {
     const result = await importInvoiceAtomically(
       clientReturning({ status: 'eklendi', musteri_yeni: true, cihaz_sayisi: 1 }, value => { args = value }),
       'firma-1',
+      'user-1',
       {
         fatura_no: 'KOK2026000000114',
         fatura_tarihi: '2026-07-03',
@@ -37,6 +38,7 @@ describe('atomic invoice import service', () => {
     assert.equal(Object.hasOwn(customer, 'ilce'), false)
     assert.equal(customer.il, 'Erzincan')
     assert.equal(customer.sube_id, 'sube-1')
+    assert.equal(args.p_user_id, 'user-1')
     assert.equal(customer.address, 'Atatürk Mahallesi No: 1, Merkez')
   })
 
@@ -47,6 +49,7 @@ describe('atomic invoice import service', () => {
         invoice = args.p_invoice as Record<string, unknown>
       }),
       'firma-1',
+      'user-1',
       { fatura_no: 'INV-1', fatura_tarihi: null, musteri_adi: 'Mevcut Müşteri' },
       'customer-1',
     )

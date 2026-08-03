@@ -50,6 +50,7 @@ function addYears(date: string, years: number): string {
 export async function importInvoiceAtomically(
   supabase: ServiceClient,
   firmaId: string,
+  userId: string,
   row: AtomicInvoiceImportRow,
   customerId?: string,
 ): Promise<AtomicInvoiceImportResult> {
@@ -70,6 +71,7 @@ export async function importInvoiceAtomically(
 
   const { data, error } = await supabase.rpc('invoice_import_atomic', {
     p_firma_id: firmaId,
+    p_user_id: userId,
     p_customer: customer,
     p_invoice: {
       invoice_number: row.fatura_no,

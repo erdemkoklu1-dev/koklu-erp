@@ -4459,6 +4459,7 @@ export type Database = {
           p_invoice: Json
           p_items?: Json | null
           p_devices?: Json | null
+          p_user_id?: string | null
         }
         Returns: Json
       }
