@@ -3,8 +3,8 @@
 ## Git
 - Branch: `fix/aggregate-data-loss-and-invoice-parse`
 - Başlangıç commit: `bec79fa7198d2bb880e953adc43cb084f853a5f1`
-- Son commit(ler): Commit öncesi doğrulama tamamlandı; aşağıdaki Git bölümünde son commit güncellenecek.
-- Remote branch/push sonucu: Commit/push adımından sonra güncellenecek.
+- Son commit(ler): `fe9b875` — Fatura içe aktarma şema ve parser hotfix
+- Remote branch/push sonucu: Feature branch push adımından sonra doğrulandı.
 - Değişen dosyaların tam listesi: Git durumunda ayrıca görülebilir; bu görevde `db/invoice_import_atomic_rpc.sql`, `src/lib/invoice-import/*`, customer/atomic testleri, generated DB tipi ve mevcut parser/import dosyaları değişti.
 - Bilinçli stage edilmeyen dosyalar: `.claude/settings.local.json`, `GOREV.md`, `tests/private-fixtures/`, private Temmuz arşivi.
 
@@ -56,7 +56,7 @@
 
 ## Son karar
 - Local code hazır mı: EVET
-- Feature branch push edildi mi: HAYIR
+- Feature branch push edildi mi: EVET
 - Staging doğrulandı mı: BLOKE
 - Production'a hazır mı: HAYIR
 - Kalan riskler: RPC local/staging ortamına uygulanıp gerçek transaction testi ve authenticated UI smoke yapılmalı. Repo-geneli lintte hotfix dışı mevcut 440 hata bulunuyor.
