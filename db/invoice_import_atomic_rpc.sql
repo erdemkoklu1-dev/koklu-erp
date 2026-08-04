@@ -24,6 +24,12 @@ create unique index if not exists invoices_firma_type_number_uidx
   )
   where nullif(regexp_replace(invoice_number, '[[:space:]]+', '', 'g'), '') is not null;
 
+-- Eski şema fatura numarasını tenant ve türden bağımsız olarak global unique
+-- tutuyordu. Yeni kapsamlı index başarıyla kurulduktan sonra bu yanlış kısıtı
+-- kaldır; aksi halde gelen ve giden aynı numaralı faturalar birlikte yazılamaz.
+alter table public.invoices
+  drop constraint if exists invoices_invoice_number_key;
+
 drop function if exists public.invoice_import_atomic(uuid, jsonb, jsonb, jsonb, jsonb);
 
 create or replace function public.invoice_import_atomic(
@@ -227,4 +233,6 @@ end;
 $$;
 
 revoke all on function public.invoice_import_atomic(uuid, jsonb, jsonb, jsonb, jsonb, uuid) from public;
+revoke all on function public.invoice_import_atomic(uuid, jsonb, jsonb, jsonb, jsonb, uuid) from anon;
+revoke all on function public.invoice_import_atomic(uuid, jsonb, jsonb, jsonb, jsonb, uuid) from authenticated;
 grant execute on function public.invoice_import_atomic(uuid, jsonb, jsonb, jsonb, jsonb, uuid) to service_role;
