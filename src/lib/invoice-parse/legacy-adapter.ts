@@ -1,3 +1,5 @@
+import { normalizeProductCapacity } from './product-capacity'
+
 /**
  * Kanonik parse hattı ↔ eski `ParseResult` sözleşmesi arasındaki köprü.
  *
@@ -64,7 +66,7 @@ export function ublToParseResult(
     const birimFiyat = line.unitPrice ?? 0
     const satirToplam = line.lineTotal ?? round2(miktar * birimFiyat)
     return {
-      urun_adi: line.description ?? '',
+      urun_adi: normalizeProductCapacity(line.description ?? ''),
       miktar,
       birim: line.unit ?? 'Adet',
       birim_fiyat: birimFiyat,

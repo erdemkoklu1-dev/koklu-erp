@@ -1,3 +1,9 @@
+import {
+  hasNumberlessWeightPrefix,
+  normalizeProductCapacity,
+  stripLeadingRowNumber,
+} from '../invoice-parse/product-capacity'
+
 export interface NormalizedIncomingProduct {
   raw_description: string
   normalized_description: string
@@ -32,8 +38,7 @@ export function normalizeIncomingProductDescription(description: unknown): Norma
   const raw = String(description ?? '').replace(/\s+/g, ' ').trim()
   const warnings: string[] = []
 
-  let normalized = raw
-    .replace(/^\d{1,4}\s+/, '')
+  let normalized = stripLeadingRowNumber(raw)
     .replace(/\s+\d{1,4}\s+(?=Söndürme|Sondurme|Cihazı|Cihazi|Dolum|Dolumu)/giu, ' ')
     .trim()
 
@@ -52,8 +57,11 @@ export function normalizeIncomingProductDescription(description: unknown): Norma
     .replace(/\s+/g, ' ')
     .trim()
 
+  normalized = normalizeProductCapacity(normalized)
+
   if (!normalized || normalized.length < 2) warnings.push('empty_description')
   if (/^\d+\s+/.test(normalized)) warnings.push('line_number_leak')
+  if (hasNumberlessWeightPrefix(normalized)) warnings.push('missing_weight_capacity')
 
   return {
     raw_description: raw,
