@@ -70,7 +70,7 @@ describe('UBL → eski ParseResult adapter', () => {
   })
 
   it('Türkçe karakterler kalem açıklamasında korunur', () => {
-    assert.equal(ubl().kalemler[0].urun_adi, 'Yangın Söndürme Tüpü 6 kg — dolum ücreti')
+    assert.equal(ubl().kalemler[0].urun_adi, 'Yangın Söndürme Tüpü 6 Kg — dolum ücreti')
   })
 })
 

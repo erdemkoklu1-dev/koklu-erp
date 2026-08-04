@@ -1,5 +1,11 @@
 import { parseIncomingInvoiceV2 } from './gelen-fatura-parser-v2/genericIncomingInvoiceParser'
 import { isOwnCompanySupplierName } from './gelen-fatura-parser-v2/supplierClassifier'
+import {
+  hasNumberlessWeightPrefix,
+  normalizeProductCapacity,
+  sourceCapacityWasLost,
+  stripLeadingRowNumber,
+} from './invoice-parse/product-capacity'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
@@ -330,9 +336,10 @@ function cleanItemDescription(desc: string): string {
 
   cleaned = cleaned
     .replace(/^(?:Sıra\s+No|Sira\s+No|Mal\s+Hizmet|Açıklama|Aciklama|Miktar|Birim\s+Fiyat|KDV|İskonto|Iskonto|Diğer\s+Vergiler|Diger\s+Vergiler)\b.*?\b(?=\d{1,3}\s+)/iu, '')
-    .replace(/^\d{1,4}\s+/, '')
     .replace(/\s+\d{1,4}\s+(?=Söndürme|Sondurme|Cihazı|Cihazi|Dolum|Dolumu)/giu, ' ')
     .trim()
+
+  cleaned = stripLeadingRowNumber(cleaned)
 
   const leakLabels = [
     'Fatura Tipi', 'Fatura No', 'Fatura Tarihi', 'Düzenleme Tarihi', 'Duzenleme Tarihi',
@@ -365,7 +372,7 @@ const PRODUCT_NORMALIZATION_RULES: Array<[RegExp, string]> = [
 ]
 
 function normalizeProductDescription(desc: string): string {
-  let normalized = cleanItemDescription(desc)
+  let normalized = normalizeProductCapacity(cleanItemDescription(desc))
   for (const [pattern, replacement] of PRODUCT_NORMALIZATION_RULES) {
     normalized = normalized.replace(pattern, replacement)
   }
@@ -377,10 +384,6 @@ function normalizeProductDescription(desc: string): string {
     .replace(/\s+/g, ' ')
     .trim()
   return normalized
-}
-
-function isSiraNo(val: unknown): boolean {
-  return /^\d{1,4}$/.test(String(val ?? '').trim())
 }
 
 function isOzetSatir(cells: unknown[]): boolean {
@@ -627,8 +630,9 @@ function parseLineItemsSatis(text: string): KalemItem[] {
     let rawDesc = tableText.substring(descStart, current.matchIndex)
       .replace(/\n/g, ' ')
       .replace(/\s+/g, ' ')
-      .replace(/^\s*\d+\s+/, '')
       .trim()
+
+    rawDesc = stripLeadingRowNumber(rawDesc)
 
     if (i === 0) {
       for (const kw of headerKeywords) {
@@ -774,6 +778,8 @@ function finalizeParsedItems(items: KalemItem[]): KalemItem[] {
     if (/^\d+\s+/.test(normalized)) warnings.push('sıra no sızıntısı')
     if (!item.miktar || item.miktar <= 0) warnings.push('miktar kontrol edilmeli')
     if (!item.birim_fiyat || item.birim_fiyat <= 0) warnings.push('birim fiyat kontrol edilmeli')
+    if (hasNumberlessWeightPrefix(normalized)) warnings.push('kapasite değeri manuel kontrol edilmeli')
+    if (sourceCapacityWasLost(raw, normalized)) warnings.push('kaynak kapasitesi korunamadı')
 
     const expectedNet = Math.round(item.miktar * item.birim_fiyat * 100) / 100
     const expectedGross = Math.round(expectedNet * (1 + (item.kdv_orani || 0) / 100) * 100) / 100
@@ -1150,7 +1156,7 @@ function getItemRegion(text: string): string {
 }
 
 function makeKalem(desc: string, miktarRaw: string, birim: string, fiyatRaw: string, tail: string, idx: number): KalemItem | null {
-  const urunAdi = desc.replace(/^\d{1,4}\s+/, '').trim()
+  const urunAdi = stripLeadingRowNumber(desc)
   if (!urunAdi || urunAdi.length < 2 || isOzetSatir([urunAdi])) return null
 
   const miktar = parseAmount(miktarRaw) ?? 1
@@ -1215,7 +1221,7 @@ function extractItemsEfatura(text: string): KalemItem[] {
 
       const kdvTutari = Math.round(miktar * birimFiyat * kdvOrani / 100 * 100) / 100
       // Sıra numarası satırın başında kalmışsa temizle (ör: "1 6 Kg KKT...")
-      const rawDesc = descParts.join(' ').trim().replace(/^\d{1,3}\s+/, '')
+      const rawDesc = stripLeadingRowNumber(descParts.join(' '))
       const urunAdi = rawDesc || `Kalem ${items.length + 1}`
 
       if (!isOzetSatir([urunAdi])) {
@@ -1288,14 +1294,14 @@ function extractItemsKoklu(text: string): KalemItem[] {
 
       // Ürün adı:
       // Önce aynı satırda miktardan önceki kısım, sonra pendingDesc, sonra placeholder
-      const beforeMiktar = line.slice(0, matchIdx).trim().replace(/^\d{1,3}\s+/, '')
+      const beforeMiktar = stripLeadingRowNumber(line.slice(0, matchIdx))
       let urunAdi: string
       if (beforeMiktar) {
         urunAdi = beforeMiktar
         pendingDesc = []
       } else if (pendingDesc.length > 0) {
         // Son pending satırı sıra numarası içeriyorsa temizle
-        const cleaned = pendingDesc.join(' ').replace(/^\d{1,3}\s+/, '').trim()
+        const cleaned = stripLeadingRowNumber(pendingDesc.join(' '))
         urunAdi = cleaned || `Kalem ${items.length + 1}`
         pendingDesc = []
       } else {
@@ -1395,7 +1401,7 @@ function extractItemsKokluSira(text: string): KalemItem[] {
     const m = joined.match(siraRe)
     if (!m) break
 
-    const descRaw = m[1].trim().replace(/^\d{1,3}\s+/, '')
+    const descRaw = stripLeadingRowNumber(m[1])
     if (!descRaw || descRaw.length < 2 || isOzetSatir([descRaw])) continue
 
     const miktar = parseAmount(m[2]) ?? 1
