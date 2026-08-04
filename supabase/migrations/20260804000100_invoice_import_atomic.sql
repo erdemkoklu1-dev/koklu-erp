@@ -1,5 +1,5 @@
--- Fatura içe aktarma: her çağrı tek faturayı ve bağlı kayıtlarını tek transaction'da yazar.
--- Forward-only production migration. Çalıştırmadan önce aşağıdaki duplicate ön kontrolü geçmelidir.
+-- Fatura iÃ§e aktarma: her Ã§aÄŸrÄ± tek faturayÄ± ve baÄŸlÄ± kayÄ±tlarÄ±nÄ± tek transaction'da yazar.
+-- Forward-only production migration. Ã‡alÄ±ÅŸtÄ±rmadan Ã¶nce aÅŸaÄŸÄ±daki duplicate Ã¶n kontrolÃ¼ geÃ§melidir.
 
 do $$
 begin
@@ -11,7 +11,7 @@ begin
               upper(regexp_replace(invoice_number, '[[:space:]]+', '', 'g'))
     having count(*) > 1
   ) then
-    raise exception 'INVOICE_IMPORT_DUPLICATE_PREFLIGHT_FAILED: normalize edilmiş mükerrer fatura numaraları var.';
+    raise exception 'INVOICE_IMPORT_DUPLICATE_PREFLIGHT_FAILED: normalize edilmiÅŸ mÃ¼kerrer fatura numaralarÄ± var.';
   end if;
 end;
 $$;
@@ -59,20 +59,20 @@ begin
      or p_invoice is null or jsonb_typeof(p_invoice) <> 'object'
      or p_items is null or jsonb_typeof(p_items) <> 'array'
      or p_devices is null or jsonb_typeof(p_devices) <> 'array' then
-    raise exception using errcode = '22023', message = 'Müşteri, fatura, kalem ve cihaz verisi geçersiz.';
+    raise exception using errcode = '22023', message = 'MÃ¼ÅŸteri, fatura, kalem ve cihaz verisi geÃ§ersiz.';
   end if;
   if v_invoice_no is null then
-    raise exception using errcode = '22023', message = 'Fatura numarası zorunludur.';
+    raise exception using errcode = '22023', message = 'Fatura numarasÄ± zorunludur.';
   end if;
   if jsonb_array_length(p_items) = 0 then
-    raise exception using errcode = '22023', message = 'Faturada en az bir geçerli kalem bulunmalıdır.';
+    raise exception using errcode = '22023', message = 'Faturada en az bir geÃ§erli kalem bulunmalÄ±dÄ±r.';
   end if;
   if exists (
     select 1
       from jsonb_to_recordset(p_items) as x(description text, quantity numeric)
      where nullif(trim(x.description), '') is null or x.quantity is null or x.quantity <= 0
   ) then
-    raise exception using errcode = '22023', message = 'Fatura kalemi açıklaması ve pozitif miktarı zorunludur.';
+    raise exception using errcode = '22023', message = 'Fatura kalemi aÃ§Ä±klamasÄ± ve pozitif miktarÄ± zorunludur.';
   end if;
 
   begin
@@ -93,7 +93,7 @@ begin
     v_effective_user := v_auth_uid;
   elsif v_jwt_role = 'service_role' then
     if p_user_id is null then
-      raise exception using errcode = '42501', message = 'INVOICE_IMPORT_USER_REQUIRED: service-role çağrısında kullanıcı zorunludur.';
+      raise exception using errcode = '42501', message = 'INVOICE_IMPORT_USER_REQUIRED: service-role Ã§aÄŸrÄ±sÄ±nda kullanÄ±cÄ± zorunludur.';
     end if;
     v_effective_user := p_user_id;
   else
@@ -106,7 +106,7 @@ begin
     left join public.roller r on r.id = kp.rol_id
    where kp.id = v_effective_user;
   if not found or v_user_firma is null then
-    raise exception using errcode = '42501', message = 'INVOICE_IMPORT_NO_TENANT: kullanıcıya bağlı firma bulunamadı.';
+    raise exception using errcode = '42501', message = 'INVOICE_IMPORT_NO_TENANT: kullanÄ±cÄ±ya baÄŸlÄ± firma bulunamadÄ±.';
   end if;
   if p_firma_id is not null and p_firma_id <> v_user_firma and not v_is_super_admin then
     raise exception using errcode = '42501', message = 'INVOICE_IMPORT_TENANT_MISMATCH';
@@ -119,13 +119,13 @@ begin
   if v_customer_branch_id is not null then
     perform 1 from public.subeler where id = v_customer_branch_id and firma_id = v_effective_firma;
     if not found then
-      raise exception using errcode = '42501', message = 'Müşteri şubesi kullanıcının firmasına ait değil.';
+      raise exception using errcode = '42501', message = 'MÃ¼ÅŸteri ÅŸubesi kullanÄ±cÄ±nÄ±n firmasÄ±na ait deÄŸil.';
     end if;
   end if;
   if v_invoice_branch_id is not null then
     perform 1 from public.subeler where id = v_invoice_branch_id and firma_id = v_effective_firma;
     if not found then
-      raise exception using errcode = '42501', message = 'Fatura şubesi kullanıcının firmasına ait değil.';
+      raise exception using errcode = '42501', message = 'Fatura ÅŸubesi kullanÄ±cÄ±nÄ±n firmasÄ±na ait deÄŸil.';
     end if;
   end if;
 
@@ -145,7 +145,7 @@ begin
   if v_customer_id is not null then
     perform 1 from public.customers where id = v_customer_id and firma_id = v_effective_firma;
     if not found then
-      raise exception using errcode = '42501', message = 'Seçilen müşteri firmaya ait değil.';
+      raise exception using errcode = '42501', message = 'SeÃ§ilen mÃ¼ÅŸteri firmaya ait deÄŸil.';
     end if;
   else
     select id into v_customer_id
