@@ -8,6 +8,7 @@ describe('invoice import atomic SQL contract', () => {
   it('tenant + tür + normalize fatura numarası için kalıcı unique index taşır', () => {
     assert.match(sql, /unique index if not exists invoices_firma_type_number_uidx/i)
     assert.match(sql, /firma_id,\s+invoice_type,\s+upper\(regexp_replace\(invoice_number/i)
+    assert.match(sql, /drop constraint if exists invoices_invoice_number_key/i)
   })
 
   it('eşzamanlı duplicate istekleri transaction advisory lock ile serileştirir', () => {
@@ -46,5 +47,12 @@ describe('invoice import atomic SQL contract', () => {
   it('yalnız fatura numarası index ihlalini idempotent duplicate kabul eder', () => {
     assert.match(sql, /get stacked diagnostics v_constraint_name = constraint_name/i)
     assert.match(sql, /v_constraint_name <> 'invoices_firma_type_number_uidx'/i)
+  })
+
+  it('RPC yalnız service_role tarafından çalıştırılabilir', () => {
+    assert.match(sql, /revoke all on function public\.invoice_import_atomic[\s\S]*?from public/i)
+    assert.match(sql, /revoke all on function public\.invoice_import_atomic[\s\S]*?from anon/i)
+    assert.match(sql, /revoke all on function public\.invoice_import_atomic[\s\S]*?from authenticated/i)
+    assert.match(sql, /grant execute on function public\.invoice_import_atomic[\s\S]*?to service_role/i)
   })
 })
