@@ -44,15 +44,21 @@ function inferSupplierName(text: string, template: IncomingSupplierTemplate): st
   if (knownNames[template]) return knownNames[template]
 
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-  for (const line of lines.slice(0, 30)) {
+  const candidates: string[] = []
+  for (const [index, line] of lines.slice(0, 30).entries()) {
     const folded = fold(line)
     if (folded.startsWith('SAYIN') || folded.startsWith('ALICI')) break
     if (isBadSupplierLine(line)) continue
-    if (/(LTD|LIMITED|ANONIM|A\.S\.|SANAYI|TICARET|MIGROS|HIDROPRES|SEMIHLER|ERKARPAS)/.test(folded)) {
-      return line.replace(/\s+/g, ' ').trim()
+    if (/(LTD|LIMITED|ANONIM|A\.S\.|SIRKETI|ENSTITUSU|SANAYI|TICARET|MAGAZACILIK|ELEKTRIK|YANGIN|KALIBRASYON)/.test(folded)) {
+      const previous = lines[index - 1]
+      if (previous && !isBadSupplierLine(previous) && /[A-ZÇĞİÖŞÜ]{3}/u.test(previous) && !candidates.includes(previous)) {
+        candidates.push(previous.replace(/\s+/g, ' ').trim())
+      }
+      candidates.push(line.replace(/\s+/g, ' ').trim())
+      if (/(LTD|LIMITED|A\.S\.|SIRKETI|ENSTITUSU)/.test(folded)) break
     }
   }
-  return null
+  return candidates.length > 0 ? candidates.slice(0, 3).join(' ').split(/\s+\/\s+/)[0].trim() : null
 }
 
 export function classifyIncomingSupplier(text: string): IncomingSupplierClassification {
@@ -60,16 +66,16 @@ export function classifyIncomingSupplier(text: string): IncomingSupplierClassifi
   const signals: string[] = []
   let template: IncomingSupplierTemplate = 'unknown'
 
-  if (/MIGROS|URUN KODU|URUN BARKODU|URUN ADI/.test(folded)) {
+  if (/\bMIGROS\b/.test(folded)) {
     template = 'migros'
     signals.push('migros_keyword_or_table')
-  } else if (/ERKARPAS|#\s*STOK KODU|MAL\s*\/\s*HIZMET/.test(folded)) {
+  } else if (/\bERKARPAS\b/.test(folded)) {
     template = 'erkarpas'
     signals.push('erkarpas_keyword_or_table')
-  } else if (/HIDROPRES|HIZMET\s*\/\s*URUN ADI|FATURA NUMARASI/.test(folded)) {
+  } else if (/\bHIDROPRES\b/.test(folded)) {
     template = 'hidropres'
     signals.push('hidropres_keyword_or_table')
-  } else if (/SEMIHLER|MALZEME\s*\/\s*HIZMET KODU|MALZEME\s*\/\s*HIZMET ACIKLAMASI/.test(folded)) {
+  } else if (/\bSEMIHLER\b/.test(folded)) {
     template = 'semihler'
     signals.push('semihler_keyword_or_table')
   }

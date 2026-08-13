@@ -138,6 +138,8 @@ export function matchExistingSupplier<T extends SupplierMatchInput>(
   if (normalizedName.length >= 5) {
     // 2a. Tam normalize eşleşme
     const exact = suppliers.find(s => {
+      const candidateTaxNo = normalizeSupplierTaxNo(s.taxNo)
+      if (taxNo.length >= 10 && candidateTaxNo.length >= 10 && candidateTaxNo !== taxNo) return false
       const cn = normalizeSupplierName(s.name)
       return cn.length >= 5 && cn === normalizedName
     })
@@ -146,6 +148,8 @@ export function matchExistingSupplier<T extends SupplierMatchInput>(
     // 2b. Benzer unvan — %86 ve üzeri güven skoru
     let best: { supplier: T; score: number } | null = null
     for (const candidate of suppliers) {
+      const candidateTaxNo = normalizeSupplierTaxNo(candidate.taxNo)
+      if (taxNo.length >= 10 && candidateTaxNo.length >= 10 && candidateTaxNo !== taxNo) continue
       const candidateNorm = normalizeSupplierName(candidate.name)
       if (candidateNorm.length < 5) continue
       const score = similarity(normalizedName, candidateNorm)

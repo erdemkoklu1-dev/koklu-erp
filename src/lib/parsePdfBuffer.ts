@@ -6,6 +6,7 @@ import {
   sourceCapacityWasLost,
   stripLeadingRowNumber,
 } from './invoice-parse/product-capacity'
+import { parseIncomingLayoutLines } from './invoice-parse/incoming-layout-lines'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
@@ -312,6 +313,9 @@ function cleanInvoiceNo(no: string | null): string | null {
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '') // trailing non-alphanumeric (—, -, _, …) temizle
   if (!compact) return null
+  // GİB seri kodu rakam içerebilir: E01, TS0, AY1 ve EF0 gibi.
+  const gibNo = compact.match(/^([A-Z0-9]{3}\d{13})/)
+  if (gibNo) return gibNo[1]
   // Köklü formatı: KOK + 13 rakam
   const kokNo = compact.match(/^(KOK\d{13})/)
   if (kokNo) return kokNo[1]
@@ -1543,6 +1547,8 @@ function extractItemsFromText(text: string): KalemItem[] {
 function extractMigrosTotal(text: string): number | null {
   const faturaM = text.match(/FATURA\s*TOPLAM[AI]\s*[:\s]+([\d.,]+)/i)
   if (faturaM) return parseAmount(faturaM[1])
+  const toplamM = text.match(/TOPLAM\s*TUTAR\s*[:\s]+([\d.,]+)/i)
+  if (toplamM) return parseAmount(toplamM[1])
   const araM = text.match(/ARA\s*TOPLAM\s*[:\s]+([\d.,]+)/i)
   if (araM) return parseAmount(araM[1])
   return null
@@ -1632,6 +1638,7 @@ export async function parsePdfBuffer(
       text,
       'Fatura\\s+No[:\\s]+([A-Z0-9\\-]+)',
       'FATURA\\s+NO[:\\s]+([A-Z0-9\\-]+)',
+      'Fatura\\s+ID[:\\s]+([A-Z0-9\\-]+)',
       'No\\s*:\\s*([A-Z]{2,}[\\-]\\d+[\\-]\\d+)',
     )
     result.fatura_no = cleanInvoiceNo(result.fatura_no)
@@ -1759,7 +1766,9 @@ export async function parsePdfBuffer(
       const satisItems = layoutItems.length > 0 ? layoutItems : parseLineItemsSatis(text)
       result.kalemler = satisItems.length > 0 ? satisItems : extractItemsFromText(text)
     } else {
-      result.kalemler = extractItemsFromText(text)
+      const layoutItems = parseIncomingLayoutLines(lines)
+      const textItems = extractItemsFromText(text)
+      result.kalemler = layoutItems.length >= textItems.length ? layoutItems : textItems
     }
     result.kalemler = finalizeParsedItems(result.kalemler)
     result.fatura_no = cleanInvoiceNo(result.fatura_no)
@@ -1789,8 +1798,8 @@ export async function parsePdfBuffer(
       result.vade_tarihi = gelenV2.header.dueDate ?? result.vade_tarihi
       result.mal_hizmet_toplami = gelenV2.header.subtotal ?? result.mal_hizmet_toplami
       result.kdv_tutari = gelenV2.header.vatTotal ?? result.kdv_tutari
-      result.vergiler_dahil_toplam = gelenV2.header.payableTotal ?? result.vergiler_dahil_toplam
-      result.odenecek_tutar = gelenV2.header.payableTotal ?? result.odenecek_tutar
+      result.vergiler_dahil_toplam = result.vergiler_dahil_toplam ?? gelenV2.header.payableTotal
+      result.odenecek_tutar = result.odenecek_tutar ?? gelenV2.header.payableTotal
       result.parse_durumu = gelenV2.legacyQuality
       result.parse_uyarilari = [
         ...gelenV2.warnings,

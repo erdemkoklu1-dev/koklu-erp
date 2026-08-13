@@ -41,7 +41,7 @@ function findField(text: string, patterns: RegExp[]): string | null {
 function cleanInvoiceNo(value: string | null): string | null {
   if (!value) return null
   const cleaned = value.replace(/\s+/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const standard = cleaned.match(/^([A-Z]{2,4}\d{13})/)
+  const standard = cleaned.match(/^([A-Z0-9]{3}\d{13})/) ?? cleaned.match(/^([A-Z]{2,4}\d{13})/)
   return standard ? standard[1] : cleaned || null
 }
 
@@ -94,6 +94,7 @@ export function parseIncomingInvoiceV2(text: string, lines: IncomingLineInput[])
     /Toplam\s+KDV\s*[:\s]+([\d.,\s]+)\s*(?:TL|TRY|TRL|₺|â‚º)?/iu,
   ]))
   const payableTotal = parseIncomingMoney(findField(text, [
+    /(?:^|\n)\s*TOPLAM\s+TUTAR\s*[:\s]+([\d.,\s]+)\s*(?:TL|TRY|TRL|₺)?/iu,
     /[ÖOÃ–]denecek\s+Tutar[ıiÄ±]?\s*[:\s]+([\d.,\s]+)\s*(?:TL|TRY|TRL|₺|â‚º)?/iu,
     /Vergiler\s+Dahil\s+Toplam(?:\s+Tutar[ıiÄ±]?)?\s*[:\s]+([\d.,\s]+)\s*(?:TL|TRY|TRL|₺|â‚º)?/iu,
     /Genel\s+Toplam(?:\s+Tutar[ıiÄ±]?)?\s*[:\s]+([\d.,\s]+)\s*(?:TL|TRY|TRL|₺|â‚º)?/iu,

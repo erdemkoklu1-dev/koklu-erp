@@ -1881,7 +1881,7 @@ function GelenPdfFaturaImport() {
             ? taxNumberMatches
             : normalizedNameMatches.length > 0
               ? normalizedNameMatches
-              : existingWithSameInvoiceNo  // fatura no tek başına yeterli
+              : [] // Fatura numarası tek başına farklı tedarikçileri duplicate yapamaz.
         const duplicateMatch = duplicateMatches[0] ?? null
         const duplicateMatchedBy = supplierIdMatches.length > 0
           ? 'supplier_id+invoice_no'
@@ -1889,9 +1889,7 @@ function GelenPdfFaturaImport() {
             ? 'tax_number+invoice_no'
             : normalizedNameMatches.length > 0
               ? 'normalized_supplier_name+invoice_no'
-              : existingWithSameInvoiceNo.length > 0
-                ? 'invoice_no_only'
-                : 'none'
+              : 'none'
         console.log('[incoming supplier match]', {
           row_invoice_no: inv.fatura_no ?? null,
           raw_supplier_name: inv.satici_adi ?? null,
@@ -2054,7 +2052,7 @@ function GelenPdfFaturaImport() {
 
       setPreviewRows(preview)
       setActivePreviewFilter(null)
-      setSelectedPreviewRows(new Set())
+      setSelectedPreviewRows(new Set(preview.map((row, index) => row.importStatus === 'importable' ? index : -1).filter(index => index >= 0)))
       setStep('preview')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -2068,7 +2066,7 @@ function GelenPdfFaturaImport() {
     setError('')
     try {
       const rowsToSend = previewRows
-        .filter(r => r.importStatus === 'importable')
+        .filter((r, index) => r.importStatus === 'importable' && selectedPreviewRows.has(index))
         .map(r => ({
           filename:        r.filename,
           fatura_no:       r.editedFaturaNo.trim() || (r.fatura_no ?? ''),
@@ -2097,7 +2095,7 @@ function GelenPdfFaturaImport() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Kayıt hatası')
 
-      const dupCount = previewRows.filter(r => r.importStatus !== 'importable').length
+      const dupCount = previewRows.length - rowsToSend.length
       setImportResult({ ...data, atilandi: (data.atilandi ?? 0) + dupCount })
       setStep('done')
     } catch (e: unknown) {
@@ -2228,9 +2226,11 @@ function GelenPdfFaturaImport() {
     const duplicate    = previewRows.filter(r => r.duplicateStatus === 'duplicate').length
     const manuelKat    = previewRows.filter(r => r.parseStatus === 'manual_review').length
     const hatali       = previewRows.filter(r => r.parseStatus === 'critical_error').length
-    const importable   = previewRows.filter(r => r.importStatus === 'importable').length
-    const toplamTutar  = previewRows
-      .filter(r => r.importStatus === 'importable')
+    const importableIndexes = previewRows.map((row, index) => row.importStatus === 'importable' ? index : -1).filter(index => index >= 0)
+    const importable = importableIndexes.filter(index => selectedPreviewRows.has(index)).length
+    const batchTotal = previewRows.filter(r => r.importStatus === 'importable').reduce((s, r) => s + (r.odenecek_tutar ?? 0), 0)
+    const selectedTotal = previewRows
+      .filter((r, index) => r.importStatus === 'importable' && selectedPreviewRows.has(index))
       .reduce((s, r) => s + (r.odenecek_tutar ?? 0), 0)
     const filterLabels: Record<GelenPrimaryPreviewStatus, string> = {
       existing_supplier: 'Tedarikçi Mevcut',
@@ -2277,7 +2277,7 @@ function GelenPdfFaturaImport() {
             disabled={importable === 0}
             className="bg-[#C8102E] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-[#a50d26] disabled:opacity-40"
           >
-            Tümünü İçe Aktar
+            Seçilenleri İçe Aktar ({importable})
           </button>
         </div>
 
@@ -2308,8 +2308,8 @@ function GelenPdfFaturaImport() {
             <div className="text-xs text-red-500">manuel kontrol</div>
           </button>
           <div className="bg-white dark:bg-gray-800 border rounded-lg p-3">
-            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Toplam Tutar</div>
-            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{fmtAmt(toplamTutar)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Batch / Seçili Toplam</div>
+            <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{fmtAmt(batchTotal)} / {fmtAmt(selectedTotal)}</div>
           </div>
         </div>
 
